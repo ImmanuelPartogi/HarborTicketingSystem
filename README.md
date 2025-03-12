@@ -425,4 +425,4 @@ Contributions are always welcome! Please create an issue or pull request in the 
 
 ## 📝 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [NAZI License](LICENSE).
