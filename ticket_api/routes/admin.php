@@ -45,6 +45,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth:admi
     Route::get('schedules/{schedule}/dates', [ScheduleController::class, 'dates'])->name('schedules.dates');
     Route::post('schedules/{schedule}/dates', [ScheduleController::class, 'storeDates'])->name('schedules.dates.store');
     Route::put('schedules/{schedule}/dates/{date}', [ScheduleController::class, 'updateDate'])->name('schedules.dates.update');
+    Route::put('schedules/dates/{date}', [ScheduleController::class, 'updateDate'])->name('schedules.dates.update');
+    Route::delete('schedules/dates/{date}', [ScheduleController::class, 'deleteDate'])->name('schedules.dates.destroy');
 
     // Booking Management
     Route::resource('bookings', BookingController::class);

@@ -5,6 +5,7 @@ import '../models/schedule_model.dart';
 import '../services/api_service.dart';
 import '../services/ferry_service.dart';
 import '../services/storage_service.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Tambahkan import ini
 
 class FerryProvider extends ChangeNotifier {
   late ApiService _apiService;
