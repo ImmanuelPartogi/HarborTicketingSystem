@@ -37,6 +37,43 @@ class AuthProvider extends ChangeNotifier {
     }
   }
   
+  // Get current user data dari server dan perbarui
+  Future<void> getCurrentUser() async {
+    _setLoading(true);
+    _clearError();
+    
+    try {
+      // Coba dapatkan user yang tersimpan di local storage terlebih dahulu
+      User? localUser = await _authService.getCurrentUser();
+      
+      // Jika user ada di local storage, set dulu ke provider
+      if (localUser != null && _user == null) {
+        _user = localUser;
+      }
+      
+      // Kemudian ambil data terbaru dari server
+      final response = await _apiService.getProfile();
+      if (response != null && response['user'] != null) {
+        final updatedUser = User.fromJson(response['user']);
+        
+        // Update user di provider dan di storage
+        _user = updatedUser;
+        await _storageService.setUser(updatedUser);
+      }
+      
+      _setLoading(false);
+    } catch (e) {
+      // Jika gagal mengambil dari server, tetap gunakan data dari storage
+      // dan jangan set error (untuk UX yang lebih baik)
+      _setLoading(false);
+      
+      // Catatkan error tetapi tidak perlu ditampilkan ke user jika data lokal tersedia
+      if (_user == null) {
+        _setError('Failed to get user profile: ${e.toString()}');
+      }
+    }
+  }
+  
   // Login with phone and password
   Future<bool> login(String phone, String password) async {
     _setLoading(true);

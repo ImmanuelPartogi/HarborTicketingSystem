@@ -82,9 +82,23 @@
                     <td class="py-3 px-4 border-b border-gray-200 text-sm">{{ $schedule->departure_time }}</td>
                     <td class="py-3 px-4 border-b border-gray-200 text-sm">Rp {{ number_format($schedule->price, 0, ',', '.') }}</td>
                     <td class="py-3 px-4 border-b border-gray-200 text-sm">
-                        <span class="px-2 py-1 rounded-full text-xs {{ $schedule->status == 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                            {{ $schedule->status == 'active' ? 'Aktif' : 'Tidak Aktif' }}
-                        </span>
+                        @if ($schedule->status == 'ACTIVE')
+                            <span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                                Aktif
+                            </span>
+                        @elseif($schedule->status == 'DELAYED')
+                            <span class="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                                Tertunda
+                            </span>
+                        @elseif($schedule->status == 'FULL')
+                            <span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                                Penuh
+                            </span>
+                        @else
+                            <span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
+                                Tidak Aktif
+                            </span>
+                        @endif
                     </td>
                     <td class="py-3 px-4 border-b border-gray-200 text-sm">
                         <a href="{{ route('admin.schedules.show', $schedule->id) }}" class="text-blue-500 hover:text-blue-700 mr-2">
