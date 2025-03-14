@@ -232,7 +232,8 @@ class Helpers {
     if (bytes <= 0) return '0 B';
     const suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
     final i = (log(bytes) / log(1024)).floor();
-    return '${(bytes / pow(1024, i)).toStringAsFixed(decimals)} ${suffixes[i]}';
+    // Konversi hasil pembagian ke double agar bisa menggunakan toStringAsFixed
+    return '${(bytes / pow(1024, i)).toDouble().toStringAsFixed(decimals)} ${suffixes[i]}';
   }
   
   // Helper functions
@@ -245,7 +246,7 @@ class Helpers {
     
     // Simple approximation of log10
     int exponent = 0;
-    double value = x;
+    double value = x.toDouble(); // Konversi x ke double
     
     if (value >= 1) {
       while (value >= 10) {
@@ -262,8 +263,9 @@ class Helpers {
     return exponent.toDouble();
   }
   
-  static num pow(num x, int exponent) {
-    num result = 1;
+  // Alternatif: mengubah pow untuk mengembalikan double
+  static double pow(num x, int exponent) {
+    double result = 1.0; // Ubah tipe menjadi double
     
     if (exponent >= 0) {
       for (int i = 0; i < exponent; i++) {
@@ -275,7 +277,7 @@ class Helpers {
       }
     }
     
-    return result;
+    return result; // Sekarang mengembalikan double
   }
   
   static const double e = 2.718281828459045;

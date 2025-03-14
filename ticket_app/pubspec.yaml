@@ -32,13 +32,42 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+
+  # UI packages
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  lottie: ^2.7.0
+  qr_flutter: ^4.1.0  # Package untuk QR code
+
+  # State management
   provider: ^6.0.5
-  intl: ^0.19.0
+
+  # Networking & API
+  http: ^1.1.0
+  connectivity_plus: ^5.0.1
+  dio: ^5.3.3  # Optional, alternatif untuk http
+
+  # Local storage
+  shared_preferences: ^2.2.1
+  sqflite: ^2.3.0  # Optional untuk penyimpanan lokal
+  path_provider: ^2.1.1
+
+  # Utilities
+  intl: ^0.19.0  # Untuk format tanggal, mata uang, dll
+  crypto: ^3.0.3  # Package untuk fungsi kriptografi
+  url_launcher: ^6.2.1
+  package_info_plus: ^4.2.0
+  device_info_plus: ^9.1.0
+  
+  # Notifications
+  flutter_local_notifications: ^16.0.0
+  timezone: ^0.9.2
+
   firebase_core: ^2.15.1
   firebase_messaging: ^14.6.7
-  shared_preferences: ^2.2.1
-  flutter_local_notifications: ^16.0.0  # Versi terbaru saat ini
-  timezone: ^0.9.2
+  mockito: ^5.4.2
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

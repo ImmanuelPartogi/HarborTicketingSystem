@@ -6,71 +6,74 @@ import '../../config/app_config.dart';
 import '../../config/theme.dart';
 import '../../models/ticket_model.dart';
 import 'watermark_painter.dart';
+import 'dart:async';
 
 class AnimatedTicket extends StatefulWidget {
   final Ticket ticket;
   final VoidCallback? onTap;
-  
-  const AnimatedTicket({
-    Key? key,
-    required this.ticket,
-    this.onTap,
-  }) : super(key: key);
+
+  const AnimatedTicket({Key? key, required this.ticket, this.onTap})
+    : super(key: key);
 
   @override
   State<AnimatedTicket> createState() => _AnimatedTicketState();
 }
 
-class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProviderStateMixin {
+class _AnimatedTicketState extends State<AnimatedTicket>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
   late Map<String, dynamic> _watermarkPattern;
   late Timer _refreshTimer;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize animation controller
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10),
     )..repeat();
-    
+
     // Create animation
-    _animation = Tween<double>(begin: 0, end: 2 * pi).animate(_animationController);
-    
+    _animation = Tween<double>(
+      begin: 0,
+      end: 2 * pi,
+    ).animate(_animationController);
+
     // Initialize watermark pattern
     _generateWatermarkPattern();
-    
+
     // Set up timer to refresh the watermark periodically
     _refreshTimer = Timer.periodic(
       Duration(seconds: AppConfig.ticketWatermarkRefreshInterval),
       (_) => _refreshWatermark(),
     );
   }
-  
+
   @override
   void dispose() {
     _animationController.dispose();
     _refreshTimer.cancel();
     super.dispose();
   }
-  
+
   void _refreshWatermark() {
     setState(() {
       _generateWatermarkPattern();
     });
   }
-  
+
   void _generateWatermarkPattern() {
     // Generate a seed based on ticket number and current time segment
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final timeSegment = (timestamp / (AppConfig.ticketWatermarkRefreshInterval * 1000)).floor();
-    
+    final timeSegment =
+        (timestamp / (AppConfig.ticketWatermarkRefreshInterval * 1000)).floor();
+
     final seed = '${widget.ticket.ticketNumber}:$timeSegment';
     final random = Random(seed.hashCode);
-    
+
     // Generate watermark pattern properties
     _watermarkPattern = {
       'rotation': random.nextDouble() * 2 * pi,
@@ -94,18 +97,19 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
     final hasPassenger = widget.ticket.passenger != null;
     final hasRoute = hasSchedule && widget.ticket.schedule!.route != null;
     final hasFerry = hasSchedule && widget.ticket.schedule!.ferry != null;
-    
+
     // Format date and time
     final dateFormat = DateFormat('EEE, dd MMM yyyy');
     final timeFormat = DateFormat('HH:mm');
-    
+
     // Determine the status color overlay
     Color statusColor = widget.ticket.statusColor.withOpacity(0.2);
-    
-    if (widget.ticket.status == 'expired' || widget.ticket.status == 'cancelled') {
+
+    if (widget.ticket.status == 'expired' ||
+        widget.ticket.status == 'cancelled') {
       statusColor = widget.ticket.statusColor.withOpacity(0.5);
     }
-    
+
     return InkWell(
       onTap: widget.onTap,
       child: Container(
@@ -139,66 +143,68 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                   },
                 ),
               ),
-              
+
               // Status color overlay for expired/cancelled tickets
-              if (widget.ticket.status == 'expired' || widget.ticket.status == 'cancelled')
+              if (widget.ticket.status == 'expired' ||
+                  widget.ticket.status == 'cancelled')
                 Positioned.fill(
                   child: Container(
                     color: statusColor,
-                    child: widget.ticket.status == 'expired' 
-                        ? Center(
-                            child: Transform.rotate(
-                              angle: -pi / 12,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.paddingXLarge,
-                                  vertical: AppTheme.paddingSmall,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: widget.ticket.statusColor,
-                                    width: 4,
+                    child:
+                        widget.ticket.status == 'expired'
+                            ? Center(
+                              child: Transform.rotate(
+                                angle: -pi / 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppTheme.paddingXLarge,
+                                    vertical: AppTheme.paddingSmall,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: widget.ticket.statusColor,
+                                      width: 4,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'EXPIRED',
+                                    style: TextStyle(
+                                      color: widget.ticket.statusColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 36,
+                                    ),
                                   ),
                                 ),
-                                child: Text(
-                                  'EXPIRED',
-                                  style: TextStyle(
-                                    color: widget.ticket.statusColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 36,
+                              ),
+                            )
+                            : Center(
+                              child: Transform.rotate(
+                                angle: -pi / 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppTheme.paddingXLarge,
+                                    vertical: AppTheme.paddingSmall,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: widget.ticket.statusColor,
+                                      width: 4,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'CANCELLED',
+                                    style: TextStyle(
+                                      color: widget.ticket.statusColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 36,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          )
-                        : Center(
-                            child: Transform.rotate(
-                              angle: -pi / 12,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.paddingXLarge,
-                                  vertical: AppTheme.paddingSmall,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: widget.ticket.statusColor,
-                                    width: 4,
-                                  ),
-                                ),
-                                child: Text(
-                                  'CANCELLED',
-                                  style: TextStyle(
-                                    color: widget.ticket.statusColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 36,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
                   ),
                 ),
-              
+
               // Ticket content
               Column(
                 children: [
@@ -223,7 +229,7 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                           children: [
                             Expanded(
                               child: Text(
-                                hasRoute 
+                                hasRoute
                                     ? widget.ticket.schedule!.route!.routeName
                                     : 'Unknown Route',
                                 style: const TextStyle(
@@ -242,7 +248,9 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusRound),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.borderRadiusRound,
+                                ),
                               ),
                               child: Text(
                                 widget.ticket.statusText,
@@ -257,7 +265,9 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                         ),
                         if (hasSchedule)
                           Text(
-                            dateFormat.format(widget.ticket.schedule!.departureTime),
+                            dateFormat.format(
+                              widget.ticket.schedule!.departureTime,
+                            ),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: AppTheme.fontSizeMedium,
@@ -266,7 +276,7 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                       ],
                     ),
                   ),
-                  
+
                   // Ticket body
                   Padding(
                     padding: const EdgeInsets.all(AppTheme.paddingMedium),
@@ -302,7 +312,7 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                             ],
                           ),
                           const SizedBox(height: AppTheme.paddingRegular),
-                          
+
                           Row(
                             children: [
                               const Icon(Icons.credit_card, size: 20),
@@ -333,7 +343,7 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                           const Divider(),
                           const SizedBox(height: AppTheme.paddingMedium),
                         ],
-                        
+
                         // Departure info
                         if (hasSchedule) ...[
                           Row(
@@ -350,7 +360,9 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                                       ),
                                     ),
                                     Text(
-                                      timeFormat.format(widget.ticket.schedule!.departureTime),
+                                      timeFormat.format(
+                                        widget.ticket.schedule!.departureTime,
+                                      ),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: AppTheme.fontSizeLarge,
@@ -359,11 +371,12 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                                   ],
                                 ),
                               ),
-                              
+
                               if (hasFerry)
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Ferry',
@@ -388,7 +401,7 @@ class _AnimatedTicketState extends State<AnimatedTicket> with SingleTickerProvid
                           ),
                           const SizedBox(height: AppTheme.paddingRegular),
                         ],
-                        
+
                         // Ticket number and QR info
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
