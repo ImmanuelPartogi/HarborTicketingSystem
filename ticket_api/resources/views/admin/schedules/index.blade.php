@@ -96,7 +96,7 @@
                             </span>
                         @else
                             <span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
-                                Tidak Aktif
+                                Dibatalkan
                             </span>
                         @endif
                     </td>
