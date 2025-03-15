@@ -52,10 +52,10 @@ class ScheduleController extends Controller
         }
 
         if ($search) {
-            $query->whereHas('route', function($q) use ($search) {
+            $query->whereHas('route', function ($q) use ($search) {
                 $q->where('origin', 'like', "%{$search}%")
-                  ->orWhere('destination', 'like', "%{$search}%");
-            })->orWhereHas('ferry', function($q) use ($search) {
+                    ->orWhere('destination', 'like', "%{$search}%");
+            })->orWhereHas('ferry', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%");
             });
         }
@@ -128,20 +128,43 @@ class ScheduleController extends Controller
      * Display the specified schedule.
      *
      * @param Schedule $schedule
+     * @param Request $request
      * @return \Illuminate\View\View
      */
-    public function show(Schedule $schedule)
+    public function show(Schedule $schedule, Request $request)
     {
         $schedule->load(['route', 'ferry']);
 
-        // Get upcoming schedule dates
-        $today = Carbon::today();
-        $upcomingDates = ScheduleDate::where('schedule_id', $schedule->id)
-            ->where('date', '>=', $today)
-            ->orderBy('date')
-            ->paginate(10);
+        // Handle filter
+        $month = $request->query('month');
+        $year = $request->query('year', date('Y'));
 
-        return view('admin.schedules.show', compact('schedule', 'upcomingDates'));
+        // Get upcoming schedule dates
+        $query = ScheduleDate::where('schedule_id', $schedule->id);
+
+        // Apply filters if provided
+        if ($month) {
+            $query->whereMonth('date', $month);
+        }
+
+        if ($year) {
+            $query->whereYear('date', $year);
+        } else {
+            // Default to upcoming dates if no filters
+            $query->where('date', '>=', Carbon::today());
+        }
+
+        // Get schedule dates with pagination
+        $scheduleDates = $query->orderBy('date')->paginate(10);
+
+        // Get recent bookings for this schedule
+        $bookings = $schedule->bookings()
+            ->with('scheduleDate')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return view('admin.schedules.show', compact('schedule', 'scheduleDates', 'bookings'));
     }
 
     /**
@@ -232,96 +255,132 @@ class ScheduleController extends Controller
      * Display schedule dates.
      *
      * @param Schedule $schedule
+     * @param Request $request
      * @return \Illuminate\View\View
      */
-    public function dates(Schedule $schedule)
+    public function dates(Schedule $schedule, Request $request)
     {
         $schedule->load(['route', 'ferry']);
 
-        // Get start date for calendar (current month)
-        $startDate = Carbon::now()->startOfMonth();
-        $endDate = Carbon::now()->addMonths(2)->endOfMonth();
+        // Handle filter
+        $month = $request->query('month');
+        $year = $request->query('year', date('Y'));
+        $status = $request->query('status');
 
-        // Get all schedule dates within range
-        $scheduleDates = ScheduleDate::where('schedule_id', $schedule->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get()
-            ->keyBy(function($item) {
-                return $item->date->format('Y-m-d');
-            });
+        // Build query for schedule dates
+        $query = ScheduleDate::where('schedule_id', $schedule->id);
 
-        // Generate calendar data
-        $calendar = [];
-        $currentDate = $startDate->copy();
-
-        while ($currentDate <= $endDate) {
-            $month = $currentDate->format('F Y');
-            $week = $currentDate->weekOfMonth;
-            $day = $currentDate->format('j');
-            $dayOfWeek = $currentDate->dayOfWeek;
-            $fullDate = $currentDate->format('Y-m-d');
-
-            // Check if schedule runs on this day of week
-            $dayNumber = $dayOfWeek == 0 ? 7 : $dayOfWeek;
-            $runsOnThisDay = in_array($dayNumber, explode(',', $schedule->days));
-
-            // Get schedule date if exists
-            $scheduleDate = $scheduleDates[$fullDate] ?? null;
-
-            if (!isset($calendar[$month])) {
-                $calendar[$month] = [];
-            }
-
-            if (!isset($calendar[$month][$week])) {
-                $calendar[$month][$week] = [];
-            }
-
-            $calendar[$month][$week][] = [
-                'day' => $day,
-                'date' => $fullDate,
-                'runs' => $runsOnThisDay,
-                'status' => $scheduleDate ? $scheduleDate->status : null,
-                'passengers' => $scheduleDate ? $scheduleDate->passenger_count : 0,
-                'capacity' => $schedule->ferry->capacity_passenger,
-                'schedule_date' => $scheduleDate,
-            ];
-
-            $currentDate->addDay();
+        // Apply filters if provided
+        if ($month) {
+            $query->whereMonth('date', $month);
         }
 
-        return view('admin.schedules.dates', compact('schedule', 'calendar'));
+        if ($year) {
+            $query->whereYear('date', $year);
+        }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        // Get schedule dates with pagination
+        $scheduleDates = $query->orderBy('date')->paginate(15);
+
+        return view('admin.schedules.dates', compact('schedule', 'scheduleDates'));
     }
 
     /**
-     * Store a specific schedule date.
+     * Store a new schedule date.
      *
-     * @param Request $request
      * @param Schedule $schedule
+     * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function storeDates(Request $request, Schedule $schedule)
+    public function storeDates(Schedule $schedule, Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'dates' => 'required|array',
-            'dates.*' => 'required|date_format:Y-m-d',
-            'status' => 'required|in:AVAILABLE,FULL,CANCELLED,DEPARTED,WEATHER_ISSUE',
+        $request->validate([
+            'date_type' => 'required|in:single,range,days',
+            'single_date' => 'required_if:date_type,single|date',
+            'start_date' => 'required_if:date_type,range|date',
+            'end_date' => 'required_if:date_type,range|date|after_or_equal:start_date',
+            'days' => 'required_if:date_type,days|array',
+            'days.*' => 'integer|between:0,7',
+            'days_start_date' => 'required_if:date_type,days|date',
+            'days_end_date' => 'required_if:date_type,days|date|after_or_equal:days_start_date',
+            'status' => 'required|in:AVAILABLE,UNAVAILABLE',
         ]);
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
-
         try {
-            foreach ($request->dates as $date) {
+            // Handle different date types
+            if ($request->date_type === 'single') {
+                // Create single date
                 ScheduleDate::updateOrCreate(
-                    ['schedule_id' => $schedule->id, 'date' => $date],
-                    ['status' => $request->status]
+                    ['schedule_id' => $schedule->id, 'date' => $request->single_date],
+                    [
+                        'status' => $request->status,
+                        'passenger_count' => 0,
+                        'motorcycle_count' => 0,
+                        'car_count' => 0,
+                        'bus_count' => 0,
+                        'truck_count' => 0
+                    ]
                 );
+            } elseif ($request->date_type === 'range') {
+                // Create date range
+                $startDate = Carbon::parse($request->start_date);
+                $endDate = Carbon::parse($request->end_date);
+                $currentDate = $startDate->copy();
+
+                while ($currentDate->lte($endDate)) {
+                    ScheduleDate::updateOrCreate(
+                        ['schedule_id' => $schedule->id, 'date' => $currentDate->format('Y-m-d')],
+                        [
+                            'status' => $request->status,
+                            'passenger_count' => 0,
+                            'motorcycle_count' => 0,
+                            'car_count' => 0,
+                            'bus_count' => 0,
+                            'truck_count' => 0
+                        ]
+                    );
+                    $currentDate->addDay();
+                }
+            } elseif ($request->date_type === 'days') {
+                // Create specific days in date range
+                $startDate = Carbon::parse($request->days_start_date);
+                $endDate = Carbon::parse($request->days_end_date);
+                $currentDate = $startDate->copy();
+
+                $selectedDays = $request->days;
+
+                while ($currentDate->lte($endDate)) {
+                    $dayOfWeek = $currentDate->dayOfWeek;
+                    // Convert Sunday from 0 to 7 to match your system
+                    if ($dayOfWeek === 0) {
+                        $dayOfWeek = 7;
+                    }
+
+                    if (in_array($dayOfWeek, $selectedDays)) {
+                        ScheduleDate::updateOrCreate(
+                            ['schedule_id' => $schedule->id, 'date' => $currentDate->format('Y-m-d')],
+                            [
+                                'status' => $request->status,
+                                'passenger_count' => 0,
+                                'motorcycle_count' => 0,
+                                'car_count' => 0,
+                                'bus_count' => 0,
+                                'truck_count' => 0
+                            ]
+                        );
+                    }
+                    $currentDate->addDay();
+                }
             }
 
-            return back()->with('success', 'Schedule dates updated successfully');
+            return redirect()->route('admin.schedules.dates', $schedule)
+                ->with('success', 'Tanggal jadwal berhasil ditambahkan.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to update schedule dates: ' . $e->getMessage());
+            return back()->with('error', 'Gagal menambahkan tanggal jadwal: ' . $e->getMessage());
         }
     }
 

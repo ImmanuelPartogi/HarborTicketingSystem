@@ -4,11 +4,11 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\Schedule;
+use App\Models\Ferry;
 use App\Models\Route;
 use App\Models\ScheduleDate;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-use App\Models\Ferry;
 
 class ScheduleController extends Controller
 {
@@ -114,11 +114,9 @@ class ScheduleController extends Controller
             }
 
             // Check if enough capacity for passengers and vehicles
-            if (
-                $isAvailable &&
+            if ($isAvailable &&
                 $remainingPassengerCapacity >= $request->passenger_count &&
-                (!$request->vehicle_count || $remainingVehicleCapacity >= $request->vehicle_count)
-            ) {
+                (!$request->vehicle_count || $remainingVehicleCapacity >= $request->vehicle_count)) {
                 $schedule->remaining_passenger_capacity = $remainingPassengerCapacity;
                 $schedule->remaining_vehicle_capacity = $remainingVehicleCapacity;
                 $availableSchedules[] = $schedule;
@@ -177,50 +175,6 @@ class ScheduleController extends Controller
         $ferries = Ferry::where('status', 'ACTIVE')->get();
 
         return view('admin.schedules.edit', compact('schedule', 'routes', 'ferries'));
-    }
-
-    /**
-     * Update the specified schedule in storage.
-     *
-     * @param Request $request
-     * @param Schedule $schedule
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function update(Request $request, Schedule $schedule)
-    {
-        $request->validate([
-            'route_id' => 'required|exists:routes,id',
-            'ferry_id' => 'required|exists:ferries,id',
-            'departure_time' => 'required|date_format:H:i',
-            'arrival_time' => 'required|date_format:H:i',
-            'days' => 'required|array',
-            'days.*' => 'integer|between:0,7',
-            'price_economy' => 'required|numeric|min:0',
-            'price_business' => 'required|numeric|min:0',
-            'status' => 'required|in:ACTIVE,INACTIVE',
-        ]);
-
-        try {
-            // Convert days array to comma separated string
-            $days = implode(',', $request->days);
-
-            $schedule->update([
-                'route_id' => $request->route_id,
-                'ferry_id' => $request->ferry_id,
-                'departure_time' => $request->departure_time,
-                'arrival_time' => $request->arrival_time,
-                'days' => $days,
-                'price_economy' => $request->price_economy,
-                'price_business' => $request->price_business,
-                'status' => $request->status,
-            ]);
-
-            return redirect()->route('admin.schedules.show', $schedule)
-                ->with('success', 'Jadwal berhasil diperbarui.');
-        } catch (\Exception $e) {
-            return back()->withInput()
-                ->with('error', 'Gagal memperbarui jadwal: ' . $e->getMessage());
-        }
     }
 
     /**

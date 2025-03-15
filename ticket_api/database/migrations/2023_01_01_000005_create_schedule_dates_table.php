@@ -20,7 +20,8 @@ return new class extends Migration
             $table->unsignedInteger('car_count')->default(0);
             $table->unsignedInteger('bus_count')->default(0);
             $table->unsignedInteger('truck_count')->default(0);
-            $table->enum('status', ['AVAILABLE', 'FULL', 'CANCELLED', 'DEPARTED', 'WEATHER_ISSUE'])->default('AVAILABLE');
+            // $table->enum('status', ['AVAILABLE', 'FULL', 'CANCELLED', 'DEPARTED', 'WEATHER_ISSUE'])->default('AVAILABLE');
+            $table->enum('status', ['AVAILABLE', 'UNAVAILABLE', 'FULL', 'CANCELLED', 'DEPARTED', 'WEATHER_ISSUE'])->default('AVAILABLE');
             $table->timestamps();
 
             $table->unique(['schedule_id', 'date'], 'idx_schedule_date');
