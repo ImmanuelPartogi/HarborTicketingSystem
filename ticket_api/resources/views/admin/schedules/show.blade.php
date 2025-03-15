@@ -31,10 +31,6 @@
                 <h2 class="text-lg font-semibold mb-4">Informasi Dasar</h2>
                 <table class="w-full">
                     <tr>
-                        <td class="py-2 text-gray-600">ID:</td>
-                        <td class="py-2 font-medium">{{ $schedule->id }}</td>
-                    </tr>
-                    <tr>
                         <td class="py-2 text-gray-600">Rute:</td>
                         <td class="py-2 font-medium">
                             @if (is_object($schedule->route))
@@ -56,11 +52,11 @@
                     </tr>
                     <tr>
                         <td class="py-2 text-gray-600">Waktu Keberangkatan:</td>
-                        <td class="py-2 font-medium">{{ $schedule->departure_time }}</td>
+                        <td class="py-2 font-medium">{{ $schedule->departure_time->format('d M Y H:i') }}</td>
                     </tr>
                     <tr>
                         <td class="py-2 text-gray-600">Estimasi Tiba:</td>
-                        <td class="py-2 font-medium">{{ $schedule->arrival_time }}</td>
+                        <td class="py-2 font-medium">{{ $schedule->arrival_time->format('d M Y H:i') }}</td>
                     </tr>
                     <tr>
                         <td class="py-2 text-gray-600">Hari Operasi:</td>

@@ -189,21 +189,21 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">{{ $loop->iteration }}</td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm font-medium">
-                                    {{ \Carbon\Carbon::parse($date->date)->format('d/m/Y') }}</td>
+                                    {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->format('d/m/Y') : '-' }}</td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">
-                                    {{ \Carbon\Carbon::parse($date->date)->translatedFormat('l') }}</td>
+                                    {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->translatedFormat('l') : '-' }}</td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">
                                     @if (is_object($schedule->ferry))
-                                        <span class="font-medium">{{ $date->passenger_count ?? 0 }}</span> /
+                                        <span class="font-medium">{{ is_object($date) ? ($date->passenger_count ?? 0) : 0 }}</span> /
                                         {{ $schedule->ferry->capacity_passenger }}
                                     @else
-                                        {{ $date->passenger_count ?? 0 }} / -
+                                        {{ is_object($date) ? ($date->passenger_count ?? 0) : 0 }} / -
                                     @endif
                                 </td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">
                                     @if (is_object($schedule->ferry))
                                         <div class="grid grid-cols-2 gap-1">
-                                            <div>Motor: <span class="font-medium">{{ $date->motorcycle_count ?? 0 }}</span>
+                                            <div>Motor: <span class="font-medium">{{ is_object($date) ? ($date->motorcycle_count ?? 0) : 0 }}</span>
                                                 /
                                                 {{ $schedule->ferry->capacity_vehicle_motorcycle }}</div>
                                             <div>Mobil: <span class="font-medium">{{ $date->car_count ?? 0 }}</span> /
@@ -229,13 +229,13 @@
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">
                                     <div class="flex space-x-2">
                                         <button
-                                            class="edit-date-btn bg-yellow-100 text-yellow-700 hover:bg-yellow-200 p-1 rounded"
+                                            class="edit-date-btn text-yellow-500 hover:text-yellow-700 mr-2"
                                             data-id="{{ $date->id }}" data-date="{{ $date->date }}"
                                             data-status="{{ $date->status }}" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button
-                                            class="delete-date-btn bg-red-100 text-red-700 hover:bg-red-200 p-1 rounded"
+                                            class="delete-date-btn text-red-500 hover:text-red-700"
                                             data-id="{{ $date->id }}"
                                             data-date="{{ \Carbon\Carbon::parse($date->date)->format('d/m/Y') }}"
                                             title="Hapus">

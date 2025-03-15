@@ -41,8 +41,8 @@ class UserController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -140,7 +140,7 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'required|string|max:20|unique:users,phone,' . $user->id,
@@ -149,10 +149,17 @@ class UserController extends Controller
             'id_type' => 'nullable|in:KTP,SIM,PASPOR',
             'dob' => 'nullable|date',
             'gender' => 'nullable|in:MALE,FEMALE',
-        ]);
+        ];
+
+        // Only validate password if it's provided
+        if ($request->filled('password')) {
+            $rules['password'] = 'required|string|min:8|confirmed';
+        }
+
+        $request->validate($rules);
 
         try {
-            $user->update([
+            $userData = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
@@ -161,7 +168,21 @@ class UserController extends Controller
                 'id_type' => $request->id_type,
                 'dob' => $request->dob,
                 'gender' => $request->gender,
-            ]);
+            ];
+
+            // Handle email verification
+            if ($request->has('email_verified')) {
+                $userData['email_verified_at'] = $user->email_verified_at ?: now();
+            } else {
+                $userData['email_verified_at'] = null;
+            }
+
+            // Update password if provided
+            if ($request->filled('password')) {
+                $userData['password'] = Hash::make($request->password);
+            }
+
+            $user->update($userData);
 
             return redirect()->route('admin.users.index')
                 ->with('success', 'User updated successfully.');

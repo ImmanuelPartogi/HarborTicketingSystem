@@ -26,6 +26,7 @@ class User extends Authenticatable
         'id_type',
         'dob',
         'gender',
+        'email_verified_at'
     ];
 
     /**

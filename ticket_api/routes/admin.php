@@ -36,6 +36,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth:admi
 
     // Ferry Management
     Route::resource('ferries', FerryController::class);
+    Route::get('admin/ferries/{ferry}/delete', [FerryController::class, 'delete'])->name('admin.ferries.delete');
 
     // Route Management
     Route::resource('routes', RouteController::class);
