@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasStatusHistory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ScheduleDate extends Model
 {
-    use HasFactory;
+    use HasFactory, HasStatusHistory;
 
     /**
      * The attributes that are mass assignable.
@@ -122,5 +123,26 @@ class ScheduleDate extends Model
             default:
                 return 0;
         }
+    }
+
+    /**
+     * Update schedule date status and record history
+     */
+    public function updateStatus($newStatus, $reason = null, $notes = null)
+    {
+        $oldStatus = $this->status;
+
+        if ($oldStatus === $newStatus) {
+            return false;
+        }
+
+        $this->status = $newStatus;
+        $saved = $this->save();
+
+        if ($saved) {
+            $this->recordStatusChange($oldStatus, $newStatus, $reason, $notes);
+        }
+
+        return $saved;
     }
 }

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasStatusHistory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Route extends Model
 {
-    use HasFactory;
+    use HasFactory, HasStatusHistory;
 
     /**
      * The attributes that are mass assignable.
@@ -94,5 +95,27 @@ class Route extends Model
     public function isActive()
     {
         return $this->status === 'ACTIVE';
+    }
+
+    /**
+     * Update route status and record history
+     */
+    public function updateStatus($newStatus, $reason = null, $notes = null)
+    {
+        $oldStatus = $this->status;
+
+        if ($oldStatus === $newStatus) {
+            return false;
+        }
+
+        $this->status = $newStatus;
+        $this->status_reason = $reason;
+        $saved = $this->save();
+
+        if ($saved) {
+            $this->recordStatusChange($oldStatus, $newStatus, $reason, $notes);
+        }
+
+        return $saved;
     }
 }
