@@ -25,6 +25,7 @@ class Route extends Model
         'bus_price',
         'truck_price',
         'status',
+        'status_reason',
     ];
 
     /**

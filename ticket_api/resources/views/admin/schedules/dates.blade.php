@@ -53,11 +53,11 @@
                     </div>
                     <div>
                         <p class="text-sm text-gray-600">Waktu Keberangkatan:</p>
-                        <p class="font-medium">{{ $schedule->departure_time }}</p>
+                        <p class="font-medium">{{ $schedule->departure_time->format('H:i') }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-600">Estimasi Tiba:</p>
-                        <p class="font-medium">{{ $schedule->arrival_time }}</p>
+                        <p class="font-medium">{{ $schedule->arrival_time->format('H:i') }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-600">Hari Operasi:</p>
@@ -189,21 +189,26 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">{{ $loop->iteration }}</td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm font-medium">
-                                    {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->format('d/m/Y') : '-' }}</td>
+                                    {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->format('d/m/Y') : '-' }}
+                                </td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">
-                                    {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->translatedFormat('l') : '-' }}</td>
+                                    {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->translatedFormat('l') : '-' }}
+                                </td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">
                                     @if (is_object($schedule->ferry))
-                                        <span class="font-medium">{{ is_object($date) ? ($date->passenger_count ?? 0) : 0 }}</span> /
+                                        <span
+                                            class="font-medium">{{ is_object($date) ? $date->passenger_count ?? 0 : 0 }}</span>
+                                        /
                                         {{ $schedule->ferry->capacity_passenger }}
                                     @else
-                                        {{ is_object($date) ? ($date->passenger_count ?? 0) : 0 }} / -
+                                        {{ is_object($date) ? $date->passenger_count ?? 0 : 0 }} / -
                                     @endif
                                 </td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">
                                     @if (is_object($schedule->ferry))
                                         <div class="grid grid-cols-2 gap-1">
-                                            <div>Motor: <span class="font-medium">{{ is_object($date) ? ($date->motorcycle_count ?? 0) : 0 }}</span>
+                                            <div>Motor: <span
+                                                    class="font-medium">{{ is_object($date) ? $date->motorcycle_count ?? 0 : 0 }}</span>
                                                 /
                                                 {{ $schedule->ferry->capacity_vehicle_motorcycle }}</div>
                                             <div>Mobil: <span class="font-medium">{{ $date->car_count ?? 0 }}</span> /
@@ -228,14 +233,12 @@
                                 </td>
                                 <td class="py-3 px-4 border-b border-gray-200 text-sm">
                                     <div class="flex space-x-2">
-                                        <button
-                                            class="edit-date-btn text-yellow-500 hover:text-yellow-700 mr-2"
+                                        <button class="edit-date-btn text-yellow-500 hover:text-yellow-700 mr-2"
                                             data-id="{{ $date->id }}" data-date="{{ $date->date }}"
                                             data-status="{{ $date->status }}" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button
-                                            class="delete-date-btn text-red-500 hover:text-red-700"
+                                        <button class="delete-date-btn text-red-500 hover:text-red-700"
                                             data-id="{{ $date->id }}"
                                             data-date="{{ \Carbon\Carbon::parse($date->date)->format('d/m/Y') }}"
                                             title="Hapus">
@@ -395,7 +398,7 @@
         <div class="flex items-center justify-center h-full w-full p-4">
             <div class="bg-white rounded-lg p-6 w-full max-w-md relative">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
-                    <h3 class="text-lg font-semibold text-gray-800">Edit Tanggal Jadwal</h3>
+                    <h3 class="text-lg font-semibold text-gray-800">Edit Jadwal Kapal</h3>
                     <button type="button" id="closeEditModal" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times"></i>
                     </button>
@@ -416,7 +419,10 @@
                         <select id="edit_status" name="status"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                             <option value="AVAILABLE">Tersedia</option>
-                            <option value="UNAVAILABLE">Tidak Tersedia</option>
+                            <option value="FULL">Penuh</option>
+                            <option value="CANCELLED">Dibatalkan</option>
+                            <option value="DEPARTED">Sudah Berangkat</option>
+                            <option value="WEATHER_ISSUE">Masalah Cuaca</option>
                         </select>
                     </div>
 
@@ -612,21 +618,28 @@
         const closeEditModal = document.getElementById('closeEditModal');
         const cancelEditBtn = document.getElementById('cancelEditBtn');
 
+        // Dapatkan ID jadwal dari URL
+        const urlParts = window.location.pathname.split('/');
+        const scheduleId = urlParts[urlParts.indexOf('schedules') + 1];
+
         editButtons.forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
                 const dateId = this.getAttribute('data-id');
-                const date = this.getAttribute('data-date');
+                const dateValue = this.getAttribute('data-date');
                 const status = this.getAttribute('data-status');
-                console.log(
-                    `Edit button clicked for date: ${date}, status: ${status}, id: ${dateId}`
-                );
 
+                console.log('Edit date ID:', dateId);
+                console.log('Edit date value:', dateValue);
+                console.log('Edit status:', status);
+
+                // Atur nilai form
                 document.getElementById('edit_date_id').value = dateId;
-                document.getElementById('edit_date').value = date;
+                document.getElementById('edit_date').value = dateValue;
                 document.getElementById('edit_status').value = status;
 
-                editDateForm.action = `/admin/schedules/dates/${dateId}`;
+                // Set URL aksi form yang benar
+                editDateForm.action = `/admin/schedules/${scheduleId}/dates/${dateId}`;
                 openModal('editDateModal');
             });
         });

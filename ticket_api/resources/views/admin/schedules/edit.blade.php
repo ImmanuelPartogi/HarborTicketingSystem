@@ -46,11 +46,11 @@
                 </div>
                 <div>
                     <p class="text-sm text-gray-600">Waktu Keberangkatan:</p>
-                    <p class="font-medium">{{ $schedule->departure_time ?? '-' }}</p>
+                    <p class="font-medium">{{ $schedule->departure_time->format('H:i') ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-600">Estimasi Tiba:</p>
-                    <p class="font-medium">{{ $schedule->arrival_time ?? '-' }}</p>
+                    <p class="font-medium">{{ $schedule->arrival_time->format('H:i') ?? '-' }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-600">Status:</p>

@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Route;
 use App\Models\Schedule;
+use App\Models\ScheduleDate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @method \Illuminate\Routing\Controller middleware($middleware, array $options = [])
@@ -37,7 +39,7 @@ class RouteController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('origin', 'like', "%{$search}%")
-                  ->orWhere('destination', 'like', "%{$search}%");
+                    ->orWhere('destination', 'like', "%{$search}%");
             });
         }
 
@@ -216,6 +218,8 @@ class RouteController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:ACTIVE,INACTIVE,WEATHER_ISSUE',
+            'reason' => 'nullable|string|max:255',
+            'apply_to_schedules' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -223,12 +227,103 @@ class RouteController extends Controller
         }
 
         try {
-            $route->status = $request->status;
+            DB::beginTransaction();
+
+            // Update route status
+            $oldStatus = $route->status;
+            $newStatus = $request->status;
+
+            $route->status = $newStatus;
+            $route->status_reason = $request->reason ?? null; // Simpan alasan perubahan status
             $route->save();
 
-            return back()->with('success', 'Route status updated successfully');
+            // Jika checkbox apply_to_schedules dicentang atau rute berubah ke INACTIVE/WEATHER_ISSUE
+            if ($request->apply_to_schedules || in_array($newStatus, ['INACTIVE', 'WEATHER_ISSUE'])) {
+
+                // Map status rute ke status jadwal yang sesuai
+                $scheduleStatus = $this->mapRouteStatusToScheduleStatus($newStatus);
+
+                // Update semua jadwal yang menggunakan rute ini
+                $schedules = Schedule::where('route_id', $route->id)->get();
+
+                foreach ($schedules as $schedule) {
+                    $schedule->status = $scheduleStatus;
+                    $schedule->save();
+
+                    // Jika status adalah WEATHER_ISSUE, tandai semua tanggal jadwal yang akan datang
+                    if ($newStatus === 'WEATHER_ISSUE') {
+                        ScheduleDate::where('schedule_id', $schedule->id)
+                            ->where('date', '>=', now()->format('Y-m-d'))
+                            ->update(['status' => 'WEATHER_ISSUE']);
+                    }
+
+                    // Jika status adalah INACTIVE, tandai semua tanggal jadwal yang akan datang
+                    if ($newStatus === 'INACTIVE') {
+                        ScheduleDate::where('schedule_id', $schedule->id)
+                            ->where('date', '>=', now()->format('Y-m-d'))
+                            ->update(['status' => 'UNAVAILABLE']);
+                    }
+
+                    // Jika status kembali ACTIVE, tandai tanggal jadwal kembali AVAILABLE
+                    if ($oldStatus !== 'ACTIVE' && $newStatus === 'ACTIVE') {
+                        ScheduleDate::where('schedule_id', $schedule->id)
+                            ->where('date', '>=', now()->format('Y-m-d'))
+                            ->where('status', 'in', ['WEATHER_ISSUE', 'UNAVAILABLE'])
+                            ->update(['status' => 'AVAILABLE']);
+                    }
+                }
+
+                // Mencatat jumlah jadwal yang diperbarui
+                $affectedSchedulesCount = $schedules->count();
+                $message = "Status rute diperbarui menjadi {$this->getStatusLabel($newStatus)}.";
+
+                if ($affectedSchedulesCount > 0) {
+                    $message .= " {$affectedSchedulesCount} jadwal terkait telah diperbarui.";
+                }
+            } else {
+                $message = "Status rute diperbarui menjadi {$this->getStatusLabel($newStatus)}.";
+            }
+
+            DB::commit();
+
+            return back()->with('success', $message);
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to update route status: ' . $e->getMessage());
+            DB::rollBack();
+            return back()->with('error', 'Gagal memperbarui status rute: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Tambahkan method pembantu untuk mapping status rute ke status jadwal
+     */
+    private function mapRouteStatusToScheduleStatus($routeStatus)
+    {
+        switch ($routeStatus) {
+            case 'ACTIVE':
+                return 'ACTIVE';
+            case 'INACTIVE':
+                return 'CANCELLED';
+            case 'WEATHER_ISSUE':
+                return 'DELAYED';
+            default:
+                return 'ACTIVE';
+        }
+    }
+
+    /**
+     * Tambahkan method pembantu untuk format label status
+     */
+    private function getStatusLabel($status)
+    {
+        switch ($status) {
+            case 'ACTIVE':
+                return 'Aktif';
+            case 'INACTIVE':
+                return 'Tidak Aktif';
+            case 'WEATHER_ISSUE':
+                return 'Masalah Cuaca';
+            default:
+                return $status;
         }
     }
 }

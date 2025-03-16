@@ -10,6 +10,7 @@ use App\Models\ScheduleDate;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @method \Illuminate\Routing\Controller middleware($middleware, array $options = [])
@@ -392,15 +393,11 @@ class ScheduleController extends Controller
      * @param string $date
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function updateDate(Request $request, Schedule $schedule, $date)
+    public function updateDate(Request $request, Schedule $schedule, $dateId)
     {
         $validator = Validator::make($request->all(), [
+            'date' => 'required|date',
             'status' => 'required|in:AVAILABLE,FULL,CANCELLED,DEPARTED,WEATHER_ISSUE',
-            'passenger_count' => 'nullable|integer|min:0',
-            'motorcycle_count' => 'nullable|integer|min:0',
-            'car_count' => 'nullable|integer|min:0',
-            'bus_count' => 'nullable|integer|min:0',
-            'truck_count' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -408,21 +405,102 @@ class ScheduleController extends Controller
         }
 
         try {
-            $scheduleDate = ScheduleDate::updateOrCreate(
-                ['schedule_id' => $schedule->id, 'date' => $date],
+            // Temukan jadwal berdasarkan ID
+            $scheduleDate = ScheduleDate::findOrFail($dateId);
+
+            // Pastikan jadwal ini milik schedule yang benar
+            if ($scheduleDate->schedule_id != $schedule->id) {
+                return back()->with('error', 'Data jadwal tidak valid');
+            }
+
+            // Update hanya tanggal dan status
+            $scheduleDate->update([
+                'date' => $request->date,
+                'status' => $request->status,
+            ]);
+
+            return back()->with('success', 'Jadwal berhasil diperbarui');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memperbarui jadwal: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reschedule a delayed schedule (typically due to weather issues).
+     *
+     * @param Request $request
+     * @param Schedule $schedule
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function reschedule(Request $request, Schedule $schedule)
+    {
+        $validator = Validator::make($request->all(), [
+            'date' => 'required|date|after_or_equal:today',
+            'time' => 'required|date_format:H:i',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Simpan waktu keberangkatan lama untuk notifikasi
+            $oldDepartureTime = $schedule->departure_time->format('H:i');
+            $oldDate = now()->format('d/m/Y');
+
+            // Hitung waktu tiba baru berdasarkan durasi perjalanan
+            $newDepartureTime = $request->time;
+            $duration = $schedule->route->duration ?? 60; // durasi dalam menit, default 60 menit
+
+            // Parse waktu keberangkatan dan tambahkan durasi untuk mendapatkan waktu tiba
+            $departureDateTime = Carbon::createFromFormat('H:i', $newDepartureTime);
+            $arrivalDateTime = $departureDateTime->copy()->addMinutes($duration);
+            $newArrivalTime = $arrivalDateTime->format('H:i');
+
+            // Update jadwal jika rute masih dalam status WEATHER_ISSUE
+            if ($schedule->route->status === 'WEATHER_ISSUE') {
+                // Jadwal tetap DELAYED, tapi dengan waktu yang baru
+                // Pengguna bisa mengubah route ke ACTIVE nanti jika masalah cuaca sudah selesai
+                $schedule->update([
+                    'departure_time' => $newDepartureTime,
+                    'arrival_time' => $newArrivalTime,
+                ]);
+            } else {
+                // Jika status rute sudah berubah (misalnya kembali ACTIVE),
+                // maka jadwal juga bisa diubah ke ACTIVE
+                $schedule->update([
+                    'departure_time' => $newDepartureTime,
+                    'arrival_time' => $newArrivalTime,
+                    'status' => 'ACTIVE'
+                ]);
+            }
+
+            // Buat tanggal jadwal baru untuk tanggal reschedule
+            $newDate = $request->date;
+            ScheduleDate::updateOrCreate(
+                ['schedule_id' => $schedule->id, 'date' => $newDate],
                 [
-                    'status' => $request->status,
-                    'passenger_count' => $request->passenger_count ?? 0,
-                    'motorcycle_count' => $request->motorcycle_count ?? 0,
-                    'car_count' => $request->car_count ?? 0,
-                    'bus_count' => $request->bus_count ?? 0,
-                    'truck_count' => $request->truck_count ?? 0,
+                    'status' => 'AVAILABLE',
+                    'passenger_count' => 0,
+                    'motorcycle_count' => 0,
+                    'car_count' => 0,
+                    'bus_count' => 0,
+                    'truck_count' => 0
                 ]
             );
 
-            return back()->with('success', 'Schedule date updated successfully');
+            DB::commit();
+
+            // Format tanggal dan waktu baru untuk ditampilkan
+            $newDateFormatted = Carbon::parse($newDate)->format('d/m/Y');
+
+            return redirect()->route('admin.schedules.index')
+                ->with('success', "Jadwal berhasil di-reschedule dari {$oldDate} {$oldDepartureTime} ke {$newDateFormatted} {$newDepartureTime}");
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to update schedule date: ' . $e->getMessage());
+            DB::rollBack();
+            return back()->with('error', 'Gagal melakukan reschedule: ' . $e->getMessage());
         }
     }
 }
