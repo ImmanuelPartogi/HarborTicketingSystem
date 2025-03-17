@@ -6,20 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('status_histories', function (Blueprint $table) {
             $table->id();
-            $table->morphs('statusable'); // Untuk Route, Schedule, atau ScheduleDate
-            $table->string('old_status')->nullable();
-            $table->string('new_status');
-            $table->string('reason')->nullable();
-            $table->text('notes')->nullable();
-            $table->foreignId('admin_id')->nullable()->constrained('admins');
             $table->timestamps();
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('status_histories');

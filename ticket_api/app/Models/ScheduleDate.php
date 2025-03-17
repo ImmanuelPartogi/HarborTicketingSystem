@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
-use App\Traits\HasStatusHistory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ScheduleDate extends Model
 {
-    use HasFactory, HasStatusHistory;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var array
      */
     protected $fillable = [
         'schedule_id',
@@ -24,12 +23,14 @@ class ScheduleDate extends Model
         'bus_count',
         'truck_count',
         'status',
+        'status_reason',
+        'adjustment_id'
     ];
 
     /**
      * The attributes that should be cast.
      *
-     * @var array<string, string>
+     * @var array
      */
     protected $casts = [
         'date' => 'date',
@@ -91,6 +92,16 @@ class ScheduleDate extends Model
     }
 
     /**
+     * Check if the schedule date is affected by weather issues.
+     *
+     * @return bool
+     */
+    public function isWeatherAffected()
+    {
+        return $this->status === 'WEATHER_ISSUE';
+    }
+
+    /**
      * Get the remaining passenger capacity.
      *
      * @return int
@@ -126,23 +137,52 @@ class ScheduleDate extends Model
     }
 
     /**
-     * Update schedule date status and record history
+     * Get user-friendly status label
+     *
+     * @return string
      */
-    public function updateStatus($newStatus, $reason = null, $notes = null)
+    public function getStatusLabelAttribute()
     {
-        $oldStatus = $this->status;
-
-        if ($oldStatus === $newStatus) {
-            return false;
+        switch ($this->status) {
+            case 'AVAILABLE':
+                return 'Tersedia';
+            case 'UNAVAILABLE':
+                return 'Tidak Tersedia';
+            case 'FULL':
+                return 'Penuh';
+            case 'CANCELLED':
+                return 'Dibatalkan';
+            case 'DEPARTED':
+                return 'Berangkat';
+            case 'WEATHER_ISSUE':
+                return 'Masalah Cuaca';
+            default:
+                return $this->status;
         }
+    }
 
-        $this->status = $newStatus;
-        $saved = $this->save();
-
-        if ($saved) {
-            $this->recordStatusChange($oldStatus, $newStatus, $reason, $notes);
+    /**
+     * Get status color for UI
+     *
+     * @return string
+     */
+    public function getStatusColorAttribute()
+    {
+        switch ($this->status) {
+            case 'AVAILABLE':
+                return 'success';
+            case 'UNAVAILABLE':
+                return 'secondary';
+            case 'FULL':
+                return 'warning';
+            case 'CANCELLED':
+                return 'danger';
+            case 'DEPARTED':
+                return 'info';
+            case 'WEATHER_ISSUE':
+                return 'warning';
+            default:
+                return 'secondary';
         }
-
-        return $saved;
     }
 }

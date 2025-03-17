@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * @method \Illuminate\Routing\Controller middleware($middleware, array $options = [])
@@ -37,6 +38,7 @@ class ScheduleController extends Controller
         $routeId = $request->query('route_id');
         $ferryId = $request->query('ferry_id');
         $status = $request->query('status');
+        $dateFilter = $request->query('date');
 
         $query = Schedule::with(['route', 'ferry']);
 
@@ -50,6 +52,13 @@ class ScheduleController extends Controller
 
         if ($status) {
             $query->where('status', $status);
+        }
+
+        if ($dateFilter) {
+            // If date filter is applied, include schedules that have dates on that day
+            $query->whereHas('scheduleDates', function ($q) use ($dateFilter) {
+                $q->where('date', $dateFilter);
+            });
         }
 
         if ($search) {
@@ -66,7 +75,7 @@ class ScheduleController extends Controller
         $routes = Route::orderBy('origin')->orderBy('destination')->get();
         $ferries = Ferry::orderBy('name')->get();
 
-        return view('admin.schedules.index', compact('schedules', 'routes', 'ferries', 'search', 'routeId', 'ferryId', 'status'));
+        return view('admin.schedules.index', compact('schedules', 'routes', 'ferries', 'search', 'routeId', 'ferryId', 'status', 'dateFilter'));
     }
 
     /**
@@ -291,7 +300,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Store a new schedule date.
+     * Store a new schedule date with enhanced operation day validation.
      *
      * @param Schedule $schedule
      * @param Request $request
@@ -299,8 +308,8 @@ class ScheduleController extends Controller
      */
     public function storeDates(Schedule $schedule, Request $request)
     {
-        $request->validate([
-            'date_type' => 'required|in:single,range,days',
+        $validator = Validator::make($request->all(), [
+            'date_type' => 'required|in:single,range,days,multiple',
             'single_date' => 'required_if:date_type,single|date',
             'start_date' => 'required_if:date_type,range|date',
             'end_date' => 'required_if:date_type,range|date|after_or_equal:start_date',
@@ -308,46 +317,55 @@ class ScheduleController extends Controller
             'days.*' => 'integer|between:0,7',
             'days_start_date' => 'required_if:date_type,days|date',
             'days_end_date' => 'required_if:date_type,days|date|after_or_equal:days_start_date',
+            'selected_dates' => 'required_if:date_type,multiple|string',
             'status' => 'required|in:AVAILABLE,UNAVAILABLE',
         ]);
 
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput()
+                ->with('error', 'Validasi gagal, silakan periksa input Anda.');
+        }
+
         try {
+            // Get schedule operation days
+            $operationDays = explode(',', $schedule->days);
+
+            // Arrays to track results
+            $addedDates = [];
+            $skippedDates = [];
+
             // Handle different date types
             if ($request->date_type === 'single') {
-                // Create single date
-                ScheduleDate::updateOrCreate(
-                    ['schedule_id' => $schedule->id, 'date' => $request->single_date],
-                    [
-                        'status' => $request->status,
-                        'passenger_count' => 0,
-                        'motorcycle_count' => 0,
-                        'car_count' => 0,
-                        'bus_count' => 0,
-                        'truck_count' => 0
-                    ]
-                );
+                // Single date mode - validate against operation days
+                $date = Carbon::parse($request->single_date);
+                $dayOfWeek = $date->dayOfWeekIso; // 1 (Mon) to 7 (Sun)
+
+                if (in_array((string)$dayOfWeek, $operationDays)) {
+                    $this->createOrUpdateScheduleDate($schedule, $date->format('Y-m-d'), $request->status);
+                    $addedDates[] = $date->format('d/m/Y');
+                } else {
+                    $skippedDates[] = $date->format('d/m/Y');
+                }
             } elseif ($request->date_type === 'range') {
-                // Create date range
+                // Range date mode - only create dates that match operation days
                 $startDate = Carbon::parse($request->start_date);
                 $endDate = Carbon::parse($request->end_date);
                 $currentDate = $startDate->copy();
 
                 while ($currentDate->lte($endDate)) {
-                    ScheduleDate::updateOrCreate(
-                        ['schedule_id' => $schedule->id, 'date' => $currentDate->format('Y-m-d')],
-                        [
-                            'status' => $request->status,
-                            'passenger_count' => 0,
-                            'motorcycle_count' => 0,
-                            'car_count' => 0,
-                            'bus_count' => 0,
-                            'truck_count' => 0
-                        ]
-                    );
+                    $dayOfWeek = $currentDate->dayOfWeekIso; // 1 (Mon) to 7 (Sun)
+
+                    if (in_array((string)$dayOfWeek, $operationDays)) {
+                        $this->createOrUpdateScheduleDate($schedule, $currentDate->format('Y-m-d'), $request->status);
+                        $addedDates[] = $currentDate->format('d/m/Y');
+                    } else {
+                        $skippedDates[] = $currentDate->format('d/m/Y');
+                    }
+
                     $currentDate->addDay();
                 }
             } elseif ($request->date_type === 'days') {
-                // Create specific days in date range
+                // Create specific days in date range (original implementation)
                 $startDate = Carbon::parse($request->days_start_date);
                 $endDate = Carbon::parse($request->days_end_date);
                 $currentDate = $startDate->copy();
@@ -362,42 +380,89 @@ class ScheduleController extends Controller
                     }
 
                     if (in_array($dayOfWeek, $selectedDays)) {
-                        ScheduleDate::updateOrCreate(
-                            ['schedule_id' => $schedule->id, 'date' => $currentDate->format('Y-m-d')],
-                            [
-                                'status' => $request->status,
-                                'passenger_count' => 0,
-                                'motorcycle_count' => 0,
-                                'car_count' => 0,
-                                'bus_count' => 0,
-                                'truck_count' => 0
-                            ]
-                        );
+                        $this->createOrUpdateScheduleDate($schedule, $currentDate->format('Y-m-d'), $request->status);
+                        $addedDates[] = $currentDate->format('d/m/Y');
+                    } else {
+                        $skippedDates[] = $currentDate->format('d/m/Y');
                     }
                     $currentDate->addDay();
+                }
+            } elseif ($request->date_type === 'multiple') {
+                // Multiple date selection mode (new implementation)
+                if (!empty($request->selected_dates)) {
+                    $selectedDates = explode(',', $request->selected_dates);
+
+                    foreach ($selectedDates as $dateString) {
+                        $date = Carbon::parse($dateString);
+                        $this->createOrUpdateScheduleDate($schedule, $date->format('Y-m-d'), $request->status);
+                        $addedDates[] = $date->format('d/m/Y');
+                    }
+                }
+            }
+
+            // Create success message
+            if (count($addedDates) > 0) {
+                $message = count($addedDates) . ' jadwal berhasil ditambahkan';
+
+                if (count($addedDates) <= 5) {
+                    $message .= ' (' . implode(', ', $addedDates) . ')';
+                }
+
+                if (count($skippedDates) > 0) {
+                    $message .= '. ' . count($skippedDates) . ' tanggal dilewati karena tidak sesuai hari operasi.';
+                }
+            } else {
+                if (count($skippedDates) > 0) {
+                    $message = 'Tidak ada jadwal yang ditambahkan karena semua tanggal tidak sesuai dengan hari operasi kapal (' . implode(', ', $skippedDates) . ').';
+                } else {
+                    $message = 'Tidak ada jadwal yang ditambahkan.';
                 }
             }
 
             return redirect()->route('admin.schedules.dates', $schedule)
-                ->with('success', 'Tanggal jadwal berhasil ditambahkan.');
+                ->with('success', $message);
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal menambahkan tanggal jadwal: ' . $e->getMessage());
+            return back()->with('error', 'Gagal menambahkan tanggal jadwal: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
     /**
-     * Update a specific schedule date.
+     * Helper method to create or update a schedule date.
+     *
+     * @param Schedule $schedule
+     * @param string $date
+     * @param string $status
+     * @return ScheduleDate
+     */
+    private function createOrUpdateScheduleDate(Schedule $schedule, $date, $status)
+    {
+        return ScheduleDate::updateOrCreate(
+            ['schedule_id' => $schedule->id, 'date' => $date],
+            [
+                'status' => $status, // Menggunakan parameter $status, bukan $request->status
+                'passenger_count' => 0,
+                'motorcycle_count' => 0,
+                'car_count' => 0,
+                'bus_count' => 0,
+                'truck_count' => 0
+            ]
+        );
+    }
+
+    /**
+     * Update a specific schedule date status.
      *
      * @param Request $request
      * @param Schedule $schedule
-     * @param string $date
+     * @param int $dateId
      * @return \Illuminate\Http\RedirectResponse
      */
     public function updateDate(Request $request, Schedule $schedule, $dateId)
     {
         $validator = Validator::make($request->all(), [
-            'date' => 'required|date',
-            'status' => 'required|in:AVAILABLE,FULL,CANCELLED,DEPARTED,WEATHER_ISSUE',
+            'status' => 'required|in:AVAILABLE,UNAVAILABLE',
+            'status_reason' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -405,28 +470,49 @@ class ScheduleController extends Controller
         }
 
         try {
-            // Temukan jadwal berdasarkan ID
+            // Find schedule date by ID
             $scheduleDate = ScheduleDate::findOrFail($dateId);
 
-            // Pastikan jadwal ini milik schedule yang benar
+            // Ensure this schedule date belongs to the correct schedule
             if ($scheduleDate->schedule_id != $schedule->id) {
                 return back()->with('error', 'Data jadwal tidak valid');
             }
 
-            // Update hanya tanggal dan status
-            $scheduleDate->update([
-                'date' => $request->date,
-                'status' => $request->status,
-            ]);
+            // Check if status was changed
+            $statusChanged = $request->status != $scheduleDate->status;
+            $oldStatus = $scheduleDate->status;
 
-            return back()->with('success', 'Jadwal berhasil diperbarui');
+            // Update the status
+            $updateData = [
+                'status' => $request->status
+            ];
+
+            // Add status reason if provided
+            if ($request->filled('status_reason')) {
+                $updateData['status_reason'] = $request->status_reason;
+            }
+
+            // Update the schedule date
+            $scheduleDate->update($updateData);
+
+            // Prepare success message
+            if ($statusChanged) {
+                $oldStatusLabel = $oldStatus == 'AVAILABLE' ? 'Tersedia' : 'Tidak Tersedia';
+                $newStatusLabel = $request->status == 'AVAILABLE' ? 'Tersedia' : 'Tidak Tersedia';
+                $message = "Status jadwal berhasil diubah dari \"{$oldStatusLabel}\" menjadi \"{$newStatusLabel}\"";
+            } else {
+                $message = "Status jadwal berhasil diperbarui";
+            }
+
+            return back()->with('success', $message);
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal memperbarui jadwal: ' . $e->getMessage());
+            return back()->with('error', 'Gagal memperbarui status jadwal: ' . $e->getMessage());
         }
     }
 
     /**
      * Reschedule a delayed schedule (typically due to weather issues).
+     * Enhanced to support the more flexible status system.
      *
      * @param Request $request
      * @param Schedule $schedule
@@ -437,6 +523,11 @@ class ScheduleController extends Controller
         $validator = Validator::make($request->all(), [
             'date' => 'required|date|after_or_equal:today',
             'time' => 'required|date_format:H:i',
+            'affected_dates' => 'required|array',
+            'affected_dates.*' => 'date',
+            'reschedule_type' => 'required|in:all,selected',
+            'status_after_reschedule' => 'required|in:ACTIVE,DELAYED',
+            'notification_message' => 'nullable|string|max:500'
         ]);
 
         if ($validator->fails()) {
@@ -446,40 +537,43 @@ class ScheduleController extends Controller
         try {
             DB::beginTransaction();
 
-            // Simpan waktu keberangkatan lama untuk notifikasi
+            // Save the old schedule details for notification
             $oldDepartureTime = $schedule->departure_time->format('H:i');
-            $oldDate = now()->format('d/m/Y');
+            $oldArrivalTime = $schedule->arrival_time->format('H:i');
 
-            // Hitung waktu tiba baru berdasarkan durasi perjalanan
+            // Calculate new arrival time based on route duration
             $newDepartureTime = $request->time;
-            $duration = $schedule->route->duration ?? 60; // durasi dalam menit, default 60 menit
+            $duration = $schedule->route->duration ?? 60; // Duration in minutes, default 60 minutes
 
-            // Parse waktu keberangkatan dan tambahkan durasi untuk mendapatkan waktu tiba
+            // Parse departure time and add duration to get arrival time
             $departureDateTime = Carbon::createFromFormat('H:i', $newDepartureTime);
             $arrivalDateTime = $departureDateTime->copy()->addMinutes($duration);
             $newArrivalTime = $arrivalDateTime->format('H:i');
 
-            // Update jadwal jika rute masih dalam status WEATHER_ISSUE
-            if ($schedule->route->status === 'WEATHER_ISSUE') {
-                // Jadwal tetap DELAYED, tapi dengan waktu yang baru
-                // Pengguna bisa mengubah route ke ACTIVE nanti jika masalah cuaca sudah selesai
-                $schedule->update([
-                    'departure_time' => $newDepartureTime,
-                    'arrival_time' => $newArrivalTime,
-                ]);
-            } else {
-                // Jika status rute sudah berubah (misalnya kembali ACTIVE),
-                // maka jadwal juga bisa diubah ke ACTIVE
-                $schedule->update([
-                    'departure_time' => $newDepartureTime,
-                    'arrival_time' => $newArrivalTime,
-                    'status' => 'ACTIVE'
-                ]);
-            }
+            // Store the adjustment details
+            $adjustmentId = Str::uuid();
+            $adjustmentDetails = [
+                'id' => $adjustmentId,
+                'schedule_id' => $schedule->id,
+                'old_departure' => $oldDepartureTime,
+                'old_arrival' => $oldArrivalTime,
+                'new_departure' => $newDepartureTime,
+                'new_arrival' => $newArrivalTime,
+                'new_date' => $request->date,
+                'created_at' => now()->toDateTimeString(),
+                'notification_message' => $request->notification_message ?? 'Jadwal telah diubah karena alasan operasional.'
+            ];
 
-            // Buat tanggal jadwal baru untuk tanggal reschedule
+            // Update schedule times and status
+            $schedule->update([
+                'departure_time' => $newDepartureTime,
+                'arrival_time' => $newArrivalTime,
+                'status' => $request->status_after_reschedule
+            ]);
+
+            // Create new schedule date for the rescheduled date
             $newDate = $request->date;
-            ScheduleDate::updateOrCreate(
+            $newScheduleDate = ScheduleDate::updateOrCreate(
                 ['schedule_id' => $schedule->id, 'date' => $newDate],
                 [
                     'status' => 'AVAILABLE',
@@ -491,16 +585,60 @@ class ScheduleController extends Controller
                 ]
             );
 
+            // Handle affected dates based on reschedule type
+            if ($request->reschedule_type === 'all') {
+                // Update all weather-affected dates to cancelled
+                ScheduleDate::where('schedule_id', $schedule->id)
+                    ->where('date', '>=', now()->format('Y-m-d'))
+                    ->where('status', 'WEATHER_ISSUE')
+                    ->update(['status' => 'CANCELLED']);
+            } else {
+                // Update only selected dates
+                foreach ($request->affected_dates as $affectedDate) {
+                    ScheduleDate::where('schedule_id', $schedule->id)
+                        ->where('date', $affectedDate)
+                        ->update(['status' => 'CANCELLED']);
+                }
+            }
+
+            // You might want to store the adjustment history in a dedicated table
+            // For now, we'll assume there's a method to handle this
+            // $this->storeScheduleAdjustment($adjustmentDetails);
+
             DB::commit();
 
-            // Format tanggal dan waktu baru untuk ditampilkan
+            // Format dates for display
             $newDateFormatted = Carbon::parse($newDate)->format('d/m/Y');
 
             return redirect()->route('admin.schedules.index')
-                ->with('success', "Jadwal berhasil di-reschedule dari {$oldDate} {$oldDepartureTime} ke {$newDateFormatted} {$newDepartureTime}");
+                ->with('success', "Jadwal berhasil disesuaikan ke {$newDateFormatted} {$newDepartureTime}. ID penyesuaian: {$adjustmentId}");
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal melakukan reschedule: ' . $e->getMessage());
+            return back()->with('error', 'Gagal melakukan penyesuaian jadwal: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Get all schedule dates affected by weather issues for a specific schedule.
+     *
+     * @param Schedule $schedule
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getWeatherAffectedDates(Schedule $schedule)
+    {
+        $dates = ScheduleDate::where('schedule_id', $schedule->id)
+            ->where('date', '>=', now()->format('Y-m-d'))
+            ->where('status', 'WEATHER_ISSUE')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($date) {
+                return [
+                    'id' => $date->id,
+                    'date' => $date->date->format('Y-m-d'),
+                    'formatted_date' => $date->date->format('d/m/Y')
+                ];
+            });
+
+        return response()->json(['dates' => $dates]);
     }
 }
