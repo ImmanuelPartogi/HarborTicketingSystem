@@ -125,11 +125,11 @@
                     </tr>
                     <tr>
                         <td class="py-2 text-gray-600">Dibuat pada:</td>
-                        <td class="py-2 font-medium text-gray-700">{{ $schedule->created_at->format('d/m/Y H:i') }}</td>
+                        <td class="py-2 font-medium text-gray-700">{{ $schedule->created_at->format('d M Y H:i') }}</td>
                     </tr>
                     <tr>
                         <td class="py-2 text-gray-600">Terakhir diperbarui:</td>
-                        <td class="py-2 font-medium text-gray-700">{{ $schedule->updated_at->format('d/m/Y H:i') }}</td>
+                        <td class="py-2 font-medium text-gray-700">{{ $schedule->updated_at->format('d M Y H:i') }}</td>
                     </tr>
                 </table>
             </div>

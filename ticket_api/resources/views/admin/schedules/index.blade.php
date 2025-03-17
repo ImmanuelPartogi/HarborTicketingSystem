@@ -229,13 +229,13 @@
                                         @php
                                             $days = explode(',', $schedule->days);
                                             $dayNames = [
-                                                '1' => 'Sen',
-                                                '2' => 'Sel',
-                                                '3' => 'Rab',
-                                                '4' => 'Kam',
-                                                '5' => 'Jum',
-                                                '6' => 'Sab',
-                                                '7' => 'Min',
+                                                '1' => 'Senin',
+                                                '2' => 'Selasa',
+                                                '3' => 'Rabu',
+                                                '4' => 'Kamis',
+                                                '5' => 'Jumat',
+                                                '6' => 'Sabtu',
+                                                '7' => 'Minggu',
                                             ];
                                         @endphp
 

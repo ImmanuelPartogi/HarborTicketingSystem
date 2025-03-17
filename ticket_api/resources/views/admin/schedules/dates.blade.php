@@ -60,17 +60,6 @@
                             </p>
                         </div>
                         <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-sm text-gray-500 mb-1">Kapal:</p>
-                            <p class="font-medium text-gray-800">
-                                @if (is_object($schedule->ferry))
-                                    <i class="fas fa-ship text-blue-500 mr-1"></i>
-                                    {{ $schedule->ferry->name }}
-                                @else
-                                    <span class="text-red-500">Kapal tidak tersedia</span>
-                                @endif
-                            </p>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-lg">
                             <p class="text-sm text-gray-500 mb-1">Waktu Keberangkatan:</p>
                             <p class="font-medium text-gray-800">
                                 <i class="fas fa-clock text-green-500 mr-1"></i>
@@ -82,6 +71,17 @@
                             <p class="font-medium text-gray-800">
                                 <i class="fas fa-hourglass-end text-green-500 mr-1"></i>
                                 {{ $schedule->arrival_time->format('H:i') }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500 mb-1">Kapal:</p>
+                            <p class="font-medium text-gray-800">
+                                @if (is_object($schedule->ferry))
+                                    <i class="fas fa-ship text-blue-500 mr-1"></i>
+                                    {{ $schedule->ferry->name }}
+                                @else
+                                    <span class="text-red-500">Kapal tidak tersedia</span>
+                                @endif
                             </p>
                         </div>
                         <div class="bg-gray-50 p-3 rounded-lg">
