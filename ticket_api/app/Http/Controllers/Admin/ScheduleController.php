@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @method \Illuminate\Routing\Controller middleware($middleware, array $options = [])
@@ -300,7 +301,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Store a new schedule date with enhanced operation day validation.
+     * Store a new schedule date with enhanced operation day validation and debug logging.
      *
      * @param Schedule $schedule
      * @param Request $request
@@ -308,37 +309,74 @@ class ScheduleController extends Controller
      */
     public function storeDates(Schedule $schedule, Request $request)
     {
+        // Log semua data request untuk debug
+        Log::info('Schedule Date Store Request', [
+            'schedule_id' => $schedule->id,
+            'all_data' => $request->all()
+        ]);
+
+        // Perbaikan: Validasi yang lebih jelas dan menampilkan pesan lebih informatif
         $validator = Validator::make($request->all(), [
             'date_type' => 'required|in:single,range,days,multiple',
             'single_date' => 'required_if:date_type,single|date',
             'start_date' => 'required_if:date_type,range|date',
             'end_date' => 'required_if:date_type,range|date|after_or_equal:start_date',
             'days' => 'required_if:date_type,days|array',
-            'days.*' => 'integer|between:0,7',
+            'days.*' => 'required_if:date_type,days|integer|between:1,7',
             'days_start_date' => 'required_if:date_type,days|date',
             'days_end_date' => 'required_if:date_type,days|date|after_or_equal:days_start_date',
-            'selected_dates' => 'required_if:date_type,multiple|string',
+            'selected_dates' => 'required_if:date_type,multiple',
             'status' => 'required|in:AVAILABLE,UNAVAILABLE',
+        ], [
+            'date_type.required' => 'Tipe penambahan tanggal harus dipilih',
+            'date_type.in' => 'Tipe penambahan tanggal tidak valid',
+            'single_date.required_if' => 'Tanggal harus diisi untuk tipe tanggal tunggal',
+            'start_date.required_if' => 'Tanggal mulai harus diisi untuk tipe rentang tanggal',
+            'end_date.required_if' => 'Tanggal akhir harus diisi untuk tipe rentang tanggal',
+            'end_date.after_or_equal' => 'Tanggal akhir harus setelah atau sama dengan tanggal mulai',
+            'days.required_if' => 'Minimal satu hari harus dipilih untuk tipe hari tertentu',
+            'days_start_date.required_if' => 'Tanggal mulai harus diisi untuk tipe hari tertentu',
+            'days_end_date.required_if' => 'Tanggal akhir harus diisi untuk tipe hari tertentu',
+            'days_end_date.after_or_equal' => 'Tanggal akhir harus setelah atau sama dengan tanggal mulai',
+            'selected_dates.required_if' => 'Minimal satu tanggal harus dipilih untuk tipe pilih beberapa tanggal',
+            'status.required' => 'Status jadwal harus dipilih',
+            'status.in' => 'Status jadwal tidak valid'
         ]);
 
         if ($validator->fails()) {
+            // Log kegagalan validasi untuk debug
+            Log::warning('Schedule Date Validation Failed', [
+                'schedule_id' => $schedule->id,
+                'errors' => $validator->errors()->toArray()
+            ]);
+
             return back()->withErrors($validator)->withInput()
-                ->with('error', 'Validasi gagal, silakan periksa input Anda.');
+                ->with('error', 'Validasi gagal: ' . implode(', ', $validator->errors()->all()));
         }
 
         try {
-            // Get schedule operation days
+            // Mendapatkan hari operasi jadwal
             $operationDays = explode(',', $schedule->days);
+            Log::info('Operation days', ['days' => $operationDays]);
 
-            // Arrays to track results
+            // Array untuk pelacakan hasil
             $addedDates = [];
             $skippedDates = [];
 
-            // Handle different date types
+            // Tangani berbagai tipe tanggal
             if ($request->date_type === 'single') {
-                // Single date mode - validate against operation days
+                Log::info('Processing single date mode', ['date' => $request->single_date]);
+
+                // Mode tanggal tunggal - validasi terhadap hari operasi
                 $date = Carbon::parse($request->single_date);
-                $dayOfWeek = $date->dayOfWeekIso; // 1 (Mon) to 7 (Sun)
+                $dayOfWeek = $date->dayOfWeekIso; // 1 (Sen) hingga 7 (Min)
+
+                Log::info('Single date day check', [
+                    'date' => $date->format('Y-m-d'),
+                    'dayOfWeek' => $dayOfWeek,
+                    'operationDays' => $operationDays,
+                    'isValid' => in_array((string)$dayOfWeek, $operationDays)
+                ]);
 
                 if (in_array((string)$dayOfWeek, $operationDays)) {
                     $this->createOrUpdateScheduleDate($schedule, $date->format('Y-m-d'), $request->status);
@@ -347,13 +385,24 @@ class ScheduleController extends Controller
                     $skippedDates[] = $date->format('d/m/Y');
                 }
             } elseif ($request->date_type === 'range') {
-                // Range date mode - only create dates that match operation days
+                Log::info('Processing range date mode', [
+                    'start' => $request->start_date,
+                    'end' => $request->end_date
+                ]);
+
+                // Mode rentang tanggal - hanya membuat tanggal yang sesuai hari operasi
                 $startDate = Carbon::parse($request->start_date);
                 $endDate = Carbon::parse($request->end_date);
                 $currentDate = $startDate->copy();
 
                 while ($currentDate->lte($endDate)) {
-                    $dayOfWeek = $currentDate->dayOfWeekIso; // 1 (Mon) to 7 (Sun)
+                    $dayOfWeek = $currentDate->dayOfWeekIso; // 1 (Sen) hingga 7 (Min)
+
+                    Log::info('Range date day check', [
+                        'date' => $currentDate->format('Y-m-d'),
+                        'dayOfWeek' => $dayOfWeek,
+                        'isValid' => in_array((string)$dayOfWeek, $operationDays)
+                    ]);
 
                     if (in_array((string)$dayOfWeek, $operationDays)) {
                         $this->createOrUpdateScheduleDate($schedule, $currentDate->format('Y-m-d'), $request->status);
@@ -365,7 +414,13 @@ class ScheduleController extends Controller
                     $currentDate->addDay();
                 }
             } elseif ($request->date_type === 'days') {
-                // Create specific days in date range (original implementation)
+                Log::info('Processing days mode', [
+                    'selectedDays' => $request->days,
+                    'start' => $request->days_start_date,
+                    'end' => $request->days_end_date
+                ]);
+
+                // Buat tanggal spesifik dalam rentang tanggal
                 $startDate = Carbon::parse($request->days_start_date);
                 $endDate = Carbon::parse($request->days_end_date);
                 $currentDate = $startDate->copy();
@@ -373,11 +428,14 @@ class ScheduleController extends Controller
                 $selectedDays = $request->days;
 
                 while ($currentDate->lte($endDate)) {
-                    $dayOfWeek = $currentDate->dayOfWeek;
-                    // Convert Sunday from 0 to 7 to match your system
-                    if ($dayOfWeek === 0) {
-                        $dayOfWeek = 7;
-                    }
+                    $dayOfWeek = $currentDate->dayOfWeekIso; // 1 (Sen) hingga 7 (Min)
+
+                    Log::info('Days mode check', [
+                        'date' => $currentDate->format('Y-m-d'),
+                        'dayOfWeek' => $dayOfWeek,
+                        'selectedDays' => $selectedDays,
+                        'isSelected' => in_array($dayOfWeek, $selectedDays)
+                    ]);
 
                     if (in_array($dayOfWeek, $selectedDays)) {
                         $this->createOrUpdateScheduleDate($schedule, $currentDate->format('Y-m-d'), $request->status);
@@ -388,11 +446,15 @@ class ScheduleController extends Controller
                     $currentDate->addDay();
                 }
             } elseif ($request->date_type === 'multiple') {
-                // Multiple date selection mode (new implementation)
+                Log::info('Processing multiple date mode', ['selectedDates' => $request->selected_dates]);
+
+                // Mode pilihan tanggal berganda
                 if (!empty($request->selected_dates)) {
                     $selectedDates = explode(',', $request->selected_dates);
 
                     foreach ($selectedDates as $dateString) {
+                        Log::info('Processing multiple date', ['date' => $dateString]);
+
                         $date = Carbon::parse($dateString);
                         $this->createOrUpdateScheduleDate($schedule, $date->format('Y-m-d'), $request->status);
                         $addedDates[] = $date->format('d/m/Y');
@@ -400,7 +462,7 @@ class ScheduleController extends Controller
                 }
             }
 
-            // Create success message
+            // Buat pesan sukses
             if (count($addedDates) > 0) {
                 $message = count($addedDates) . ' jadwal berhasil ditambahkan';
 
@@ -411,17 +473,34 @@ class ScheduleController extends Controller
                 if (count($skippedDates) > 0) {
                     $message .= '. ' . count($skippedDates) . ' tanggal dilewati karena tidak sesuai hari operasi.';
                 }
+
+                Log::info('Schedule dates added successfully', [
+                    'schedule_id' => $schedule->id,
+                    'added_count' => count($addedDates),
+                    'skipped_count' => count($skippedDates)
+                ]);
             } else {
                 if (count($skippedDates) > 0) {
                     $message = 'Tidak ada jadwal yang ditambahkan karena semua tanggal tidak sesuai dengan hari operasi kapal (' . implode(', ', $skippedDates) . ').';
                 } else {
                     $message = 'Tidak ada jadwal yang ditambahkan.';
                 }
+
+                Log::warning('No schedule dates added', [
+                    'schedule_id' => $schedule->id,
+                    'skipped_dates' => $skippedDates
+                ]);
             }
 
             return redirect()->route('admin.schedules.dates', $schedule)
                 ->with('success', $message);
         } catch (\Exception $e) {
+            Log::error('Failed to add schedule dates', [
+                'schedule_id' => $schedule->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return back()->with('error', 'Gagal menambahkan tanggal jadwal: ' . $e->getMessage())
                 ->withInput();
         }
@@ -437,10 +516,16 @@ class ScheduleController extends Controller
      */
     private function createOrUpdateScheduleDate(Schedule $schedule, $date, $status)
     {
+        Log::info('Creating/updating schedule date', [
+            'schedule_id' => $schedule->id,
+            'date' => $date,
+            'status' => $status
+        ]);
+
         return ScheduleDate::updateOrCreate(
             ['schedule_id' => $schedule->id, 'date' => $date],
             [
-                'status' => $status, // Menggunakan parameter $status, bukan $request->status
+                'status' => $status,
                 'passenger_count' => 0,
                 'motorcycle_count' => 0,
                 'car_count' => 0,

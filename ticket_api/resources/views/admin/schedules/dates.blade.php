@@ -2,243 +2,322 @@
 
 @section('content')
     <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">Kelola Tanggal Jadwal</h1>
-            <div>
+        <!-- Header Section -->
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-3 md:mb-0">Kelola Jadwal Operasi</h1>
+            <div class="flex flex-col sm:flex-row gap-2">
                 <a href="{{ route('admin.schedules.show', $schedule) }}"
-                    class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded mr-2">
+                    class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded transition-colors duration-200 flex items-center justify-center">
                     <i class="fas fa-arrow-left mr-2"></i> Kembali
                 </a>
-                <button type="button" id="addDateBtn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
-                    <i class="fas fa-plus mr-2"></i> Tambah Tanggal
+                <button type="button" id="addDateBtn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors duration-200 flex items-center justify-center">
+                    <i class="fas fa-plus mr-2"></i> Tambah Jadwal
                 </button>
             </div>
         </div>
 
+        <!-- Alerts Section -->
         @if (session('success'))
-            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
-                <p>{{ session('success') }}</p>
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-md fade-out-alert"
+                role="alert">
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                    <p>{{ session('success') }}</p>
+                </div>
             </div>
         @endif
 
         @if (session('error'))
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
-                <p>{{ session('error') }}</p>
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md fade-out-alert"
+                role="alert">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
+                    <p>{{ session('error') }}</p>
+                </div>
             </div>
         @endif
 
-        <div class="mb-4">
-            <h2 class="text-lg font-semibold mb-2">Informasi Jadwal</h2>
-            <div class="bg-gray-50 p-4 rounded-lg mb-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-sm text-gray-600">Rute:</p>
-                        <p class="font-medium">
-                            @if (is_object($schedule->route))
-                                {{ $schedule->route->origin }} - {{ $schedule->route->destination }}
-                            @else
-                                Rute tidak tersedia
-                            @endif
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Kapal:</p>
-                        <p class="font-medium">
-                            @if (is_object($schedule->ferry))
-                                {{ $schedule->ferry->name }}
-                            @else
-                                Kapal tidak tersedia
-                            @endif
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Waktu Keberangkatan:</p>
-                        <p class="font-medium">{{ $schedule->departure_time->format('H:i') }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Estimasi Tiba:</p>
-                        <p class="font-medium">{{ $schedule->arrival_time->format('H:i') }}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Hari Operasi:</p>
-                        <p class="font-medium">
-                            @php
-                                $days = explode(',', $schedule->days);
-                                $dayNames = [
-                                    '1' => 'Senin',
-                                    '2' => 'Selasa',
-                                    '3' => 'Rabu',
-                                    '4' => 'Kamis',
-                                    '5' => 'Jumat',
-                                    '6' => 'Sabtu',
-                                    '7' => 'Minggu',
-                                    '0' => 'Minggu',
-                                ];
-                                $dayLabels = [];
-                                foreach ($days as $day) {
-                                    if (isset($dayNames[$day])) {
-                                        $dayLabels[] = $dayNames[$day];
+        <!-- Schedule Info Card -->
+        <div class="mb-6">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-800">
+                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>Informasi Jadwal
+                    </h2>
+                </div>
+                <div class="p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500 mb-1">Rute:</p>
+                            <p class="font-medium text-gray-800">
+                                @if (is_object($schedule->route))
+                                    <i class="fas fa-route text-blue-500 mr-1"></i>
+                                    {{ $schedule->route->origin }} - {{ $schedule->route->destination }}
+                                @else
+                                    <span class="text-red-500">Rute tidak tersedia</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500 mb-1">Kapal:</p>
+                            <p class="font-medium text-gray-800">
+                                @if (is_object($schedule->ferry))
+                                    <i class="fas fa-ship text-blue-500 mr-1"></i>
+                                    {{ $schedule->ferry->name }}
+                                @else
+                                    <span class="text-red-500">Kapal tidak tersedia</span>
+                                @endif
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500 mb-1">Waktu Keberangkatan:</p>
+                            <p class="font-medium text-gray-800">
+                                <i class="fas fa-clock text-green-500 mr-1"></i>
+                                {{ $schedule->departure_time->format('H:i') }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500 mb-1">Estimasi Tiba:</p>
+                            <p class="font-medium text-gray-800">
+                                <i class="fas fa-hourglass-end text-green-500 mr-1"></i>
+                                {{ $schedule->arrival_time->format('H:i') }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500 mb-1">Hari Operasi:</p>
+                            <p class="font-medium text-gray-800">
+                                @php
+                                    $days = explode(',', $schedule->days);
+                                    $dayNames = [
+                                        '1' => 'Senin',
+                                        '2' => 'Selasa',
+                                        '3' => 'Rabu',
+                                        '4' => 'Kamis',
+                                        '5' => 'Jumat',
+                                        '6' => 'Sabtu',
+                                        '7' => 'Minggu',
+                                        '0' => 'Minggu',
+                                    ];
+                                    $dayLabels = [];
+                                    foreach ($days as $day) {
+                                        if (isset($dayNames[$day])) {
+                                            $dayLabels[] = $dayNames[$day];
+                                        }
                                     }
-                                }
-                            @endphp
-                            {{ implode(', ', $dayLabels) }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Status:</p>
-                        <p class="font-medium">
-                            @if ($schedule->status == 'ACTIVE')
-                                <span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                                    Aktif
-                                </span>
-                            @elseif($schedule->status == 'DELAYED')
-                                <span class="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
-                                    Tertunda
-                                </span>
-                            @elseif($schedule->status == 'FULL')
-                                <span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                                    Penuh
-                                </span>
-                            @else
-                                <span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
-                                    Dibatalkan
-                                </span>
-                            @endif
-                        </p>
+                                @endphp
+                                <i class="fas fa-calendar-day text-indigo-500 mr-1"></i>
+                                {{ implode(', ', $dayLabels) }}
+                            </p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500 mb-1">Status:</p>
+                            <p class="font-medium">
+                                @if ($schedule->status == 'ACTIVE')
+                                    <span
+                                        class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 flex items-center w-fit">
+                                        <i class="fas fa-check-circle mr-1"></i> Aktif
+                                    </span>
+                                @elseif($schedule->status == 'DELAYED')
+                                    <span
+                                        class="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800 flex items-center w-fit">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i> Tertunda
+                                    </span>
+                                @elseif($schedule->status == 'FULL')
+                                    <span
+                                        class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 flex items-center w-fit">
+                                        <i class="fas fa-users mr-1"></i> Penuh
+                                    </span>
+                                @else
+                                    <span
+                                        class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 flex items-center w-fit">
+                                        <i class="fas fa-ban mr-1"></i> Dibatalkan
+                                    </span>
+                                @endif
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Date Filter -->
-        <form action="{{ url()->current() }}" method="GET" id="filterForm" class="mb-6 bg-gray-50 p-4 rounded-lg">
-            <h3 class="text-lg font-semibold mb-3">Filter Tanggal</h3>
-            <div class="flex flex-col md:flex-row md:items-center gap-4">
-                <div>
-                    <label for="month" class="block text-sm font-medium text-gray-700 mb-1">Bulan:</label>
-                    <select id="month" name="month"
-                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Semua Bulan</option>
-                        @foreach (range(1, 12) as $month)
-                            <option value="{{ $month }}" {{ request('month') == $month ? 'selected' : '' }}>
-                                {{ \Carbon\Carbon::create(null, $month)->translatedFormat('F') }}
-                            </option>
-                        @endforeach
-                    </select>
+        <!-- Filter Card -->
+        <div class="mb-6">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-800">
+                        <i class="fas fa-filter text-indigo-500 mr-2"></i>Filter Tanggal
+                    </h2>
                 </div>
-                <div>
-                    <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Tahun:</label>
-                    <select id="year" name="year"
-                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Semua Tahun</option>
-                        @foreach (range(date('Y'), date('Y') + 1) as $year)
-                            <option value="{{ $year }}" {{ request('year') == $year ? 'selected' : '' }}>
-                                {{ $year }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status:</label>
-                    <select id="status" name="status"
-                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Semua Status</option>
-                        <option value="AVAILABLE" {{ request('status') == 'AVAILABLE' ? 'selected' : '' }}>Tersedia
-                        </option>
-                        <option value="UNAVAILABLE" {{ request('status') == 'UNAVAILABLE' ? 'selected' : '' }}>Tidak
-                            Tersedia
-                        </option>
-                    </select>
-                </div>
-                <div class="mt-4 md:mt-6">
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
-                        <i class="fas fa-filter mr-2"></i> Terapkan Filter
-                    </button>
+                <div class="p-4">
+                    <form action="{{ url()->current() }}" method="GET" id="filterForm">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label for="month" class="block text-sm font-medium text-gray-700 mb-1">Bulan:</label>
+                                <select id="month" name="month"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                    <option value="">Semua Bulan</option>
+                                    @foreach (range(1, 12) as $month)
+                                        <option value="{{ $month }}"
+                                            {{ request('month') == $month ? 'selected' : '' }}>
+                                            {{ \Carbon\Carbon::create(null, $month)->translatedFormat('F') }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Tahun:</label>
+                                <select id="year" name="year"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                    <option value="">Semua Tahun</option>
+                                    @foreach (range(date('Y'), date('Y') + 1) as $year)
+                                        <option value="{{ $year }}"
+                                            {{ request('year') == $year ? 'selected' : '' }}>
+                                            {{ $year }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status:</label>
+                                <select id="status" name="status"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                    <option value="">Semua Status</option>
+                                    <option value="AVAILABLE" {{ request('status') == 'AVAILABLE' ? 'selected' : '' }}>
+                                        Tersedia</option>
+                                    <option value="UNAVAILABLE" {{ request('status') == 'UNAVAILABLE' ? 'selected' : '' }}>
+                                        Tidak Tersedia</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit"
+                                    class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded transition-colors duration-200">
+                                    <i class="fas fa-filter mr-2"></i> Terapkan Filter
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
-        </form>
+        </div>
 
-        <!-- Dates Table -->
-        <div class="bg-gray-50 p-4 rounded-lg mb-6">
-            <h3 class="text-lg font-semibold mb-3">Daftar Tanggal Jadwal</h3>
+        <!-- Dates Table Card -->
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
+            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-calendar-alt text-green-500 mr-2"></i>Daftar Tanggal Jadwal
+                </h2>
+                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
+                    Total: {{ $scheduleDates->total() ?? 0 }}
+                </span>
+            </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">#
-                            </th>
-                            <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">
-                                Tanggal
-                            </th>
-                            <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">
-                                Hari
-                            </th>
-                            <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">
-                                Penumpang</th>
-                            <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">
-                                Kendaraan</th>
-                            <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">
-                                Status
-                            </th>
-                            <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">
-                                Aksi
-                            </th>
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-600 text-left text-sm">
+                            <th class="py-3 px-4 font-medium border-b">#</th>
+                            <th class="py-3 px-4 font-medium border-b">Tanggal</th>
+                            <th class="py-3 px-4 font-medium border-b">Hari</th>
+                            <th class="py-3 px-4 font-medium border-b">Penumpang</th>
+                            <th class="py-3 px-4 font-medium border-b">Kendaraan</th>
+                            <th class="py-3 px-4 font-medium border-b">Status</th>
+                            <th class="py-3 px-4 font-medium border-b">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($scheduleDates ?? [] as $date)
-                            <tr class="hover:bg-gray-50">
-                                <td class="py-3 px-4 border-b border-gray-200 text-sm">{{ $loop->iteration }}</td>
-                                <td class="py-3 px-4 border-b border-gray-200 text-sm font-medium">
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4 border-b text-sm text-gray-500">{{ $loop->iteration }}</td>
+                                <td class="py-3 px-4 border-b text-sm font-medium">
                                     {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->format('d/m/Y') : '-' }}
                                 </td>
-                                <td class="py-3 px-4 border-b border-gray-200 text-sm">
+                                <td class="py-3 px-4 border-b text-sm">
                                     {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->translatedFormat('l') : '-' }}
                                 </td>
-                                <td class="py-3 px-4 border-b border-gray-200 text-sm">
+                                <td class="py-3 px-4 border-b text-sm">
                                     @if (is_object($schedule->ferry))
-                                        <span
-                                            class="font-medium">{{ is_object($date) ? $date->passenger_count ?? 0 : 0 }}</span>
-                                        /
-                                        {{ $schedule->ferry->capacity_passenger }}
-                                    @else
-                                        {{ is_object($date) ? $date->passenger_count ?? 0 : 0 }} / -
-                                    @endif
-                                </td>
-                                <td class="py-3 px-4 border-b border-gray-200 text-sm">
-                                    @if (is_object($schedule->ferry))
-                                        <div class="grid grid-cols-2 gap-1">
-                                            <div>Motor: <span
-                                                    class="font-medium">{{ is_object($date) ? $date->motorcycle_count ?? 0 : 0 }}</span>
-                                                /
-                                                {{ $schedule->ferry->capacity_vehicle_motorcycle }}</div>
-                                            <div>Mobil: <span class="font-medium">{{ $date->car_count ?? 0 }}</span> /
-                                                {{ $schedule->ferry->capacity_vehicle_car }}</div>
-                                            <div>Bus: <span class="font-medium">{{ $date->bus_count ?? 0 }}</span> /
-                                                {{ $schedule->ferry->capacity_vehicle_bus }}</div>
-                                            <div>Truk: <span class="font-medium">{{ $date->truck_count ?? 0 }}</span> /
-                                                {{ $schedule->ferry->capacity_vehicle_truck }}</div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-users text-blue-500 mr-2"></i>
+                                            <span
+                                                class="font-medium">{{ is_object($date) ? $date->passenger_count ?? 0 : 0 }}</span>
+                                            /
+                                            <span>{{ $schedule->ferry->capacity_passenger }}</span>
+                                            @php
+                                                $passengerPercentage =
+                                                    is_object($date) && $schedule->ferry->capacity_passenger > 0
+                                                        ? min(
+                                                            100,
+                                                            round(
+                                                                (($date->passenger_count ?? 0) /
+                                                                    $schedule->ferry->capacity_passenger) *
+                                                                    100,
+                                                            ),
+                                                        )
+                                                        : 0;
+                                            @endphp
+                                            <div class="w-16 h-2 ml-2 bg-gray-200 rounded-full overflow-hidden">
+                                                <div class="h-full rounded-full {{ $passengerPercentage > 80 ? 'bg-red-500' : 'bg-blue-500' }}"
+                                                    style="width: {{ $passengerPercentage }}%"></div>
+                                            </div>
                                         </div>
                                     @else
-                                        -
+                                        <span
+                                            class="text-gray-400">{{ is_object($date) ? $date->passenger_count ?? 0 : 0 }}
+                                            / -</span>
                                     @endif
                                 </td>
-                                <td class="py-3 px-4 border-b border-gray-200 text-sm">
+                                <td class="py-3 px-4 border-b text-sm">
+                                    @if (is_object($schedule->ferry))
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div class="flex items-center text-xs">
+                                                <i class="fas fa-motorcycle text-gray-500 mr-1"></i>
+                                                <span
+                                                    class="font-medium">{{ is_object($date) ? $date->motorcycle_count ?? 0 : 0 }}</span>
+                                                /
+                                                <span>{{ $schedule->ferry->capacity_vehicle_motorcycle }}</span>
+                                            </div>
+                                            <div class="flex items-center text-xs">
+                                                <i class="fas fa-car text-gray-500 mr-1"></i>
+                                                <span class="font-medium">{{ $date->car_count ?? 0 }}</span> /
+                                                <span>{{ $schedule->ferry->capacity_vehicle_car }}</span>
+                                            </div>
+                                            <div class="flex items-center text-xs">
+                                                <i class="fas fa-bus text-gray-500 mr-1"></i>
+                                                <span class="font-medium">{{ $date->bus_count ?? 0 }}</span> /
+                                                <span>{{ $schedule->ferry->capacity_vehicle_bus }}</span>
+                                            </div>
+                                            <div class="flex items-center text-xs">
+                                                <i class="fas fa-truck text-gray-500 mr-1"></i>
+                                                <span class="font-medium">{{ $date->truck_count ?? 0 }}</span> /
+                                                <span>{{ $schedule->ferry->capacity_vehicle_truck }}</span>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="py-3 px-4 border-b text-sm">
                                     @if ($date->status == 'AVAILABLE')
                                         <span
-                                            class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">Tersedia</span>
+                                            class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 flex items-center w-fit">
+                                            <i class="fas fa-check-circle mr-1"></i> Tersedia
+                                        </span>
                                     @else
-                                        <span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">Tidak
-                                            Tersedia</span>
+                                        <span
+                                            class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 flex items-center w-fit">
+                                            <i class="fas fa-ban mr-1"></i> Tidak Tersedia
+                                        </span>
                                     @endif
                                 </td>
-                                <td class="py-3 px-4 border-b border-gray-200 text-sm">
-                                    <div class="flex space-x-2">
-                                        <button class="edit-date-btn text-yellow-500 hover:text-yellow-700 mr-2"
+                                <td class="py-3 px-4 border-b text-sm">
+                                    <div class="flex space-x-1">
+                                        <button
+                                            class="edit-date-btn bg-yellow-100 text-yellow-600 hover:bg-yellow-200 p-1.5 rounded"
                                             data-id="{{ $date->id }}" data-date="{{ $date->date }}"
                                             data-status="{{ $date->status }}" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button class="delete-date-btn text-red-500 hover:text-red-700"
+                                        <button
+                                            class="delete-date-btn bg-red-100 text-red-600 hover:bg-red-200 p-1.5 rounded"
                                             data-id="{{ $date->id }}"
                                             data-date="{{ \Carbon\Carbon::parse($date->date)->format('d/m/Y') }}"
                                             title="Hapus">
@@ -249,14 +328,14 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7"
-                                    class="py-6 px-4 border-b border-gray-200 text-sm text-center text-gray-500">
+                                <td colspan="7" class="py-8 px-4 text-center text-gray-500">
                                     <div class="flex flex-col items-center justify-center">
-                                        <i class="fas fa-calendar-times text-4xl mb-2"></i>
-                                        <p>Tidak ada tanggal terjadwal</p>
+                                        <i class="fas fa-calendar-times text-5xl text-gray-300 mb-3"></i>
+                                        <p class="text-lg font-medium mb-2">Tidak ada tanggal terjadwal</p>
+                                        <p class="text-sm mb-4">Tambahkan jadwal baru untuk kapal ini</p>
                                         <button id="emptyAddDateBtn"
-                                            class="mt-3 bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm">
-                                            <i class="fas fa-plus mr-1"></i> Tambah Tanggal
+                                            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors duration-200">
+                                            <i class="fas fa-plus mr-2"></i> Tambah Jadwal Baru
                                         </button>
                                     </div>
                                 </td>
@@ -267,34 +346,45 @@
             </div>
         </div>
 
+        <!-- Pagination -->
         @if (isset($scheduleDates) &&
                 $scheduleDates instanceof \Illuminate\Pagination\LengthAwarePaginator &&
                 $scheduleDates->hasPages())
-            <div class="mt-4">
+            <div class="mt-4 flex justify-center">
                 {{ $scheduleDates->appends(request()->except('page'))->links() }}
             </div>
         @endif
     </div>
 
     <!-- Add Date Modal -->
-    <div id="addDateModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div id="addDateModal"
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="flex items-center justify-center h-full w-full p-4">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md relative">
-                <div class="flex justify-between items-center mb-4 border-b pb-3">
-                    <h3 class="text-lg font-semibold text-gray-800">Tambah Tanggal Jadwal</h3>
-                    <button type="button" id="closeAddModal" class="text-gray-500 hover:text-gray-700">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-xl relative animate-modalFadeIn">
+                <div class="flex justify-between items-center mb-4 pb-3 border-b">
+                    <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-calendar-plus text-blue-500 mr-2"></i>Tambah Jadwal
+                    </h3>
+                    <button type="button" id="closeAddModal"
+                        class="text-gray-400 hover:text-gray-600 transition-colors">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
 
                 <!-- Operation Days Info -->
-                <div class="bg-blue-50 p-3 rounded-lg mb-4">
-                    <p class="text-sm text-blue-800">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        <span>Hari operasi: <strong>{{ implode(', ', $dayLabels) }}</strong></span>
-                    </p>
-                    <p class="text-xs text-blue-600 mt-1">Hanya tanggal yang jatuh pada hari operasi yang dapat dipilih.
-                    </p>
+                <div class="bg-blue-50 p-3 rounded-lg mb-4 border border-blue-200">
+                    <div class="flex">
+                        <div class="text-blue-500 mr-2">
+                            <i class="fas fa-info-circle text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-blue-800">
+                                Hari operasi: <strong>{{ implode(', ', $dayLabels) }}</strong>
+                            </p>
+                            <p class="text-xs text-blue-600 mt-1">Hanya tanggal yang jatuh pada hari operasi yang dapat
+                                dipilih.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <form id="addDateForm" action="{{ route('admin.schedules.dates.store', $schedule) }}" method="POST"
@@ -303,108 +393,48 @@
                     <div>
                         <label for="date_type" class="block text-sm font-medium text-gray-700 mb-2">Tipe
                             Penambahan</label>
-                        <select id="date_type" name="date_type"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <option value="single">Tanggal Tunggal</option>
-                            <option value="range">Rentang Tanggal</option>
-                            <option value="multiple">Pilih Beberapa Tanggal</option>
-                        </select>
+                        <div class="relative">
+                            <select id="date_type" name="date_type"
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="single">Tanggal Tunggal</option>
+                                <option value="range">Rentang Tanggal</option>
+                                <option value="multiple">Pilih Beberapa Tanggal</option>
+                                <option value="days">Pilih Hari Tertentu</option>
+                            </select>
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-calendar-alt text-gray-400"></i>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Single date fields section -->
-                    <div id="singleDateFields">
+                    <div id="singleDateFields" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <div>
                             <label for="single_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal</label>
                             <div class="flex items-center">
-                                <input type="date" id="single_date" name="single_date"
-                                    class="date-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                <span id="single_date_day" class="ml-2 font-medium"></span>
+                                <div class="relative flex-grow">
+                                    <input type="date" id="single_date" name="single_date"
+                                        class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-calendar text-gray-400"></i>
+                                    </div>
+                                </div>
+                                <span id="single_date_day" class="ml-2 px-2 py-1 rounded font-medium"></span>
                             </div>
-                            <div id="single_date_warning" class="hidden mt-1 text-xs text-red-500"></div>
+                            <div id="single_date_warning"
+                                class="hidden mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-200"></div>
                             <div class="date-type-info text-xs text-blue-600 mt-1"></div>
                         </div>
                     </div>
 
                     <!-- Range date fields section -->
-                    <div id="rangeDateFields" class="hidden space-y-4">
+                    <!-- Perbaikan 1: Tambahkan fields untuk mode "days" yang hilang -->
+                    <!-- Tambahkan section ini setelah multipleDateFields div di form addDateModal -->
+
+                    <div id="daysFields" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
                         <div>
-                            <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
-                                Mulai</label>
-                            <div class="flex items-center">
-                                <input type="date" id="start_date" name="start_date"
-                                    class="date-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                <span id="start_date_day" class="ml-2 font-medium"></span>
-                            </div>
-                            <div id="start_date_warning" class="hidden mt-1 text-xs text-red-500"></div>
-                            <div class="date-type-info text-xs text-blue-600 mt-1"></div>
-                        </div>
-
-                        <div>
-                            <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
-                                Akhir</label>
-                            <div class="flex items-center">
-                                <input type="date" id="end_date" name="end_date"
-                                    class="date-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                <span id="end_date_day" class="ml-2 font-medium"></span>
-                            </div>
-                            <div id="end_date_warning" class="hidden mt-1 text-xs text-red-500"></div>
-                            <p class="text-xs text-gray-500 mt-1">Catatan: Hanya tanggal yang jatuh pada hari operasi yang
-                                akan dibuat.</p>
-                        </div>
-
-                        <!-- Preview of valid operation days in the range -->
-                        <div id="range_date_preview" class="bg-gray-50 rounded p-2"></div>
-                    </div>
-
-                    <!-- Multiple date fields section -->
-                    <div id="multipleDateFields" class="hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tanggal (3 Bulan Ke
-                            Depan)</label>
-
-                        <!-- Operation days info -->
-                        <div class="bg-blue-50 p-2 rounded-lg mb-3 border border-blue-200">
-                            <p class="text-xs text-blue-800 font-medium">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                <span id="calendar-info">Hari operasi: Senin, Selasa, Rabu, Kamis, Jumat, Sabtu,
-                                    Minggu</span>
-                            </p>
-                        </div>
-
-                        <!-- Calendar Legend -->
-                        <div class="flex items-center text-xs mb-2 bg-gray-50 p-2 rounded">
-                            <div class="flex items-center mr-4">
-                                <div class="w-3 h-3 bg-gray-300 rounded mr-1"></div>
-                                <span>Bukan hari operasi</span>
-                            </div>
-                            <div class="flex items-center mr-4">
-                                <div class="w-3 h-3 border border-green-200 rounded mr-1"></div>
-                                <span>Hari operasi</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 bg-blue-500 rounded mr-1"></div>
-                                <span>Tanggal dipilih</span>
-                            </div>
-                        </div>
-
-                        <div id="date_calendar" class="bg-gray-50 p-3 rounded-lg border max-h-60 overflow-y-auto">
-                            <div id="calendar_dates" class="grid grid-cols-7 gap-1">
-                                <!-- Calendar dates will be generated by JS -->
-                            </div>
-                            <input type="hidden" id="selected_dates" name="selected_dates" value="">
-                        </div>
-
-                        <!-- Preview of selected dates -->
-                        <div id="selected_dates_preview" class="mt-2"></div>
-
-                        <p class="text-xs text-gray-500 mt-1">Hanya hari operasi yang dapat dipilih (ditampilkan dengan
-                            warna normal).</p>
-                    </div>
-
-                    <!-- Days selection fields if needed -->
-                    <div id="daysFields" class="hidden space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Hari</label>
-                            <div class="grid grid-cols-2 gap-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Hari dalam Seminggu</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 <div class="flex items-center">
                                     <input type="checkbox" id="day_1" name="days[]" value="1" class="mr-2">
                                     <label for="day_1">Senin</label>
@@ -435,48 +465,110 @@
                                 </div>
                             </div>
                         </div>
+
                         <div>
-                            <label for="days_start_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai</label>
-                            <input type="date" id="days_start_date" name="days_start_date"
-                                class="date-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <label for="days_start_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
+                                Mulai</label>
+                            <div class="relative">
+                                <input type="date" id="days_start_date" name="days_start_date"
+                                    class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-calendar text-gray-400"></i>
+                                </div>
+                            </div>
                         </div>
+
                         <div>
-                            <label for="days_end_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal Akhir</label>
-                            <input type="date" id="days_end_date" name="days_end_date"
-                                class="date-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <label for="days_end_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
+                                Akhir</label>
+                            <div class="relative">
+                                <input type="date" id="days_end_date" name="days_end_date"
+                                    class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-calendar text-gray-400"></i>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Jadwal akan dibuat untuk hari-hari yang dipilih dalam
+                                rentang tanggal ini.</p>
                         </div>
                     </div>
 
-                    <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                        <select id="status" name="status"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <option value="AVAILABLE">Tersedia</option>
-                            <option value="UNAVAILABLE">Tidak Tersedia</option>
-                        </select>
-                    </div>
-
-                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                        <button type="button" id="cancelAddBtn"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
-                            Batal
-                        </button>
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
-                            <i class="fas fa-save mr-1"></i> Simpan
-                        </button>
-                    </div>
-                </form>
+                    <!-- Preview of valid operation days in the range -->
+                    <div id="range_date_preview" class="bg-white rounded p-3 border border-gray-200"></div>
             </div>
+
+            <!-- Multiple date fields section -->
+            <div id="multipleDateFields" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tanggal (3 Bulan Ke Depan)</label>
+
+                <!-- Calendar Legend -->
+                <div class="flex flex-wrap items-center text-xs mb-3 bg-white p-2 rounded-lg border border-gray-200">
+                    <div class="flex items-center mr-4 mb-1">
+                        <div class="w-3 h-3 bg-gray-300 rounded mr-1"></div>
+                        <span>Bukan hari operasi</span>
+                    </div>
+                    <div class="flex items-center mr-4 mb-1">
+                        <div class="w-3 h-3 border border-green-200 rounded mr-1"></div>
+                        <span>Hari operasi</span>
+                    </div>
+                    <div class="flex items-center mb-1">
+                        <div class="w-3 h-3 bg-blue-500 rounded mr-1"></div>
+                        <span>Tanggal dipilih</span>
+                    </div>
+                </div>
+
+                <div id="date_calendar" class="bg-white p-3 rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
+                    <div id="calendar_dates" class="grid grid-cols-7 gap-1">
+                        <!-- Calendar dates will be generated by JS -->
+                    </div>
+                    <input type="hidden" id="selected_dates" name="selected_dates" value="">
+                </div>
+
+                <!-- Preview of selected dates -->
+                <div id="selected_dates_preview" class="mt-3 p-2 bg-white rounded-lg border border-gray-200 min-h-[50px]">
+                </div>
+            </div>
+
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <div class="relative">
+                    <select id="status" name="status"
+                        class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="AVAILABLE">Tersedia</option>
+                        <option value="UNAVAILABLE">Tidak Tersedia</option>
+                    </select>
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-toggle-on text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                <button type="button" id="cancelAddBtn"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
+                    Batal
+                </button>
+                <button type="submit"
+                    class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors duration-200">
+                    <i class="fas fa-save mr-1"></i> Simpan
+                </button>
+            </div>
+            </form>
         </div>
+    </div>
     </div>
 
     <!-- Edit Date Modal - Simplified Version (No Date Editing) -->
-    <div id="editDateModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div id="editDateModal"
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="flex items-center justify-center h-full w-full p-4">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md relative">
-                <div class="flex justify-between items-center mb-4 border-b pb-3">
-                    <h3 class="text-lg font-semibold text-gray-800">Edit Status Jadwal</h3>
-                    <button type="button" id="closeEditModal" class="text-gray-500 hover:text-gray-700">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative animate-modalFadeIn">
+                <div class="flex justify-between items-center mb-4 pb-3 border-b">
+                    <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-edit text-yellow-500 mr-2"></i>Edit Status Jadwal
+                    </h3>
+                    <button type="button" id="closeEditModal"
+                        class="text-gray-400 hover:text-gray-600 transition-colors">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -486,38 +578,55 @@
                     <input type="hidden" id="edit_date_id" name="date_id">
                     <input type="hidden" id="original_date" name="date">
 
-                    <div class="bg-blue-50 p-3 rounded-lg mb-4">
-                        <p class="text-sm text-blue-800">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            <span id="currentDateDisplay" class="font-medium">Jadwal: </span>
-                        </p>
+                    <div class="bg-yellow-50 p-3 rounded-lg mb-4 border border-yellow-200">
+                        <div class="flex">
+                            <div class="text-yellow-500 mr-2">
+                                <i class="fas fa-info-circle text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-yellow-800" id="currentDateDisplay">
+                                    Jadwal:
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-4">
                         <label for="edit_status" class="block text-sm font-medium text-gray-700 mb-2">Status
                             Jadwal</label>
-                        <select id="edit_status" name="status"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <option value="AVAILABLE">Tersedia</option>
-                            <option value="UNAVAILABLE">Tidak Tersedia</option>
-                        </select>
+                        <div class="relative">
+                            <select id="edit_status" name="status"
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="AVAILABLE">Tersedia</option>
+                                <option value="UNAVAILABLE">Tidak Tersedia</option>
+                            </select>
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-toggle-on text-gray-400"></i>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-4">
                         <label for="edit_status_reason" class="block text-sm font-medium text-gray-700 mb-2">
                             Alasan Perubahan Status <span class="text-sm text-gray-500">(opsional)</span>
                         </label>
-                        <input type="text" id="edit_status_reason" name="status_reason"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Contoh: Maintenance, Libur, dll">
+                        <div class="relative">
+                            <input type="text" id="edit_status_reason" name="status_reason"
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Contoh: Maintenance, Libur, dll">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-comment-alt text-gray-400"></i>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
                         <button type="button" id="cancelEditBtn"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
                             Batal
                         </button>
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">
+                        <button type="submit"
+                            class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded transition-colors duration-200">
                             <i class="fas fa-save mr-1"></i> Simpan Perubahan
                         </button>
                     </div>
@@ -527,28 +636,38 @@
     </div>
 
     <!-- Delete Date Modal -->
-    <div id="deleteDateModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div id="deleteDateModal"
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="flex items-center justify-center h-full w-full p-4">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md relative">
-                <div class="flex justify-between items-center mb-4 border-b pb-3">
-                    <h3 class="text-lg font-semibold text-gray-800">Konfirmasi Hapus</h3>
-                    <button type="button" id="closeDeleteModal" class="text-gray-500 hover:text-gray-700">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative animate-modalFadeIn">
+                <div class="flex justify-between items-center mb-4 pb-3 border-b">
+                    <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-trash text-red-500 mr-2"></i>Konfirmasi Hapus
+                    </h3>
+                    <button type="button" id="closeDeleteModal"
+                        class="text-gray-400 hover:text-gray-600 transition-colors">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="mb-6">
-                    <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mr-2"></i>
-                    <p id="deleteConfirmText" class="text-gray-700">Apakah Anda yakin ingin menghapus tanggal ini?</p>
+                <div class="bg-red-50 p-4 rounded-lg mb-6 flex items-start border border-red-200">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-2xl mr-3 mt-0.5"></i>
+                    <div>
+                        <p class="font-medium text-red-800 mb-1">Perhatian!</p>
+                        <p id="deleteConfirmText" class="text-gray-700 text-sm">Apakah Anda yakin ingin menghapus tanggal
+                            ini?</p>
+                        <p class="text-gray-500 text-xs mt-2">Tindakan ini tidak dapat dibatalkan.</p>
+                    </div>
                 </div>
                 <form id="deleteDateForm" action="#" method="POST">
                     @csrf
                     @method('DELETE')
                     <div class="flex justify-end gap-2">
                         <button type="button" id="cancelDeleteBtn"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded">
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
                             Batal
                         </button>
-                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded">
+                        <button type="submit"
+                            class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded transition-colors duration-200">
                             <i class="fas fa-trash mr-1"></i> Hapus
                         </button>
                     </div>
@@ -557,6 +676,43 @@
         </div>
     </div>
 @endsection
+
+<style>
+    .animate-modalFadeIn {
+        animation: modalFadeIn 0.3s ease-out forwards;
+    }
+
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-out-alert {
+        animation: fadeOut 5s forwards;
+        animation-delay: 3s;
+    }
+
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+        }
+
+        to {
+            opacity: 0;
+            visibility: hidden;
+            margin-bottom: 0;
+            padding: 0;
+            height: 0;
+        }
+    }
+</style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -587,6 +743,8 @@
                 setTimeout(() => {
                     modal.style.opacity = '1';
                 }, 10);
+                // Prevent body scrolling when modal is open
+                document.body.style.overflow = 'hidden';
                 console.log(`Modal ${modalId} opened`);
             } else {
                 console.error(`Modal with ID ${modalId} not found`);
@@ -600,6 +758,8 @@
                 modal.style.opacity = '0';
                 setTimeout(() => {
                     modal.classList.add('hidden');
+                    // Restore body scrolling
+                    document.body.style.overflow = 'auto';
                 }, 300);
                 console.log(`Modal ${modalId} closed`);
             } else {
@@ -677,8 +837,16 @@
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) return false;
 
-                const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, etc.
-                return jsOperationDays.includes(dayOfWeek);
+                // Get day of week as 1 (Monday) to 7 (Sunday) to match backend (ISO format)
+                let dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, etc.
+
+                // Convert from JS day to ISO day format (0→7, 1→1, 2→2, etc.)
+                dayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+                // Convert scheduleDays to strings for comparison because backend compares as strings
+                const operationDaysAsStrings = scheduleDays.map(day => day.toString());
+
+                return operationDaysAsStrings.includes(dayOfWeek.toString());
             } catch (e) {
                 console.error('Error validating date:', e);
                 return false;
@@ -721,8 +889,8 @@
                     warningElement.classList.remove('hidden');
                 }
                 if (dayDisplayElement) {
-                    dayDisplayElement.classList.remove('text-green-600');
-                    dayDisplayElement.classList.add('text-red-600');
+                    dayDisplayElement.classList.remove('bg-green-100', 'text-green-800');
+                    dayDisplayElement.classList.add('bg-red-100', 'text-red-800');
                 }
                 inputElement.classList.add('border-red-500');
                 inputElement.classList.remove('border-green-500');
@@ -733,8 +901,8 @@
                     warningElement.classList.add('hidden');
                 }
                 if (dayDisplayElement) {
-                    dayDisplayElement.classList.remove('text-red-600');
-                    dayDisplayElement.classList.add('text-green-600');
+                    dayDisplayElement.classList.remove('bg-red-100', 'text-red-800');
+                    dayDisplayElement.classList.add('bg-green-100', 'text-green-800');
                 }
                 inputElement.classList.remove('border-red-500');
                 inputElement.classList.add('border-green-500');
@@ -758,7 +926,7 @@
                     // Create new day display element if it doesn't exist
                     dayDisplayElement = document.createElement('span');
                     dayDisplayElement.id = dayDisplayId;
-                    dayDisplayElement.className = 'ml-2 font-medium';
+                    dayDisplayElement.className = 'ml-2 px-2 py-1 rounded font-medium';
                     input.parentNode.insertBefore(dayDisplayElement, warningElement || input
                         .nextSibling);
                 }
@@ -800,7 +968,10 @@
 
             if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
                 previewElement.innerHTML =
-                    '<p class="text-red-500 text-xs mt-2">Rentang tanggal tidak valid</p>';
+                    `<div class="flex items-center text-red-600 text-sm">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <span>Rentang tanggal tidak valid</span>
+                    </div>`;
                 return;
             }
 
@@ -819,16 +990,23 @@
             // Create preview
             if (validDates.length === 0) {
                 previewElement.innerHTML =
-                    '<p class="text-yellow-600 text-xs mt-2">Tidak ada tanggal operasi dalam rentang ini</p>';
+                    `<div class="flex items-center text-yellow-600 text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <span>Tidak ada tanggal operasi dalam rentang ini</span>
+                    </div>`;
             } else {
                 previewElement.innerHTML = `
-                <div class="text-xs mt-2">
-                    <p class="font-medium text-gray-700">Tanggal operasi yang akan dibuat (${validDates.length}):</p>
-                    <div class="mt-1 grid grid-cols-2 sm:grid-cols-3 gap-1 bg-gray-50 p-2 rounded max-h-24 overflow-y-auto">
+                <div class="text-sm">
+                    <div class="flex items-center text-blue-600 font-medium mb-2">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <span>Tanggal operasi yang akan dibuat (${validDates.length}):</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto bg-gray-50 p-2 rounded border border-gray-200">
                         ${validDates.map(date => `
-                            <div class="text-xs text-gray-800">
+                            <div class="text-xs bg-white p-1.5 rounded border border-gray-200 flex items-center">
+                                <i class="fas fa-calendar-day text-green-500 mr-1.5"></i>
                                 ${formatDisplayDate(date.toISOString().split('T')[0])}
-                                <span class="text-green-600">(${getDayName(date)})</span>
+                                <span class="ml-1 text-green-600">(${getDayName(date)})</span>
                             </div>
                         `).join('')}
                     </div>
@@ -873,27 +1051,51 @@
 
                 if (selectedDates.length === 0) {
                     selectedDatesPreview.innerHTML =
-                        '<p class="text-gray-500 text-xs">Belum ada tanggal yang dipilih</p>';
+                        '<p class="text-gray-500 text-xs text-center py-2">Belum ada tanggal yang dipilih</p>';
                     return;
                 }
 
                 selectedDatesPreview.innerHTML = `
-            <p class="font-medium text-gray-700 text-xs">Tanggal yang dipilih (${selectedDates.length}):</p>
-            <div class="mt-1 flex flex-wrap gap-1 bg-gray-50 p-2 rounded max-h-24 overflow-y-auto">
-                ${selectedDates.map(dateStr => {
-                    const date = new Date(dateStr);
-                    return `
-                        <div class="text-xs text-white bg-blue-500 rounded px-1 py-0.5 flex items-center">
-                            ${formatDisplayDate(dateStr)}
-                            <span class="ml-1">(${getDayName(date)})</span>
-                            <button type="button" class="remove-date ml-1" data-date="${dateStr}">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `;
+                    <div class="mb-2 flex items-center justify-between">
+                        <p class="text-xs font-medium text-gray-700">Tanggal yang dipilih (${selectedDates.length}):</p>
+                        <button type="button" id="clearAllDates" class="text-red-600 hover:text-red-800 text-xs">
+                            <i class="fas fa-trash-alt mr-1"></i>Hapus Semua
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-2 bg-gray-50 rounded border border-gray-200">
+                        ${selectedDates.map(dateStr => {
+                            const date = new Date(dateStr);
+                            return `
+                                <div class="text-xs bg-blue-100 text-blue-800 rounded px-2 py-1 flex items-center">
+                                    <i class="fas fa-calendar-check text-blue-500 mr-1"></i>
+                                    ${formatDisplayDate(dateStr)}
+                                    <span class="mx-1">(${getDayName(date)})</span>
+                                    <button type="button" class="remove-date text-red-500 hover:text-red-700" data-date="${dateStr}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+
+                // Add event listener to clear all button
+                const clearAllBtn = document.getElementById('clearAllDates');
+                if (clearAllBtn) {
+                    clearAllBtn.addEventListener('click', function() {
+                        // Clear all selected dates
+                        selectedDates = [];
+                        selectedDatesInput.value = '';
+
+                        // Clear all selected cells in calendar
+                        document.querySelectorAll('.date-cell.bg-blue-500').forEach(cell => {
+                            cell.classList.remove('bg-blue-500', 'text-white');
+                        });
+
+                        // Update preview
+                        updateSelectedDatesPreview();
+                    });
+                }
 
                 // Add event listeners to remove buttons
                 document.querySelectorAll('.remove-date').forEach(btn => {
@@ -919,7 +1121,7 @@
 
             // Add days of week header with highlighting for operation days
             const weekdayHeader = document.createElement('div');
-            weekdayHeader.className = 'grid grid-cols-7 gap-1 text-center mb-2';
+            weekdayHeader.className = 'grid grid-cols-7 gap-1 text-center mb-2 border-b pb-2';
 
             ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].forEach((day, index) => {
                 // Convert display index to JS day (0=Sunday, 1=Monday, etc.)
@@ -930,7 +1132,7 @@
 
                 const dayElement = document.createElement('div');
                 dayElement.className =
-                    `text-xs font-medium ${isOperationDay ? 'text-green-600' : 'text-gray-400'}`;
+                    `text-xs font-medium p-1 rounded ${isOperationDay ? 'text-green-700 bg-green-50' : 'text-gray-400'}`;
                 dayElement.textContent = day;
                 weekdayHeader.appendChild(dayElement);
             });
@@ -968,6 +1170,9 @@
                 // Check if this date falls on a valid operation day
                 const isOperationDay = jsOperationDays.includes(dayOfWeek);
 
+                // Check if date is in the past
+                const isPastDate = currentDate < today;
+
                 // Debug log for days
                 if (currentDate.getDate() === 1 || currentDate.getDate() === 15) {
                     console.log(
@@ -977,7 +1182,7 @@
 
                 dateCell.textContent = currentDate.getDate();
 
-                if (isOperationDay) {
+                if (isOperationDay && !isPastDate) {
                     dateCell.className =
                         'date-cell h-8 flex items-center justify-center rounded cursor-pointer hover:bg-blue-100 text-center text-sm border border-green-200';
                     dateCell.setAttribute('data-date', dateString);
@@ -1004,9 +1209,15 @@
                         // Update preview
                         updateSelectedDatesPreview();
                     });
-                } else {
+                } else if (isPastDate) {
+                    // Past dates are disabled
                     dateCell.className =
-                        'h-8 flex items-center justify-center text-gray-300 text-center text-sm';
+                        'h-8 flex items-center justify-center text-gray-300 text-center text-sm bg-gray-100 opacity-50';
+                    dateCell.setAttribute('title', `${getDayName(currentDate)} - Tanggal telah lewat`);
+                } else {
+                    // Non-operation days
+                    dateCell.className =
+                        'h-8 flex items-center justify-center text-gray-300 text-center text-sm bg-gray-100';
                     dateCell.setAttribute('title', `${getDayName(currentDate)} - Bukan hari operasi`);
                 }
 
@@ -1019,14 +1230,14 @@
                 if (currentDate.getDate() === 1) {
                     const monthDivider = document.createElement('div');
                     monthDivider.className =
-                        'col-span-7 text-center py-1 border-t mt-1 mb-1 text-xs font-medium text-gray-500';
+                        'col-span-7 text-center py-2 my-2 border-t border-b text-xs font-medium text-gray-600 bg-gray-50';
 
                     const monthNames = [
                         "Januari", "Februari", "Maret", "April", "Mei", "Juni",
                         "Juli", "Agustus", "September", "Oktober", "November", "Desember"
                     ];
-                    monthDivider.textContent = monthNames[currentDate.getMonth()] + ' ' + currentDate
-                        .getFullYear();
+                    monthDivider.innerHTML =
+                        `<i class="fas fa-calendar-alt mr-1"></i> ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
                     calendarDates.appendChild(monthDivider);
 
@@ -1065,7 +1276,7 @@
                 if (daysFields) daysFields.classList.add('hidden');
                 if (multipleDateFields) multipleDateFields.classList.add('hidden');
 
-                // Show only relevant fields
+                // Show only relevant fields with smooth transition
                 if (selectedValue === 'single' && singleDateFields) {
                     singleDateFields.classList.remove('hidden');
                 } else if (selectedValue === 'range' && rangeDateFields) {
@@ -1084,30 +1295,6 @@
             });
         }
 
-        // Create header with operation days information
-        function addOperationDaysHeader() {
-            // Check if header already exists
-            const existingHeader = document.querySelector('.operation-days-header');
-            if (existingHeader) return;
-
-            const operationInfoDiv = document.createElement('div');
-            operationInfoDiv.className =
-                'operation-days-header bg-yellow-50 p-3 rounded-lg mb-4 border border-yellow-200';
-            operationInfoDiv.innerHTML = `
-            <p class="text-sm font-medium text-yellow-800">
-                <i class="fas fa-exclamation-circle mr-1"></i>
-                <span>Perhatian: Hanya tanggal yang jatuh pada hari-hari operasi yang valid: <strong>${operationDayNames.join(', ')}</strong></span>
-            </p>
-            <p class="text-xs text-yellow-700 mt-1">Tanggal yang dipilih harus sesuai dengan hari operasi kapal.</p>
-        `;
-
-            // Add before the date type selector
-            const dateTypeDiv = dateTypeSelect ? dateTypeSelect.closest('div') : null;
-            if (dateTypeDiv && dateTypeDiv.parentNode) {
-                dateTypeDiv.parentNode.insertBefore(operationInfoDiv, dateTypeDiv);
-            }
-        }
-
         // Add operation days header when modal is opened
         const addDateBtn = document.getElementById('addDateBtn');
         const emptyAddDateBtn = document.getElementById('emptyAddDateBtn');
@@ -1116,9 +1303,6 @@
         const cancelAddBtn = document.getElementById('cancelAddBtn');
 
         function prepareAddModal() {
-            // Add operation days header
-            addOperationDaysHeader();
-
             // Setup date inputs with enhanced validation
             setupDateInputs();
 
@@ -1130,6 +1314,14 @@
             // If calendar is visible, generate it
             if (multipleDateFields && !multipleDateFields.classList.contains('hidden')) {
                 generateCalendar();
+            }
+
+            // Setup days mode if visible
+            if (daysFields && !daysFields.classList.contains('hidden')) {
+                setupDaysMode();
+            } else {
+                // Initialize days checkboxes anyway for when they become visible
+                setupDaysCheckboxes();
             }
         }
 
@@ -1163,11 +1355,30 @@
 
         // Form validation before submission
         if (addDateForm) {
+            // Add debug output to help troubleshoot
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', function(e) {
+                    console.log('Submit button clicked');
+
+                    // Debug info about form
+                    const dateType = dateTypeSelect ? dateTypeSelect.value : '';
+                    console.log('Current date_type:', dateType);
+
+                    // For 'days' type, check checkboxes
+                    if (dateType === 'days') {
+                        const daysChecked = document.querySelectorAll('input[name="days[]"]:checked');
+                        console.log('Days checked:', Array.from(daysChecked).map(cb => cb.value));
+                    }
+                });
+            }
+
             addDateForm.addEventListener('submit', function(e) {
                 console.log('Form submitted');
 
                 // Validate form based on date type
                 const dateType = dateTypeSelect ? dateTypeSelect.value : '';
+                console.log('Validating form with date_type:', dateType);
 
                 if (dateType === 'single') {
                     const singleDate = document.getElementById('single_date');
@@ -1176,13 +1387,14 @@
 
                     if (!singleDate.value) {
                         e.preventDefault();
-                        alert('Silakan pilih tanggal');
+                        showToast('Silakan pilih tanggal', 'error');
                         return false;
                     }
 
                     if (!validateDateInput(singleDate, singleDateWarning, singleDateDay)) {
                         e.preventDefault();
-                        alert('Tanggal yang dipilih tidak sesuai dengan hari operasi kapal');
+                        showToast('Tanggal yang dipilih tidak sesuai dengan hari operasi kapal',
+                            'error');
                         return false;
                     }
                 } else if (dateType === 'range') {
@@ -1195,13 +1407,13 @@
 
                     if (!startDate.value || !endDate.value) {
                         e.preventDefault();
-                        alert('Silakan pilih tanggal mulai dan tanggal akhir');
+                        showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
                         return false;
                     }
 
                     if (!validateDateInput(startDate, startDateWarning, startDateDay)) {
                         e.preventDefault();
-                        alert('Tanggal mulai tidak sesuai dengan hari operasi kapal');
+                        showToast('Tanggal mulai tidak sesuai dengan hari operasi kapal', 'error');
                         return false;
                     }
 
@@ -1223,7 +1435,7 @@
 
                     if (!hasValidDays) {
                         e.preventDefault();
-                        alert('Tidak ada hari operasi dalam rentang tanggal yang dipilih');
+                        showToast('Tidak ada hari operasi dalam rentang tanggal yang dipilih', 'error');
                         return false;
                     }
                 } else if (dateType === 'days') {
@@ -1233,21 +1445,43 @@
 
                     if (daysChecked.length === 0) {
                         e.preventDefault();
-                        alert('Silakan pilih minimal satu hari');
+                        showToast('Silakan pilih minimal satu hari', 'error');
+                        console.error('No days selected');
                         return false;
                     }
 
                     if (!daysStartDate.value || !daysEndDate.value) {
                         e.preventDefault();
-                        alert('Silakan pilih tanggal mulai dan tanggal akhir');
+                        showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
+                        console.error('Missing date range');
                         return false;
                     }
+
+                    // Validate start date is before or equal to end date
+                    const startDate = new Date(daysStartDate.value);
+                    const endDate = new Date(daysEndDate.value);
+
+                    if (startDate > endDate) {
+                        e.preventDefault();
+                        showToast('Tanggal mulai harus sebelum atau sama dengan tanggal akhir',
+                            'error');
+                        console.error('Start date after end date');
+                        return false;
+                    }
+
+                    // Console log all form data for debugging
+                    console.log('Form data for days mode:');
+                    console.log('- date_type:', dateType);
+                    console.log('- days:', Array.from(daysChecked).map(cb => cb.value));
+                    console.log('- days_start_date:', daysStartDate.value);
+                    console.log('- days_end_date:', daysEndDate.value);
+                    console.log('- status:', document.getElementById('status').value);
                 } else if (dateType === 'multiple') {
                     const selectedDates = document.getElementById('selected_dates').value;
 
                     if (!selectedDates) {
                         e.preventDefault();
-                        alert('Silakan pilih minimal satu tanggal');
+                        showToast('Silakan pilih minimal satu tanggal', 'error');
                         return false;
                     }
                 }
@@ -1256,6 +1490,94 @@
                 console.log('Form validation passed, submitting...');
                 return true;
             });
+        }
+
+        // ====== Toast Notification System ======
+        function showToast(message, type = 'info') {
+            // Check if toast container exists, create if not
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'fixed bottom-4 right-4 z-50 flex flex-col space-y-2';
+                document.body.appendChild(toastContainer);
+            }
+
+            // Create toast element
+            const toast = document.createElement('div');
+
+            // Set classes based on type
+            let bgColor, textColor, icon;
+            switch (type) {
+                case 'success':
+                    bgColor = 'bg-green-100';
+                    textColor = 'text-green-800';
+                    icon = '<i class="fas fa-check-circle text-green-500 mr-2"></i>';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-100';
+                    textColor = 'text-red-800';
+                    icon = '<i class="fas fa-exclamation-circle text-red-500 mr-2"></i>';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-yellow-100';
+                    textColor = 'text-yellow-800';
+                    icon = '<i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>';
+                    break;
+                default: // info
+                    bgColor = 'bg-blue-100';
+                    textColor = 'text-blue-800';
+                    icon = '<i class="fas fa-info-circle text-blue-500 mr-2"></i>';
+            }
+
+            toast.className =
+                `${bgColor} ${textColor} py-3 px-4 rounded-lg shadow-md flex items-start max-w-xs transform transition-all duration-300 opacity-0 translate-y-2`;
+            toast.innerHTML = `
+                <div class="flex-shrink-0">
+                    ${icon}
+                </div>
+                <div>
+                    ${message}
+                </div>
+                <button class="ml-auto text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            // Add to container
+            toastContainer.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+
+            // Setup close button
+            const closeBtn = toast.querySelector('button');
+            closeBtn.addEventListener('click', () => {
+                closeToast(toast);
+            });
+
+            // Auto close after 5 seconds
+            setTimeout(() => {
+                closeToast(toast);
+            }, 5000);
+        }
+
+        function closeToast(toast) {
+            // Animate out
+            toast.classList.add('opacity-0', 'translate-y-2');
+
+            // Remove from DOM after animation
+            setTimeout(() => {
+                toast.remove();
+
+                // Remove container if empty
+                const toastContainer = document.getElementById('toast-container');
+                if (toastContainer && toastContainer.children.length === 0) {
+                    toastContainer.remove();
+                }
+            }, 300);
         }
 
         // ====== Edit Date Modal - Simplified (No Date Editing) ======
@@ -1293,8 +1615,8 @@
                 if (currentDateDisplay) {
                     const formattedDate = formatDisplayDate(dateValue);
                     const dayName = getDayName(dateValue);
-                    currentDateDisplay.textContent =
-                        `Jadwal tanggal: ${formattedDate} (${dayName})`;
+                    currentDateDisplay.innerHTML =
+                        `<i class="fas fa-calendar-day mr-1"></i> Jadwal tanggal <strong>${formattedDate}</strong> (${dayName})`;
                 }
 
                 // Set status
@@ -1338,8 +1660,8 @@
                 console.log(`Delete button clicked for date: ${dateText}, id: ${dateId}`);
 
                 if (deleteConfirmText) {
-                    deleteConfirmText.textContent =
-                        `Apakah Anda yakin ingin menghapus jadwal untuk tanggal ${dateText}?`;
+                    deleteConfirmText.innerHTML =
+                        `Apakah Anda yakin ingin menghapus jadwal untuk tanggal <strong>${dateText}</strong>?`;
                 }
 
                 if (deleteDateForm) {
@@ -1364,6 +1686,204 @@
             });
         }
 
+        // Auto-hide alerts after 5 seconds
+        const autoHideAlerts = document.querySelectorAll('.fade-out-alert');
+        autoHideAlerts.forEach(alert => {
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 500);
+            }, 5000);
+        });
+
+        // Set up the days checkboxes based on schedule operation days
+        function setupDaysCheckboxes() {
+            // Check if schedule days data is available
+            if (scheduleDays && scheduleDays.length > 0) {
+                console.log('Setting up days checkboxes with scheduleDays:', scheduleDays);
+
+                // Clear all checkboxes first
+                document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+
+                // Pre-check the days that match schedule operation days
+                scheduleDays.forEach(day => {
+                    // Make sure day is treated as a number for comparison
+                    const dayNum = parseInt(day, 10);
+                    const checkbox = document.getElementById(`day_${dayNum}`);
+                    if (checkbox) {
+                        console.log(`Checking day_${dayNum}`);
+                        checkbox.checked = true;
+                    }
+                });
+
+                // Make sure at least one checkbox is checked
+                const hasChecked = Array.from(document.querySelectorAll('input[name="days[]"]')).some(cb => cb
+                    .checked);
+                if (!hasChecked && document.querySelectorAll('input[name="days[]"]').length > 0) {
+                    // If none are checked, check the first one
+                    document.querySelector('input[name="days[]"]').checked = true;
+                }
+            }
+        }
+
+        // Call setup function when form is shown
+        function setupDaysMode() {
+            console.log('Setting up days mode...');
+            setupDaysCheckboxes();
+
+            // Add change event listener to ensure at least one day is always selected
+            document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    // After this checkbox change, check if at least one is still checked
+                    const hasChecked = Array.from(document.querySelectorAll(
+                        'input[name="days[]"]')).some(cb => cb.checked);
+                    if (!hasChecked) {
+                        // If the user unchecked the last checked box, show warning and recheck it
+                        showToast('Minimal satu hari harus dipilih', 'warning');
+                        this.checked = true;
+                    }
+                });
+            });
+
+            // Initialize date fields
+            const daysStartDate = document.getElementById('days_start_date');
+            const daysEndDate = document.getElementById('days_end_date');
+
+            if (daysStartDate && daysEndDate) {
+                // Set minimum dates
+                const today = new Date().toISOString().split('T')[0];
+                daysStartDate.min = today;
+                daysEndDate.min = today;
+
+                // Set default values if not set
+                if (!daysStartDate.value) {
+                    daysStartDate.value = today;
+                }
+
+                if (!daysEndDate.value) {
+                    const defaultEndDate = new Date();
+                    defaultEndDate.setDate(defaultEndDate.getDate() + 30);
+                    daysEndDate.value = defaultEndDate.toISOString().split('T')[0];
+                }
+
+                // Add validation
+                daysStartDate.addEventListener('change', function() {
+                    if (daysEndDate.value && this.value > daysEndDate.value) {
+                        showToast('Tanggal mulai tidak boleh setelah tanggal akhir', 'error');
+                        this.value = daysEndDate.value;
+                    }
+                });
+
+                daysEndDate.addEventListener('change', function() {
+                    if (daysStartDate.value && this.value < daysStartDate.value) {
+                        showToast('Tanggal akhir tidak boleh sebelum tanggal mulai', 'error');
+                        this.value = daysStartDate.value;
+                    }
+                });
+            }
+
+            console.log('Days mode setup complete');
+        }
+
+        function validateAddDateForm(e) {
+            console.log('Validating form submission...');
+
+            const dateType = document.getElementById('date_type').value;
+            console.log('Date type:', dateType);
+
+            if (dateType === 'single') {
+                const singleDate = document.getElementById('single_date');
+                if (!singleDate || !singleDate.value) {
+                    e.preventDefault();
+                    showToast('Silakan pilih tanggal', 'error');
+                    return false;
+                }
+
+                // Validate operation day only if field exists
+                const singleDateWarning = document.getElementById('single_date_warning');
+                const singleDateDay = document.getElementById('single_date_day');
+                if (!isValidOperationDay(singleDate.value)) {
+                    e.preventDefault();
+                    showToast('Tanggal yang dipilih tidak sesuai dengan hari operasi kapal', 'error');
+                    return false;
+                }
+            } else if (dateType === 'range') {
+                const startDate = document.getElementById('start_date');
+                const endDate = document.getElementById('end_date');
+
+                if (!startDate || !startDate.value || !endDate || !endDate.value) {
+                    e.preventDefault();
+                    showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
+                    return false;
+                }
+
+                // Check if there are any valid operation days in the range
+                let hasValidDays = false;
+                const start = new Date(startDate.value);
+                const end = new Date(endDate.value);
+
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+                    let currentDate = new Date(start);
+                    while (currentDate <= end) {
+                        if (isValidOperationDay(currentDate.toISOString().split('T')[0])) {
+                            hasValidDays = true;
+                            break;
+                        }
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                }
+
+                if (!hasValidDays) {
+                    e.preventDefault();
+                    showToast('Tidak ada hari operasi dalam rentang tanggal yang dipilih', 'error');
+                    return false;
+                }
+            } else if (dateType === 'days') {
+                console.log('Validating days mode...');
+
+                const daysChecked = document.querySelectorAll('input[name="days[]"]:checked');
+                const daysStartDate = document.getElementById('days_start_date');
+                const daysEndDate = document.getElementById('days_end_date');
+
+                console.log('Checked days:', Array.from(daysChecked).map(cb => cb.value));
+                console.log('Start date:', daysStartDate?.value);
+                console.log('End date:', daysEndDate?.value);
+
+                if (!daysChecked || daysChecked.length === 0) {
+                    e.preventDefault();
+                    showToast('Silakan pilih minimal satu hari', 'error');
+                    return false;
+                }
+
+                if (!daysStartDate || !daysStartDate.value || !daysEndDate || !daysEndDate.value) {
+                    e.preventDefault();
+                    showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
+                    return false;
+                }
+
+                // Validate start date is before or equal to end date
+                if (daysStartDate.value > daysEndDate.value) {
+                    e.preventDefault();
+                    showToast('Tanggal mulai harus sebelum atau sama dengan tanggal akhir', 'error');
+                    return false;
+                }
+            } else if (dateType === 'multiple') {
+                const selectedDates = document.getElementById('selected_dates');
+
+                if (!selectedDates || !selectedDates.value) {
+                    e.preventDefault();
+                    showToast('Silakan pilih minimal satu tanggal', 'error');
+                    return false;
+                }
+            }
+
+            console.log('Form validation passed');
+            return true;
+        }
+
         // Pre-fill today's date for convenience
         const today = new Date().toISOString().split('T')[0];
         const allDateInputs = document.querySelectorAll('input[type="date"]');
@@ -1380,10 +1900,67 @@
         });
 
         // Init calendar if we start on multiple date view
-        if (dateTypeSelect && dateTypeSelect.value === 'multiple' && multipleDateFields && !multipleDateFields.classList.contains('hidden')) {
+        if (dateTypeSelect && dateTypeSelect.value === 'multiple' && multipleDateFields && !multipleDateFields
+            .classList.contains('hidden')) {
             generateCalendar();
         }
 
         console.log('Schedule dates management initialization complete');
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const addDateForm = document.getElementById('addDateForm');
+
+        if (addDateForm) {
+            addDateForm.addEventListener('submit', function(e) {
+                return validateAddDateForm(e);
+            });
+        }
+
+        // Update dateTypeSelect event listener to properly handle days mode
+        const dateTypeSelect = document.getElementById('date_type');
+        if (dateTypeSelect) {
+            dateTypeSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                console.log(`Date type changed to: ${selectedValue}`);
+
+                // Hide all fields first
+                const singleDateFields = document.getElementById('singleDateFields');
+                const rangeDateFields = document.getElementById('rangeDateFields');
+                const daysFields = document.getElementById('daysFields');
+                const multipleDateFields = document.getElementById('multipleDateFields');
+
+                if (singleDateFields) singleDateFields.classList.add('hidden');
+                if (rangeDateFields) rangeDateFields.classList.add('hidden');
+                if (daysFields) daysFields.classList.add('hidden');
+                if (multipleDateFields) multipleDateFields.classList.add('hidden');
+
+                // Show only relevant fields with smooth transition
+                if (selectedValue === 'single' && singleDateFields) {
+                    singleDateFields.classList.remove('hidden');
+                } else if (selectedValue === 'range' && rangeDateFields) {
+                    rangeDateFields.classList.remove('hidden');
+                    // Update preview when showing range fields
+                    if (typeof updateRangeDatePreview === 'function') {
+                        updateRangeDatePreview();
+                    }
+                } else if (selectedValue === 'days' && daysFields) {
+                    daysFields.classList.remove('hidden');
+                    setupDaysMode(); // Setup days mode
+                } else if (selectedValue === 'multiple' && multipleDateFields) {
+                    multipleDateFields.classList.remove('hidden');
+                    if (typeof generateCalendar === 'function') {
+                        generateCalendar(); // Generate calendar when this view is selected
+                    }
+                }
+
+                // Re-setup date inputs with enhanced validation after showing fields
+                setTimeout(function() {
+                    if (typeof setupDateInputs === 'function') {
+                        setupDateInputs();
+                    }
+                }, 100);
+            });
+        }
     });
 </script>
