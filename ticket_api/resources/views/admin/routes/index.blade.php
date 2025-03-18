@@ -1,170 +1,206 @@
 @extends('admin.layouts.app')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 class="text-2xl font-bold">Manajemen Rute</h1>
-        <div class="flex flex-col sm:flex-row gap-3">
-            <a href="{{ route('admin.routes.create') }}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center justify-center">
-                <i class="fas fa-plus mr-2"></i> Tambah Rute Baru
-            </a>
+<div class="bg-white shadow rounded-lg overflow-hidden">
+    <!-- Header Section -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold">Manajemen Rute</h1>
+                <p class="mt-1 text-blue-100">Kelola semua rute pelayaran</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <a href="{{ route('admin.routes.create') }}" class="bg-white hover:bg-gray-100 text-blue-700 font-medium py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-md">
+                    <i class="fas fa-plus mr-2"></i> Tambah Rute Baru
+                </a>
+            </div>
         </div>
     </div>
 
-    @if(session('success'))
-    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
-        <p>{{ session('success') }}</p>
-    </div>
-    @endif
-
-    @if(session('error'))
-    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
-        <p>{{ session('error') }}</p>
-    </div>
-    @endif
-
-    <!-- Filter and Search -->
-    <div class="mb-6 bg-gray-50 p-4 rounded-lg">
-        <form action="{{ route('admin.routes.index') }}" method="GET" class="flex flex-col md:flex-row gap-4">
-            <div class="flex-grow">
-                <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Cari Rute</label>
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-search text-gray-400"></i>
-                    </div>
-                    <input type="text" id="search" name="search" value="{{ request('search') }}"
-                        placeholder="Cari asal atau tujuan..."
-                        class="pl-10 bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+    <div class="p-6">
+        <!-- Alerts -->
+        @if(session('success'))
+        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-r shadow-sm" role="alert">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle text-green-500 mt-1"></i>
+                </div>
+                <div class="ml-3">
+                    <p>{{ session('success') }}</p>
                 </div>
             </div>
+        </div>
+        @endif
 
-            <div class="w-full md:w-48">
-                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select id="status" name="status" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                    <option value="">Semua Status</option>
-                    <option value="ACTIVE" {{ request('status') == 'ACTIVE' ? 'selected' : '' }}>Aktif</option>
-                    <option value="INACTIVE" {{ request('status') == 'INACTIVE' ? 'selected' : '' }}>Tidak Aktif</option>
-                    <option value="WEATHER_ISSUE" {{ request('status') == 'WEATHER_ISSUE' ? 'selected' : '' }}>Masalah Cuaca</option>
-                </select>
+        @if(session('error'))
+        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r shadow-sm" role="alert">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-circle text-red-500 mt-1"></i>
+                </div>
+                <div class="ml-3">
+                    <p>{{ session('error') }}</p>
+                </div>
             </div>
+        </div>
+        @endif
 
-            <div class="flex items-end">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded h-10">
-                    <i class="fas fa-filter mr-1"></i> Filter
-                </button>
-
-                @if(request('search') || request('status'))
-                <a href="{{ route('admin.routes.index') }}" class="ml-2 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-3 rounded h-10 flex items-center">
-                    <i class="fas fa-times mr-1"></i> Reset
-                </a>
-                @endif
-            </div>
-        </form>
-    </div>
-
-    <div class="overflow-x-auto bg-white rounded-lg shadow">
-        <table class="min-w-full">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                    <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asal</th>
-                    <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tujuan</th>
-                    <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jarak (KM)</th>
-                    <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durasi (Menit)</th>
-                    <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Dasar</th>
-                    <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @forelse($routes as $index => $route)
-                <tr class="hover:bg-gray-50">
-                    <td class="py-3 px-4 text-sm text-gray-500">{{ $routes->firstItem() + $index }}</td>
-                    <td class="py-3 px-4 text-sm font-medium text-gray-900">{{ $route->origin }}</td>
-                    <td class="py-3 px-4 text-sm font-medium text-gray-900">{{ $route->destination }}</td>
-                    <td class="py-3 px-4 text-sm text-gray-500">{{ $route->distance ?? '-' }}</td>
-                    <td class="py-3 px-4 text-sm text-gray-500">{{ $route->duration }}</td>
-                    <td class="py-3 px-4 text-sm text-gray-500">Rp {{ number_format($route->base_price, 0, ',', '.') }}</td>
-                    <td class="py-3 px-4 text-sm">
-                        @if ($route->status == 'ACTIVE')
-                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                <i class="fas fa-check-circle mr-1"></i> Aktif
-                            </span>
-                        @elseif($route->status == 'WEATHER_ISSUE')
-                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                <i class="fas fa-cloud-rain mr-1"></i> Masalah Cuaca
-                            </span>
-                        @else
-                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                <i class="fas fa-ban mr-1"></i> Tidak Aktif
-                            </span>
-                        @endif
-                    </td>
-                    <td class="py-3 px-4 text-sm">
-                        <div class="flex items-center space-x-2">
-                            <a href="{{ route('admin.routes.show', $route->id) }}"
-                                class="text-blue-600 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 p-2 rounded-lg transition"
-                                title="Detail">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="{{ route('admin.routes.edit', $route->id) }}"
-                                class="text-yellow-600 hover:text-yellow-900 bg-yellow-100 hover:bg-yellow-200 p-2 rounded-lg transition"
-                                title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <form action="{{ route('admin.routes.destroy', $route->id) }}" method="POST" class="inline delete-form">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                    class="text-red-600 hover:text-red-900 bg-red-100 hover:bg-red-200 p-2 rounded-lg transition delete-btn"
-                                    title="Hapus"
-                                    data-route-name="{{ $route->origin }} - {{ $route->destination }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+        <!-- Filter and Search -->
+        <div class="mb-6 bg-gray-50 p-5 rounded-lg border border-gray-200 shadow-sm">
+            <form action="{{ route('admin.routes.index') }}" method="GET" class="space-y-4 md:space-y-0 md:flex md:items-end md:gap-4">
+                <div class="flex-grow">
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Cari Rute</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
                         </div>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="8" class="py-6 px-4 text-center text-gray-500">
-                        <div class="flex flex-col items-center justify-center">
-                            <i class="fas fa-route text-gray-300 text-5xl mb-3"></i>
-                            <p class="text-lg font-medium">Tidak ada data rute</p>
-                            <p class="text-sm text-gray-400">Belum ada rute yang ditambahkan atau sesuai filter yang dipilih</p>
-                            <a href="{{ route('admin.routes.create') }}" class="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                                <i class="fas fa-plus mr-2"></i> Tambah Rute Baru
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                        <input type="text" id="search" name="search" value="{{ request('search') }}"
+                            placeholder="Cari asal atau tujuan..."
+                            class="pl-10 bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm">
+                    </div>
+                </div>
 
-    <div class="mt-4">
-        {{ $routes->links() }}
+                <div class="w-full md:w-48">
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select id="status" name="status" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm">
+                        <option value="">Semua Status</option>
+                        <option value="ACTIVE" {{ request('status') == 'ACTIVE' ? 'selected' : '' }}>Aktif</option>
+                        <option value="INACTIVE" {{ request('status') == 'INACTIVE' ? 'selected' : '' }}>Tidak Aktif</option>
+                        <option value="WEATHER_ISSUE" {{ request('status') == 'WEATHER_ISSUE' ? 'selected' : '' }}>Masalah Cuaca</option>
+                    </select>
+                </div>
+
+                <div class="flex items-end gap-2">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg h-10 font-medium transition-colors shadow-sm">
+                        <i class="fas fa-filter mr-1"></i> Filter
+                    </button>
+
+                    @if(request('search') || request('status'))
+                    <a href="{{ route('admin.routes.index') }}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-3 rounded-lg h-10 flex items-center transition-colors shadow-sm">
+                        <i class="fas fa-times mr-1"></i> Reset
+                    </a>
+                    @endif
+                </div>
+            </form>
+        </div>
+
+        <!-- Route Table -->
+        <div class="overflow-x-auto bg-white rounded-lg shadow border border-gray-200">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                        <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asal</th>
+                        <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tujuan</th>
+                        <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jarak (KM)</th>
+                        <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durasi</th>
+                        <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga Dasar</th>
+                        <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @forelse($routes as $index => $route)
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="py-3 px-4 text-sm text-gray-500">{{ $routes->firstItem() + $index }}</td>
+                        <td class="py-3 px-4 text-sm font-medium text-gray-900">{{ $route->origin }}</td>
+                        <td class="py-3 px-4 text-sm font-medium text-gray-900">{{ $route->destination }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">{{ $route->distance ?? '-' }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">
+                            {{ $route->duration }} menit
+                            <span class="text-xs text-gray-500">({{ floor($route->duration / 60) }}j {{ $route->duration % 60 }}m)</span>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700">
+                            <span class="font-medium">Rp {{ number_format($route->base_price, 0, ',', '.') }}</span>
+                        </td>
+                        <td class="py-3 px-4 text-sm">
+                            @if ($route->status == 'ACTIVE')
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 border border-green-200">
+                                    <i class="fas fa-check-circle mr-1"></i> Aktif
+                                </span>
+                            @elseif($route->status == 'WEATHER_ISSUE')
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                    <i class="fas fa-cloud-rain mr-1"></i> Masalah Cuaca
+                                </span>
+                            @else
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 border border-red-200">
+                                    <i class="fas fa-ban mr-1"></i> Tidak Aktif
+                                </span>
+                            @endif
+                        </td>
+                        <td class="py-3 px-4 text-sm">
+                            <div class="flex items-center space-x-2">
+                                <a href="{{ route('admin.routes.show', $route->id) }}"
+                                    class="text-blue-600 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 p-2 rounded-lg transition-colors"
+                                    title="Detail">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ route('admin.routes.edit', $route->id) }}"
+                                    class="text-yellow-600 hover:text-yellow-900 bg-yellow-100 hover:bg-yellow-200 p-2 rounded-lg transition-colors"
+                                    title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('admin.routes.destroy', $route->id) }}" method="POST" class="inline delete-form">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                        class="text-red-600 hover:text-red-900 bg-red-100 hover:bg-red-200 p-2 rounded-lg transition-colors delete-btn"
+                                        title="Hapus"
+                                        data-route-name="{{ $route->origin }} - {{ $route->destination }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="8" class="py-8 px-4 text-center">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                <p class="text-lg font-medium text-gray-500">Tidak ada data rute</p>
+                                <p class="text-sm text-gray-400 mb-4">Belum ada rute yang ditambahkan atau sesuai filter yang dipilih</p>
+                                <a href="{{ route('admin.routes.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-plus mr-2"></i> Tambah Rute Baru
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="mt-4">
+            {{ $routes->links() }}
+        </div>
     </div>
 </div>
 
 <!-- Confirmation Modal -->
-<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden transition-opacity duration-300 ease-in-out">
     <div class="flex items-center justify-center h-full w-full p-4">
-        <div class="bg-white rounded-lg p-6 w-full max-w-md">
-            <div class="mb-4 text-center">
-                <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-3"></i>
-                <h3 class="text-xl font-bold text-gray-900">Konfirmasi Hapus</h3>
-                <p class="text-gray-500 mt-2">Apakah Anda yakin ingin menghapus rute:</p>
-                <p id="routeNameToDelete" class="font-semibold text-gray-800 mt-1"></p>
-            </div>
-            <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                <button id="cancelDelete" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 sm:mt-0 sm:col-start-1 sm:text-sm">
-                    Batal
-                </button>
-                <button id="confirmDelete" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:col-start-2 sm:text-sm">
-                    Hapus
-                </button>
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0" id="deleteModalContent">
+            <div class="p-6">
+                <div class="text-center">
+                    <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-1">Konfirmasi Hapus</h3>
+                    <p class="text-gray-500">Apakah Anda yakin ingin menghapus rute:</p>
+                    <p id="routeNameToDelete" class="font-semibold text-gray-800 mt-2 mb-4"></p>
+                </div>
+                <div class="mt-6 grid grid-cols-2 gap-3">
+                    <button id="cancelDelete" type="button" class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors">
+                        <i class="fas fa-times mr-2"></i> Batal
+                    </button>
+                    <button id="confirmDelete" type="button" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                        <i class="fas fa-trash mr-2"></i> Hapus
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -174,9 +210,10 @@
 @section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Handle delete confirmation
+        // Handle delete confirmation with animation
         const deleteBtns = document.querySelectorAll('.delete-btn');
         const deleteModal = document.getElementById('deleteModal');
+        const deleteModalContent = document.getElementById('deleteModalContent');
         const confirmDelete = document.getElementById('confirmDelete');
         const cancelDelete = document.getElementById('cancelDelete');
         const routeNameToDelete = document.getElementById('routeNameToDelete');
@@ -186,14 +223,21 @@
             deleteModal.classList.remove('hidden');
             setTimeout(() => {
                 deleteModal.style.opacity = '1';
+                deleteModalContent.classList.remove('scale-95', 'opacity-0');
+                deleteModalContent.classList.add('scale-100', 'opacity-100');
             }, 10);
         }
 
         function closeModal() {
-            deleteModal.style.opacity = '0';
+            deleteModalContent.classList.remove('scale-100', 'opacity-100');
+            deleteModalContent.classList.add('scale-95', 'opacity-0');
+
             setTimeout(() => {
-                deleteModal.classList.add('hidden');
-            }, 300);
+                deleteModal.style.opacity = '0';
+                setTimeout(() => {
+                    deleteModal.classList.add('hidden');
+                }, 300);
+            }, 200);
         }
 
         deleteBtns.forEach(btn => {

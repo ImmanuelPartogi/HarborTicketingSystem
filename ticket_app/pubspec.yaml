@@ -65,8 +65,8 @@ dependencies:
   timezone: ^0.9.2
 
   # Firebase - Updated versions for compatibility
-  # firebase_core: ^2.24.2  # Temporarily disabled for web compatibility
-  # firebase_messaging: ^14.7.10  # Temporarily disabled for web compatibility
+  firebase_core: ^2.24.2
+  firebase_messaging: ^14.7.10
   mockito: ^5.4.2
 
   # The following adds the Cupertino Icons font to your application.

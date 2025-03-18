@@ -16,16 +16,16 @@
             </div>
         </div>
 
-        @if(session('success'))
-        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
-            <p>{{ session('success') }}</p>
-        </div>
+        @if (session('success'))
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
+                <p>{{ session('success') }}</p>
+            </div>
         @endif
 
-        @if(session('error'))
-        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
-            <p>{{ session('error') }}</p>
-        </div>
+        @if (session('error'))
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
+                <p>{{ session('error') }}</p>
+            </div>
         @endif
 
         <!-- Status Alert untuk rute dengan masalah cuaca atau non-aktif -->
@@ -78,7 +78,8 @@
                     </div>
                     <div class="flex items-center">
                         <div class="w-32 text-gray-600">Durasi:</div>
-                        <div class="font-medium">{{ $route->duration }} menit ({{ floor($route->duration / 60) }} jam {{ $route->duration % 60 }} menit)</div>
+                        <div class="font-medium">{{ $route->duration }} menit ({{ floor($route->duration / 60) }} jam
+                            {{ $route->duration % 60 }} menit)</div>
                     </div>
                     <div class="flex items-center">
                         <div class="w-32 text-gray-600">Status:</div>
@@ -121,108 +122,179 @@
             </div>
         </div>
 
-        <!-- Form Update Status Rute - Enhanced with Time Windows -->
-        <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 class="text-lg font-semibold mb-4 flex items-center">
-                <i class="fas fa-toggle-on mr-2 text-indigo-500"></i> Update Status Rute
-            </h3>
-            <form action="{{ route('admin.routes.update-status', $route) }}" method="POST" id="statusForm">
+        <!-- Route Status Management Form - Redesigned -->
+        <div class="mt-6 rounded-lg border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-toggle-on mr-2"></i> Update Status Rute
+                </h3>
+            </div>
+
+            <form action="{{ route('admin.routes.update-status', $route) }}" method="POST" id="statusForm"
+                class="p-6 bg-white">
                 @csrf
                 @method('PUT')
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left Column: Status Selection -->
                     <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select id="status" name="status"
-                            class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                            <option value="ACTIVE" {{ $route->status == 'ACTIVE' ? 'selected' : '' }}>Aktif</option>
-                            <option value="INACTIVE" {{ $route->status == 'INACTIVE' ? 'selected' : '' }}>Tidak Aktif
-                            </option>
-                            <option value="WEATHER_ISSUE" {{ $route->status == 'WEATHER_ISSUE' ? 'selected' : '' }}>Masalah
-                                Cuaca</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Pilih status baru untuk rute ini</p>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Status Rute <span
+                                class="text-red-500">*</span></label>
+                        <div class="space-y-3">
+                            <div class="relative">
+                                <input type="radio" id="status_active" name="status" value="ACTIVE"
+                                    {{ $route->status == 'ACTIVE' ? 'checked' : '' }} class="peer hidden">
+                                <label for="status_active"
+                                    class="flex items-center p-3 border rounded-lg cursor-pointer transition-colors
+                            peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-800
+                            border-gray-300 hover:bg-gray-50">
+                                    <div
+                                        class="w-4 h-4 mr-2 rounded-full border border-gray-400 flex items-center justify-center peer-checked:border-green-500">
+                                        <div class="w-2 h-2 rounded-full bg-green-500 peer-checked:block hidden"></div>
+                                    </div>
+                                    <i class="fas fa-check-circle mr-2 text-green-500"></i>
+                                    <span class="font-medium">Aktif</span>
+                                    <span class="text-sm text-gray-500 ml-2">(Rute Beroperasi Normal)</span>
+                                </label>
+                            </div>
+
+                            <div class="relative">
+                                <input type="radio" id="status_weather" name="status" value="WEATHER_ISSUE"
+                                    {{ $route->status == 'WEATHER_ISSUE' ? 'checked' : '' }} class="peer hidden">
+                                <label for="status_weather"
+                                    class="flex items-center p-3 border rounded-lg cursor-pointer transition-colors
+                            peer-checked:bg-yellow-100 peer-checked:border-yellow-500 peer-checked:text-yellow-800
+                            border-gray-300 hover:bg-gray-50">
+                                    <div
+                                        class="w-4 h-4 mr-2 rounded-full border border-gray-400 flex items-center justify-center peer-checked:border-yellow-500">
+                                        <div class="w-2 h-2 rounded-full bg-yellow-500 peer-checked:block hidden"></div>
+                                    </div>
+                                    <i class="fas fa-cloud-rain mr-2 text-yellow-500"></i>
+                                    <span class="font-medium">Masalah Cuaca</span>
+                                    <span class="text-sm text-gray-500 ml-2">(Jadwal Tertunda)</span>
+                                </label>
+                            </div>
+
+                            <div class="relative">
+                                <input type="radio" id="status_inactive" name="status" value="INACTIVE"
+                                    {{ $route->status == 'INACTIVE' ? 'checked' : '' }} class="peer hidden">
+                                <label for="status_inactive"
+                                    class="flex items-center p-3 border rounded-lg cursor-pointer transition-colors
+                            peer-checked:bg-red-100 peer-checked:border-red-500 peer-checked:text-red-800
+                            border-gray-300 hover:bg-gray-50">
+                                    <div
+                                        class="w-4 h-4 mr-2 rounded-full border border-gray-400 flex items-center justify-center peer-checked:border-red-500">
+                                        <div class="w-2 h-2 rounded-full bg-red-500 peer-checked:block hidden"></div>
+                                    </div>
+                                    <i class="fas fa-ban mr-2 text-red-500"></i>
+                                    <span class="font-medium">Tidak Aktif</span>
+                                    <span class="text-sm text-gray-500 ml-2">(Jadwal Dibatalkan)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Status Note -->
+                        <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                            <p class="text-sm text-blue-800 flex items-start">
+                                <i class="fas fa-info-circle mt-0.5 mr-2 text-blue-500"></i>
+                                <span id="status_note">
+                                    <!-- Dynamic text will be updated via JavaScript -->
+                                </span>
+                            </p>
+                        </div>
                     </div>
 
+                    <!-- Right Column: Reason and Settings -->
                     <div>
-                        <label for="reason" class="block text-sm font-medium text-gray-700 mb-1">Alasan (opsional)</label>
-                        <input type="text" id="reason" name="reason" value="{{ $route->status_reason }}"
-                            class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                        <p class="text-xs text-gray-500 mt-1">Berikan alasan untuk perubahan status ini</p>
+                        <!-- Reason Input -->
+                        <div class="mb-4">
+                            <label for="reason" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-comment-alt mr-1 text-gray-500"></i> Alasan Perubahan Status
+                            </label>
+                            <textarea id="reason" name="reason" rows="2"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Contoh: Gelombang tinggi, perbaikan kapal, dll.">{{ $route->status_reason }}</textarea>
+                            <p class="mt-1 text-sm text-gray-500">Alasan ini akan ditampilkan kepada penumpang</p>
+                        </div>
+
+                        <!-- Apply to Schedules Option -->
+                        <div class="mt-6">
+                            <div class="flex items-center mb-3">
+                                <input type="checkbox" id="apply_to_schedules" name="apply_to_schedules" value="1"
+                                    class="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" checked>
+                                <label for="apply_to_schedules" class="ml-2 font-medium text-gray-700">
+                                    Terapkan perubahan ke jadwal terkait
+                                </label>
+                            </div>
+
+                            <div class="ml-7 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                <p class="text-sm text-blue-800 font-medium mb-2">Perubahan status akan mempengaruhi
+                                    jadwal:</p>
+                                <ul class="space-y-1 text-sm text-blue-700">
+                                    <li class="flex items-center">
+                                        <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                        Rute <span class="text-green-600 font-medium mx-1">Aktif</span> → Jadwal <span
+                                            class="text-green-600 font-medium mx-1">Aktif</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <i class="fas fa-cloud-rain text-yellow-500 mr-2"></i>
+                                        Rute <span class="text-yellow-600 font-medium mx-1">Masalah Cuaca</span> → Jadwal
+                                        <span class="text-yellow-600 font-medium mx-1">Tertunda</span>
+                                    </li>
+                                    <li class="flex items-center">
+                                        <i class="fas fa-ban text-red-500 mr-2"></i>
+                                        Rute <span class="text-red-600 font-medium mx-1">Tidak Aktif</span> → Jadwal <span
+                                            class="text-red-600 font-medium mx-1">Dibatalkan</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mt-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="apply_to_schedules" name="apply_to_schedules" value="1"
-                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4" checked>
-                        <label for="apply_to_schedules" class="ml-2 text-sm text-gray-700 font-medium">
-                            Terapkan perubahan status ke jadwal yang menggunakan rute ini
-                        </label>
-                    </div>
-                    <div class="ml-6 mt-1">
-                        <p class="text-xs text-gray-600">
-                            Jika dicentang, jadwal yang menggunakan rute ini akan diperbarui statusnya sesuai:
-                        </p>
-                        <ul class="list-disc list-inside text-xs text-gray-600 mt-1 space-y-1">
-                            <li>Rute <span class="text-green-600 font-medium">Aktif</span> → Jadwal <span class="text-green-600 font-medium">Aktif</span></li>
-                            <li>Rute <span class="text-red-600 font-medium">Tidak Aktif</span> → Jadwal <span class="text-red-600 font-medium">Dibatalkan</span></li>
-                            <li>Rute <span class="text-yellow-600 font-medium">Masalah Cuaca</span> → Jadwal <span class="text-yellow-600 font-medium">Tertunda</span> (bisa di-reschedule)</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Enhanced time window settings -->
-                <div id="timeWindowOptions" class="mt-4 border-t pt-4">
-                    <h4 class="text-md font-medium mb-2 flex items-center">
-                        <i class="fas fa-clock mr-2 text-blue-500"></i> Pengaturan Waktu dan Tanggal
+                <!-- Duration Settings - Simplified to just days -->
+                <div id="durationSettings" class="mt-6 p-5 bg-gray-50 rounded-lg border border-gray-200">
+                    <h4 class="text-md font-semibold mb-4 flex items-center text-gray-800">
+                        <i class="fas fa-calendar-alt mr-2 text-indigo-500"></i> Durasi Perubahan Status
                     </h4>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Waktu Mulai</label>
-                            <input type="time" id="start_time" name="start_time"
-                                class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                            <p class="text-xs text-gray-500 mt-1">Kosongkan jika semua waktu terpengaruh</p>
+                    <div class="max-w-md">
+                        <label for="affect_days" class="block text-sm font-medium text-gray-700 mb-2">
+                            Berlaku Untuk Berapa Hari?
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-calendar-day text-gray-400"></i>
+                            </div>
+                            <select id="affect_days" name="affect_days"
+                                class="pl-10 bg-white border border-gray-300 text-gray-900 text-sm rounded-lg w-full p-2.5 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="1">1 hari</option>
+                                <option value="2">2 hari</option>
+                                <option value="3" selected>3 hari</option>
+                                <option value="5">5 hari</option>
+                                <option value="7">7 hari</option>
+                                <option value="14">14 hari</option>
+                                <option value="30">30 hari</option>
+                            </select>
                         </div>
-
-                        <div>
-                            <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">Waktu Selesai</label>
-                            <input type="time" id="end_time" name="end_time"
-                                class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                            <p class="text-xs text-gray-500 mt-1">Kosongkan jika semua waktu terpengaruh</p>
-                        </div>
+                        <p class="text-sm text-gray-500 mt-2 flex items-start">
+                            <i class="fas fa-info-circle mr-2 mt-0.5 text-blue-500"></i>
+                            <span id="duration_explanation">
+                                Setelah <span class="font-medium">3 hari</span>, status akan otomatis kembali ke <span
+                                    class="text-green-600 font-medium">Aktif</span> jika saat ini diubah ke <span
+                                    class="text-yellow-600 font-medium">Masalah Cuaca</span>.
+                            </span>
+                        </p>
                     </div>
 
-                    <div class="mb-4">
-                        <label for="affect_days" class="block text-sm font-medium text-gray-700 mb-1">Jumlah Hari ke Depan</label>
-                        <select id="affect_days" name="affect_days"
-                            class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                            <option value="1">1 hari</option>
-                            <option value="2">2 hari</option>
-                            <option value="3" selected>3 hari</option>
-                            <option value="5">5 hari</option>
-                            <option value="7">7 hari</option>
-                            <option value="14">14 hari</option>
-                            <option value="30">30 hari</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Berapa hari ke depan jadwal akan terpengaruh</p>
-                    </div>
+                    <!-- Add hidden inputs to ensure time settings are not used -->
+                    <input type="hidden" name="start_time" value="">
+                    <input type="hidden" name="end_time" value="">
                 </div>
 
-                <div class="mt-4 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <p class="text-sm text-blue-700 flex items-start">
-                        <i class="fas fa-info-circle mr-2 mt-1"></i>
-                        <span>
-                            <strong>Perubahan Status Fleksibel:</strong> Sistem akan hanya mengubah jadwal dalam rentang waktu yang ditentukan.
-                            Misalnya, jika Anda menandai masalah cuaca dari jam 08:00-14:00 untuk 2 hari ke depan,
-                            hanya keberangkatan pada jam tersebut yang akan ditandai tertunda.
-                        </span>
-                    </p>
-                </div>
-
-                <div class="mt-4">
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded flex items-center">
+                <div class="flex justify-end mt-6">
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg flex items-center transition-colors shadow-md">
                         <i class="fas fa-save mr-2"></i> Update Status
                     </button>
                 </div>
@@ -237,12 +309,24 @@
                 <table class="min-w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kapal</th>
-                            <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hari</th>
-                            <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu Keberangkatan</th>
-                            <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu Kedatangan</th>
-                            <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                            <th scope="col"
+                                class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Kapal</th>
+                            <th scope="col"
+                                class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Hari</th>
+                            <th scope="col"
+                                class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Waktu Keberangkatan</th>
+                            <th scope="col"
+                                class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Waktu Kedatangan</th>
+                            <th scope="col"
+                                class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status</th>
+                            <th scope="col"
+                                class="py-3 px-4 border-b border-gray-200 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -276,22 +360,26 @@
                                     {{ \Carbon\Carbon::parse($schedule->arrival_time)->format('H:i') }}</td>
                                 <td class="py-3 px-4 text-sm">
                                     @if ($schedule->status == 'ACTIVE')
-                                        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                        <span
+                                            class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                             <i class="fas fa-check-circle mr-1"></i> Aktif
                                         </span>
                                     @elseif($schedule->status == 'DELAYED')
-                                        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                        <span
+                                            class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                             <i class="fas fa-clock mr-1"></i> Tertunda
                                             @if ($route->status == 'WEATHER_ISSUE')
                                                 (Cuaca)
                                             @endif
                                         </span>
                                     @elseif($schedule->status == 'FULL')
-                                        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        <span
+                                            class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                             <i class="fas fa-users mr-1"></i> Penuh
                                         </span>
                                     @else
-                                        <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                        <span
+                                            class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                                             <i class="fas fa-ban mr-1"></i> Dibatalkan
                                             @if ($route->status == 'INACTIVE')
                                                 (Rute)
@@ -330,8 +418,10 @@
                                     <div class="flex flex-col items-center justify-center">
                                         <i class="fas fa-ship text-gray-300 text-5xl mb-3"></i>
                                         <p class="text-lg font-medium">Tidak ada jadwal keberangkatan</p>
-                                        <p class="text-sm text-gray-400 mb-3">Belum ada jadwal yang ditambahkan untuk rute ini</p>
-                                        <a href="{{ route('admin.schedules.create', ['route_id' => $route->id]) }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                        <p class="text-sm text-gray-400 mb-3">Belum ada jadwal yang ditambahkan untuk rute
+                                            ini</p>
+                                        <a href="{{ route('admin.schedules.create', ['route_id' => $route->id]) }}"
+                                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
                                             <i class="fas fa-plus mr-2"></i> Tambah Jadwal Baru
                                         </a>
                                     </div>
@@ -395,14 +485,16 @@
 
                     <div id="affected_dates_container" class="hidden">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal yang akan direschedule</label>
-                        <div id="affected_dates_list" class="border rounded-md p-3 max-h-40 overflow-y-auto bg-gray-50 space-y-2">
+                        <div id="affected_dates_list"
+                            class="border rounded-md p-3 max-h-40 overflow-y-auto bg-gray-50 space-y-2">
                             <!-- JS will populate this -->
                             <p class="text-gray-500 text-sm italic">Memuat tanggal...</p>
                         </div>
                     </div>
 
                     <div>
-                        <label for="status_after_reschedule" class="block text-sm font-medium text-gray-700 mb-2">Status Setelah Reschedule</label>
+                        <label for="status_after_reschedule" class="block text-sm font-medium text-gray-700 mb-2">Status
+                            Setelah Reschedule</label>
                         <select id="status_after_reschedule" name="status_after_reschedule" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                             <option value="ACTIVE">Aktif</option>
@@ -411,7 +503,8 @@
                     </div>
 
                     <div>
-                        <label for="notification_message" class="block text-sm font-medium text-gray-700 mb-2">Pesan Notifikasi (opsional)</label>
+                        <label for="notification_message" class="block text-sm font-medium text-gray-700 mb-2">Pesan
+                            Notifikasi (opsional)</label>
                         <textarea id="notification_message" name="notification_message" rows="2"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Pesan untuk penumpang tentang perubahan jadwal"></textarea>
@@ -433,145 +526,218 @@
 @endsection
 
 @section('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Function to open modal
-        function openModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    modal.style.opacity = '1';
-                }, 10);
-            }
-        }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const statusRadios = document.querySelectorAll('input[name="status"]');
+            const statusNote = document.getElementById('status_note');
+            const durationSettings = document.getElementById('durationSettings');
+            const applyToSchedulesCheckbox = document.getElementById('apply_to_schedules');
+            const affectDaysSelect = document.getElementById('affect_days');
+            const durationExplanation = document.getElementById('duration_explanation');
 
-        // Function to close modal
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.opacity = '0';
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
-            }
-        }
+            // Initial state
+            updateStatusNote();
+            toggleDurationSettings();
+            updateDurationExplanation();
 
-        // Apply to schedules checkbox toggle
-        const applyToSchedulesCheckbox = document.getElementById('apply_to_schedules');
-        const timeWindowOptions = document.getElementById('timeWindowOptions');
+            // Status change event
+            statusRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    updateStatusNote();
+                    toggleDurationSettings();
+                    updateDurationExplanation();
+                });
+            });
 
-        if (applyToSchedulesCheckbox && timeWindowOptions) {
-            function toggleTimeWindow() {
-                timeWindowOptions.style.display = applyToSchedulesCheckbox.checked ? 'block' : 'none';
-            }
+            // Affect days change event
+            affectDaysSelect.addEventListener('change', updateDurationExplanation);
 
-            // Initialize visibility
-            toggleTimeWindow();
+            // Apply to schedules change event
+            applyToSchedulesCheckbox.addEventListener('change', toggleDurationSettings);
 
-            applyToSchedulesCheckbox.addEventListener('change', toggleTimeWindow);
-        }
-
-        // Toggle affected dates container based on reschedule type
-        const rescheduleAllRadio = document.getElementById('reschedule_all');
-        const rescheduleSelectedRadio = document.getElementById('reschedule_selected');
-        const affectedDatesContainer = document.getElementById('affected_dates_container');
-
-        if (rescheduleAllRadio && rescheduleSelectedRadio && affectedDatesContainer) {
-            function toggleAffectedDatesContainer() {
-                affectedDatesContainer.classList.toggle('hidden', rescheduleAllRadio.checked);
+            // Functions
+            function getSelectedStatus() {
+                return document.querySelector('input[name="status"]:checked').value;
             }
 
-            rescheduleAllRadio.addEventListener('change', toggleAffectedDatesContainer);
-            rescheduleSelectedRadio.addEventListener('change', toggleAffectedDatesContainer);
-        }
+            function updateStatusNote() {
+                const status = getSelectedStatus();
 
-        // Reschedule button event handlers
-        const rescheduleButtons = document.querySelectorAll('.reschedule-btn');
-        const rescheduleForm = document.getElementById('rescheduleForm');
-        const closeRescheduleModal = document.getElementById('closeRescheduleModal');
-        const cancelRescheduleBtn = document.getElementById('cancelRescheduleBtn');
-        const affectedDatesList = document.getElementById('affected_dates_list');
+                if (status === 'ACTIVE') {
+                    statusNote.innerHTML =
+                        'Mengubah status menjadi <strong>Aktif</strong> akan membuka kembali rute ini untuk keberangkatan.';
+                } else if (status === 'WEATHER_ISSUE') {
+                    statusNote.innerHTML =
+                        'Status <strong>Masalah Cuaca</strong> bersifat sementara dan akan otomatis berubah kembali menjadi <strong>Aktif</strong> setelah periode waktu yang ditentukan.';
+                } else {
+                    statusNote.innerHTML =
+                        'Status <strong>Tidak Aktif</strong> akan membatalkan semua jadwal keberangkatan untuk rute ini sampai diaktifkan kembali secara manual.';
+                }
+            }
 
-        rescheduleButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const scheduleId = this.getAttribute('data-id');
-                const departureTime = this.getAttribute('data-departure');
+            function toggleDurationSettings() {
+                const status = getSelectedStatus();
+                const applyToSchedules = applyToSchedulesCheckbox.checked;
 
-                // Atur nilai default form (tanggal besok dan waktu asli)
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const tomorrowFormatted = tomorrow.toISOString().split('T')[0];
+                // Only show duration settings for WEATHER_ISSUE status and when applying to schedules
+                if (status === 'WEATHER_ISSUE' && applyToSchedules) {
+                    durationSettings.classList.remove('hidden');
+                } else {
+                    durationSettings.classList.add('hidden');
+                }
+            }
 
-                document.getElementById('reschedule_schedule_id').value = scheduleId;
-                document.getElementById('reschedule_date').value = tomorrowFormatted;
-                document.getElementById('reschedule_time').value = departureTime;
+            function updateDurationExplanation() {
+                const days = affectDaysSelect.value;
+                durationExplanation.innerHTML =
+                    `Setelah <span class="font-medium">${days} hari</span>, status akan otomatis kembali ke <span class="text-green-600 font-medium">Aktif</span> jika saat ini diubah ke <span class="text-yellow-600 font-medium">Masalah Cuaca</span>.`;
+            }
+        });
 
-                // Set URL action
-                rescheduleForm.action = `/admin/schedules/${scheduleId}/reschedule`;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Function to open modal
+            function openModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    setTimeout(() => {
+                        modal.style.opacity = '1';
+                    }, 10);
+                }
+            }
 
-                // Fetch affected dates for this schedule
-                if (affectedDatesList) {
-                    affectedDatesList.innerHTML = '<p class="text-gray-500 text-sm italic">Memuat tanggal...</p>';
+            // Function to close modal
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.style.opacity = '0';
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                    }, 300);
+                }
+            }
 
-                    fetch(`/admin/schedules/${scheduleId}/weather-affected-dates`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.dates && data.dates.length > 0) {
-                                affectedDatesList.innerHTML = '';
-                                data.dates.forEach(date => {
-                                    const checkbox = document.createElement('div');
-                                    checkbox.className = 'flex items-center';
-                                    checkbox.innerHTML = `
+            // Apply to schedules checkbox toggle
+            const applyToSchedulesCheckbox = document.getElementById('apply_to_schedules');
+            const timeWindowOptions = document.getElementById('timeWindowOptions');
+
+            if (applyToSchedulesCheckbox && timeWindowOptions) {
+                function toggleTimeWindow() {
+                    timeWindowOptions.style.display = applyToSchedulesCheckbox.checked ? 'block' : 'none';
+                }
+
+                // Initialize visibility
+                toggleTimeWindow();
+
+                applyToSchedulesCheckbox.addEventListener('change', toggleTimeWindow);
+            }
+
+            // Toggle affected dates container based on reschedule type
+            const rescheduleAllRadio = document.getElementById('reschedule_all');
+            const rescheduleSelectedRadio = document.getElementById('reschedule_selected');
+            const affectedDatesContainer = document.getElementById('affected_dates_container');
+
+            if (rescheduleAllRadio && rescheduleSelectedRadio && affectedDatesContainer) {
+                function toggleAffectedDatesContainer() {
+                    affectedDatesContainer.classList.toggle('hidden', rescheduleAllRadio.checked);
+                }
+
+                rescheduleAllRadio.addEventListener('change', toggleAffectedDatesContainer);
+                rescheduleSelectedRadio.addEventListener('change', toggleAffectedDatesContainer);
+            }
+
+            // Reschedule button event handlers
+            const rescheduleButtons = document.querySelectorAll('.reschedule-btn');
+            const rescheduleForm = document.getElementById('rescheduleForm');
+            const closeRescheduleModal = document.getElementById('closeRescheduleModal');
+            const cancelRescheduleBtn = document.getElementById('cancelRescheduleBtn');
+            const affectedDatesList = document.getElementById('affected_dates_list');
+
+            rescheduleButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const scheduleId = this.getAttribute('data-id');
+                    const departureTime = this.getAttribute('data-departure');
+
+                    // Atur nilai default form (tanggal besok dan waktu asli)
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const tomorrowFormatted = tomorrow.toISOString().split('T')[0];
+
+                    document.getElementById('reschedule_schedule_id').value = scheduleId;
+                    document.getElementById('reschedule_date').value = tomorrowFormatted;
+                    document.getElementById('reschedule_time').value = departureTime;
+
+                    // Set URL action
+                    rescheduleForm.action = `/admin/schedules/${scheduleId}/reschedule`;
+
+                    // Fetch affected dates for this schedule
+                    if (affectedDatesList) {
+                        affectedDatesList.innerHTML =
+                            '<p class="text-gray-500 text-sm italic">Memuat tanggal...</p>';
+
+                        fetch(`/admin/schedules/${scheduleId}/weather-affected-dates`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.dates && data.dates.length > 0) {
+                                    affectedDatesList.innerHTML = '';
+                                    data.dates.forEach(date => {
+                                        const checkbox = document.createElement('div');
+                                        checkbox.className = 'flex items-center';
+                                        checkbox.innerHTML = `
                                         <input type="checkbox" id="date_${date.id}" name="affected_dates[]" value="${date.date}" class="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4" checked>
                                         <label for="date_${date.id}" class="text-sm">${date.formatted_date}</label>
                                     `;
-                                    affectedDatesList.appendChild(checkbox);
-                                });
-                            } else {
-                                affectedDatesList.innerHTML = '<p class="text-gray-500 text-sm italic">Tidak ada tanggal terdampak cuaca</p>';
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error fetching affected dates:', error);
-                            affectedDatesList.innerHTML = '<p class="text-red-500 text-sm italic">Gagal memuat tanggal</p>';
-                        });
-                }
-
-                openModal('rescheduleModal');
-            });
-        });
-
-        if (closeRescheduleModal) {
-            closeRescheduleModal.addEventListener('click', function() {
-                closeModal('rescheduleModal');
-            });
-        }
-
-        if (cancelRescheduleBtn) {
-            cancelRescheduleBtn.addEventListener('click', function() {
-                closeModal('rescheduleModal');
-            });
-        }
-
-        // Form validation
-        const statusForm = document.getElementById('statusForm');
-        if (statusForm) {
-            statusForm.addEventListener('submit', function(e) {
-                const applyToSchedules = document.getElementById('apply_to_schedules').checked;
-
-                if (applyToSchedules) {
-                    const startTime = document.getElementById('start_time').value;
-                    const endTime = document.getElementById('end_time').value;
-
-                    if ((startTime && !endTime) || (!startTime && endTime)) {
-                        e.preventDefault();
-                        alert('Jika Anda menentukan waktu, silakan isi kedua waktu mulai dan waktu selesai.');
+                                        affectedDatesList.appendChild(checkbox);
+                                    });
+                                } else {
+                                    affectedDatesList.innerHTML =
+                                        '<p class="text-gray-500 text-sm italic">Tidak ada tanggal terdampak cuaca</p>';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error fetching affected dates:', error);
+                                affectedDatesList.innerHTML =
+                                    '<p class="text-red-500 text-sm italic">Gagal memuat tanggal</p>';
+                            });
                     }
-                }
+
+                    openModal('rescheduleModal');
+                });
             });
-        }
-    });
-</script>
+
+            if (closeRescheduleModal) {
+                closeRescheduleModal.addEventListener('click', function() {
+                    closeModal('rescheduleModal');
+                });
+            }
+
+            if (cancelRescheduleBtn) {
+                cancelRescheduleBtn.addEventListener('click', function() {
+                    closeModal('rescheduleModal');
+                });
+            }
+
+            // Form validation
+            const statusForm = document.getElementById('statusForm');
+            if (statusForm) {
+                statusForm.addEventListener('submit', function(e) {
+                    const applyToSchedules = document.getElementById('apply_to_schedules').checked;
+
+                    if (applyToSchedules) {
+                        const startTime = document.getElementById('start_time').value;
+                        const endTime = document.getElementById('end_time').value;
+
+                        if ((startTime && !endTime) || (!startTime && endTime)) {
+                            e.preventDefault();
+                            alert(
+                                'Jika Anda menentukan waktu, silakan isi kedua waktu mulai dan waktu selesai.'
+                                );
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 @endsection

@@ -14,21 +14,21 @@ import 'providers/ticket_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
   await Firebase.initializeApp();
-  
+
   // Initialize shared preferences
   final prefs = await SharedPreferences.getInstance();
   final storageService = StorageService(prefs);
-  
+
   // Initialize notification service
   final notificationService = NotificationService();
   await notificationService.initialize();
-  
+
   // Request notification permissions
   FirebaseMessaging.instance.requestPermission();
-  
+
   // Listen for background messages
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
