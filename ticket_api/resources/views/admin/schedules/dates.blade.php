@@ -356,7 +356,7 @@
         @endif
     </div>
 
-    <!-- Add Date Modal -->
+    <!-- Add Date Modal - Fixed Structure -->
     <div id="addDateModal"
         class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="flex items-center justify-center h-full w-full p-4">
@@ -398,8 +398,6 @@
                                 class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="single">Tanggal Tunggal</option>
                                 <option value="range">Rentang Tanggal</option>
-                                <option value="multiple">Pilih Beberapa Tanggal</option>
-                                <option value="days">Pilih Hari Tertentu</option>
                             </select>
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-calendar-alt text-gray-400"></i>
@@ -428,134 +426,72 @@
                     </div>
 
                     <!-- Range date fields section -->
-                    <!-- Perbaikan 1: Tambahkan fields untuk mode "days" yang hilang -->
-                    <!-- Tambahkan section ini setelah multipleDateFields div di form addDateModal -->
-
-                    <div id="daysFields" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
+                    <div id="rangeDateFields" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Hari dalam Seminggu</label>
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="day_1" name="days[]" value="1" class="mr-2">
-                                    <label for="day_1">Senin</label>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="day_2" name="days[]" value="2" class="mr-2">
-                                    <label for="day_2">Selasa</label>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="day_3" name="days[]" value="3" class="mr-2">
-                                    <label for="day_3">Rabu</label>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="day_4" name="days[]" value="4" class="mr-2">
-                                    <label for="day_4">Kamis</label>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="day_5" name="days[]" value="5" class="mr-2">
-                                    <label for="day_5">Jumat</label>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="day_6" name="days[]" value="6" class="mr-2">
-                                    <label for="day_6">Sabtu</label>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="day_7" name="days[]" value="7" class="mr-2">
-                                    <label for="day_7">Minggu</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="days_start_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
+                            <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
                                 Mulai</label>
-                            <div class="relative">
-                                <input type="date" id="days_start_date" name="days_start_date"
-                                    class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-calendar text-gray-400"></i>
+                            <div class="flex items-center">
+                                <div class="relative flex-grow">
+                                    <input type="date" id="start_date" name="start_date"
+                                        class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-calendar text-gray-400"></i>
+                                    </div>
                                 </div>
+                                <span id="start_date_day" class="ml-2 px-2 py-1 rounded font-medium"></span>
                             </div>
+                            <div id="start_date_warning"
+                                class="hidden mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-200"></div>
                         </div>
 
                         <div>
-                            <label for="days_end_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
+                            <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
                                 Akhir</label>
-                            <div class="relative">
-                                <input type="date" id="days_end_date" name="days_end_date"
-                                    class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-calendar text-gray-400"></i>
+                            <div class="flex items-center">
+                                <div class="relative flex-grow">
+                                    <input type="date" id="end_date" name="end_date"
+                                        class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-calendar text-gray-400"></i>
+                                    </div>
                                 </div>
+                                <span id="end_date_day" class="ml-2 px-2 py-1 rounded font-medium"></span>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">Jadwal akan dibuat untuk hari-hari yang dipilih dalam
-                                rentang tanggal ini.</p>
+                            <div id="end_date_warning"
+                                class="hidden mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-200"></div>
+                        </div>
+
+                        <!-- Preview of valid operation days in the range -->
+                        <div id="range_date_preview" class="bg-white rounded p-3 border border-gray-200"></div>
+                    </div>
+
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <div class="relative">
+                            <select id="status" name="status"
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="AVAILABLE">Tersedia</option>
+                                <option value="UNAVAILABLE">Tidak Tersedia</option>
+                            </select>
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-toggle-on text-gray-400"></i>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Preview of valid operation days in the range -->
-                    <div id="range_date_preview" class="bg-white rounded p-3 border border-gray-200"></div>
+                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                        <button type="button" id="cancelAddBtn"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
+                            Batal
+                        </button>
+                        <button type="submit" id="submitBtn"
+                            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors duration-200">
+                            <i class="fas fa-save mr-1"></i> Simpan
+                        </button>
+                    </div>
+                </form>
             </div>
-
-            <!-- Multiple date fields section -->
-            <div id="multipleDateFields" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tanggal (3 Bulan Ke Depan)</label>
-
-                <!-- Calendar Legend -->
-                <div class="flex flex-wrap items-center text-xs mb-3 bg-white p-2 rounded-lg border border-gray-200">
-                    <div class="flex items-center mr-4 mb-1">
-                        <div class="w-3 h-3 bg-gray-300 rounded mr-1"></div>
-                        <span>Bukan hari operasi</span>
-                    </div>
-                    <div class="flex items-center mr-4 mb-1">
-                        <div class="w-3 h-3 border border-green-200 rounded mr-1"></div>
-                        <span>Hari operasi</span>
-                    </div>
-                    <div class="flex items-center mb-1">
-                        <div class="w-3 h-3 bg-blue-500 rounded mr-1"></div>
-                        <span>Tanggal dipilih</span>
-                    </div>
-                </div>
-
-                <div id="date_calendar" class="bg-white p-3 rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
-                    <div id="calendar_dates" class="grid grid-cols-7 gap-1">
-                        <!-- Calendar dates will be generated by JS -->
-                    </div>
-                    <input type="hidden" id="selected_dates" name="selected_dates" value="">
-                </div>
-
-                <!-- Preview of selected dates -->
-                <div id="selected_dates_preview" class="mt-3 p-2 bg-white rounded-lg border border-gray-200 min-h-[50px]">
-                </div>
-            </div>
-
-            <div>
-                <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <div class="relative">
-                    <select id="status" name="status"
-                        class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="AVAILABLE">Tersedia</option>
-                        <option value="UNAVAILABLE">Tidak Tersedia</option>
-                    </select>
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fas fa-toggle-on text-gray-400"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                <button type="button" id="cancelAddBtn"
-                    class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
-                    Batal
-                </button>
-                <button type="submit"
-                    class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors duration-200">
-                    <i class="fas fa-save mr-1"></i> Simpan
-                </button>
-            </div>
-            </form>
         </div>
-    </div>
     </div>
 
     <!-- Edit Date Modal - Simplified Version (No Date Editing) -->
@@ -730,8 +666,8 @@
         scheduleDays = scheduleDays.filter(day => day.trim() !== '' && !isNaN(parseInt(day.trim())));
         console.log('Cleaned scheduleDays:', scheduleDays);
 
-        // Convert to integers
-        scheduleDays = scheduleDays.map(day => parseInt(day.trim()));
+        // Convert to integers - VERY IMPORTANT for proper comparisons
+        scheduleDays = scheduleDays.map(day => parseInt(day.trim(), 10));
         console.log('Final integer scheduleDays:', scheduleDays);
 
         // ====== Utility Functions ======
@@ -799,14 +735,9 @@
 
         // ====== Date Operation Day Validation ======
 
-        // Convert schedule days to JS days (0=Sunday to 6=Saturday)
-        // The system uses 1=Monday through 7=Sunday, JS uses 0=Sunday through 6=Saturday
-        const jsOperationDays = scheduleDays.map(day => {
-            // Convert day 7 (Sunday in our system) to 0 (Sunday in JS)
-            return day === 7 ? 0 : day;
-        });
-
-        console.log('JS operation days:', jsOperationDays);
+        // No conversion needed - we'll use the backend days directly (1-7)
+        // and convert JavaScript days when needed
+        console.log('Backend operation days:', scheduleDays);
 
         // Add day name labels for visual feedback
         const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -837,20 +768,71 @@
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) return false;
 
-                // Get day of week as 1 (Monday) to 7 (Sunday) to match backend (ISO format)
-                let dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, etc.
+                // JavaScript uses 0-6 (where 0=Sunday through 6=Saturday)
+                // Convert to format 1-7 (where 1=Monday through 7=Sunday)
+                const jsDay = date.getDay();
+                const backendDay = jsDay === 0 ? 7 : jsDay;
 
-                // Convert from JS day to ISO day format (0→7, 1→1, 2→2, etc.)
-                dayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
+                // Pastikan scheduleDays berisi angka, bukan string
+                const operationDays = scheduleDays.map(day => parseInt(day, 10));
 
-                // Convert scheduleDays to strings for comparison because backend compares as strings
-                const operationDaysAsStrings = scheduleDays.map(day => day.toString());
+                // Debug untuk membantu troubleshooting
+                console.log(
+                    `Validating date: ${dateString}, JS day: ${jsDay}, backendDay: ${backendDay}, operationDays: ${operationDays}`
+                );
 
-                return operationDaysAsStrings.includes(dayOfWeek.toString());
+                // Periksa apakah hari ini ada dalam daftar hari operasi
+                return operationDays.includes(backendDay);
             } catch (e) {
                 console.error('Error validating date:', e);
                 return false;
             }
+        }
+
+        // Konversi hari JavaScript (0-6) ke format backend (1-7)
+        function jsToBackendDay(jsDay) {
+            // JavaScript: 0=Minggu, 1=Senin, ..., 6=Sabtu
+            // Backend: 1=Senin, 2=Selasa, ..., 7=Minggu
+            return jsDay === 0 ? 7 : jsDay;
+        }
+
+        // Memastikan nilai scheduleDays selalu berupa integer
+        function normalizeScheduleDays() {
+            // Ubah semua string menjadi integer
+            scheduleDays = scheduleDays.map(day => parseInt(day, 10));
+            console.log('Normalized scheduleDays:', scheduleDays);
+            return scheduleDays;
+        }
+
+        // Fungsi untuk memastikan nilai scheduleDays terisi dengan benar
+        function validateScheduleDays() {
+            // Periksa apakah ada nilai yang tidak valid
+            let valid = true;
+
+            if (!scheduleDays || !Array.isArray(scheduleDays)) {
+                console.error('scheduleDays is not an array:', scheduleDays);
+                valid = false;
+            } else if (scheduleDays.length === 0) {
+                console.error('scheduleDays is empty');
+                valid = false;
+            } else {
+                // Cek apakah semua nilai valid (1-7)
+                for (const day of scheduleDays) {
+                    const dayNum = parseInt(day, 10);
+                    if (isNaN(dayNum) || dayNum < 1 || dayNum > 7) {
+                        console.error('Invalid day value in scheduleDays:', day);
+                        valid = false;
+                    }
+                }
+            }
+
+            // Jika tidak valid, set default (e.g., Senin & Jumat)
+            if (!valid) {
+                console.warn('Setting default scheduleDays to [1, 5]');
+                scheduleDays = [1, 5];
+            }
+
+            return normalizeScheduleDays();
         }
 
         // Get day name for a date
@@ -910,7 +892,7 @@
             }
         }
 
-        // Add day display elements next to date inputs
+        // Setup function for all date inputs
         function setupDateInputs() {
             const dateInputs = document.querySelectorAll('.date-input');
             dateInputs.forEach(input => {
@@ -946,7 +928,7 @@
             });
         }
 
-        // Setup date inputs with enhanced validation
+        // Initialize date inputs with validation
         setupDateInputs();
 
         // ====== Visualize valid dates in range ======
@@ -969,9 +951,9 @@
             if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
                 previewElement.innerHTML =
                     `<div class="flex items-center text-red-600 text-sm">
-                        <i class="fas fa-exclamation-circle mr-2"></i>
-                        <span>Rentang tanggal tidak valid</span>
-                    </div>`;
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    <span>Rentang tanggal tidak valid</span>
+                </div>`;
                 return;
             }
 
@@ -991,27 +973,27 @@
             if (validDates.length === 0) {
                 previewElement.innerHTML =
                     `<div class="flex items-center text-yellow-600 text-sm">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        <span>Tidak ada tanggal operasi dalam rentang ini</span>
-                    </div>`;
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <span>Tidak ada tanggal operasi dalam rentang ini</span>
+                </div>`;
             } else {
                 previewElement.innerHTML = `
-                <div class="text-sm">
-                    <div class="flex items-center text-blue-600 font-medium mb-2">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        <span>Tanggal operasi yang akan dibuat (${validDates.length}):</span>
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto bg-gray-50 p-2 rounded border border-gray-200">
-                        ${validDates.map(date => `
-                            <div class="text-xs bg-white p-1.5 rounded border border-gray-200 flex items-center">
-                                <i class="fas fa-calendar-day text-green-500 mr-1.5"></i>
-                                ${formatDisplayDate(date.toISOString().split('T')[0])}
-                                <span class="ml-1 text-green-600">(${getDayName(date)})</span>
-                            </div>
-                        `).join('')}
-                    </div>
+            <div class="text-sm">
+                <div class="flex items-center text-blue-600 font-medium mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <span>Tanggal operasi yang akan dibuat (${validDates.length}):</span>
                 </div>
-            `;
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto bg-gray-50 p-2 rounded border border-gray-200">
+                    ${validDates.map(date => `
+                        <div class="text-xs bg-white p-1.5 rounded border border-gray-200 flex items-center">
+                            <i class="fas fa-calendar-day text-green-500 mr-1.5"></i>
+                            ${formatDisplayDate(date.toISOString().split('T')[0])}
+                            <span class="ml-1 text-green-600">(${getDayName(date)})</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
             }
         }
 
@@ -1022,474 +1004,6 @@
         if (startDateInput && endDateInput) {
             startDateInput.addEventListener('change', updateRangeDatePreview);
             endDateInput.addEventListener('change', updateRangeDatePreview);
-        }
-
-        // ====== Calendar for Multiple Date Selection ======
-        function generateCalendar() {
-            console.log('Generating calendar...');
-            const calendarDates = document.getElementById('calendar_dates');
-            const selectedDatesInput = document.getElementById('selected_dates');
-            const selectedDatesPreview = document.getElementById('selected_dates_preview');
-
-            if (!calendarDates || !selectedDatesInput) {
-                console.error('Calendar elements not found');
-                return;
-            }
-
-            // Clear existing calendar
-            calendarDates.innerHTML = '';
-
-            // Log operation days for debugging
-            console.log('Operation days (JS format):', jsOperationDays);
-
-            // Selected dates collection
-            let selectedDates = [];
-
-            // Helper function to update selected dates preview
-            function updateSelectedDatesPreview() {
-                if (!selectedDatesPreview) return;
-
-                if (selectedDates.length === 0) {
-                    selectedDatesPreview.innerHTML =
-                        '<p class="text-gray-500 text-xs text-center py-2">Belum ada tanggal yang dipilih</p>';
-                    return;
-                }
-
-                selectedDatesPreview.innerHTML = `
-                    <div class="mb-2 flex items-center justify-between">
-                        <p class="text-xs font-medium text-gray-700">Tanggal yang dipilih (${selectedDates.length}):</p>
-                        <button type="button" id="clearAllDates" class="text-red-600 hover:text-red-800 text-xs">
-                            <i class="fas fa-trash-alt mr-1"></i>Hapus Semua
-                        </button>
-                    </div>
-                    <div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto p-2 bg-gray-50 rounded border border-gray-200">
-                        ${selectedDates.map(dateStr => {
-                            const date = new Date(dateStr);
-                            return `
-                                <div class="text-xs bg-blue-100 text-blue-800 rounded px-2 py-1 flex items-center">
-                                    <i class="fas fa-calendar-check text-blue-500 mr-1"></i>
-                                    ${formatDisplayDate(dateStr)}
-                                    <span class="mx-1">(${getDayName(date)})</span>
-                                    <button type="button" class="remove-date text-red-500 hover:text-red-700" data-date="${dateStr}">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
-
-                // Add event listener to clear all button
-                const clearAllBtn = document.getElementById('clearAllDates');
-                if (clearAllBtn) {
-                    clearAllBtn.addEventListener('click', function() {
-                        // Clear all selected dates
-                        selectedDates = [];
-                        selectedDatesInput.value = '';
-
-                        // Clear all selected cells in calendar
-                        document.querySelectorAll('.date-cell.bg-blue-500').forEach(cell => {
-                            cell.classList.remove('bg-blue-500', 'text-white');
-                        });
-
-                        // Update preview
-                        updateSelectedDatesPreview();
-                    });
-                }
-
-                // Add event listeners to remove buttons
-                document.querySelectorAll('.remove-date').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const dateToRemove = this.getAttribute('data-date');
-                        selectedDates = selectedDates.filter(d => d !== dateToRemove);
-
-                        // Update hidden input with selected dates
-                        selectedDatesInput.value = selectedDates.join(',');
-
-                        // Update preview
-                        updateSelectedDatesPreview();
-
-                        // Update calendar cell styling
-                        const cell = document.querySelector(
-                            `.date-cell[data-date="${dateToRemove}"]`);
-                        if (cell) {
-                            cell.classList.remove('bg-blue-500', 'text-white');
-                        }
-                    });
-                });
-            }
-
-            // Add days of week header with highlighting for operation days
-            const weekdayHeader = document.createElement('div');
-            weekdayHeader.className = 'grid grid-cols-7 gap-1 text-center mb-2 border-b pb-2';
-
-            ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].forEach((day, index) => {
-                // Convert display index to JS day (0=Sunday, 1=Monday, etc.)
-                // index 0 = Sen (Monday) which is 1 in JS
-                // index 6 = Min (Sunday) which is 0 in JS
-                const jsDay = index === 6 ? 0 : index + 1;
-                const isOperationDay = jsOperationDays.includes(jsDay);
-
-                const dayElement = document.createElement('div');
-                dayElement.className =
-                    `text-xs font-medium p-1 rounded ${isOperationDay ? 'text-green-700 bg-green-50' : 'text-gray-400'}`;
-                dayElement.textContent = day;
-                weekdayHeader.appendChild(dayElement);
-            });
-
-            calendarDates.appendChild(weekdayHeader);
-
-            // Generate dates for next 3 months
-            const today = new Date();
-            const endDate = new Date(today);
-            endDate.setMonth(today.getMonth() + 3);
-
-            let currentDate = new Date(today);
-            currentDate.setHours(0, 0, 0, 0);
-
-            // Get the first day of the month and adjust for calendar display
-            const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const firstDayOfWeek = firstDayOfMonth.getDay(); // 0=Sunday, 1=Monday, etc.
-
-            // Adjust for our calendar (Monday as first day)
-            const dayOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
-
-            // Add empty cells for days before the first day of month
-            for (let i = 0; i < dayOffset; i++) {
-                const emptyCell = document.createElement('div');
-                emptyCell.className = 'h-8 text-center';
-                calendarDates.appendChild(emptyCell);
-            }
-
-            // Generate calendar cells for each date
-            while (currentDate <= endDate) {
-                const dateCell = document.createElement('div');
-                const dateString = currentDate.toISOString().split('T')[0];
-                const dayOfWeek = currentDate.getDay(); // 0=Sunday, 1=Monday, etc.
-
-                // Check if this date falls on a valid operation day
-                const isOperationDay = jsOperationDays.includes(dayOfWeek);
-
-                // Check if date is in the past
-                const isPastDate = currentDate < today;
-
-                // Debug log for days
-                if (currentDate.getDate() === 1 || currentDate.getDate() === 15) {
-                    console.log(
-                        `Day check: ${dateString}, day of week: ${dayOfWeek}, is operation day: ${isOperationDay}`
-                    );
-                }
-
-                dateCell.textContent = currentDate.getDate();
-
-                if (isOperationDay && !isPastDate) {
-                    dateCell.className =
-                        'date-cell h-8 flex items-center justify-center rounded cursor-pointer hover:bg-blue-100 text-center text-sm border border-green-200';
-                    dateCell.setAttribute('data-date', dateString);
-                    dateCell.setAttribute('title', `${getDayName(currentDate)} - Hari Operasi`);
-
-                    dateCell.addEventListener('click', function() {
-                        const dateValue = this.getAttribute('data-date');
-
-                        // Toggle selection
-                        if (this.classList.contains('bg-blue-500')) {
-                            this.classList.remove('bg-blue-500', 'text-white');
-                            selectedDates = selectedDates.filter(d => d !== dateValue);
-                        } else {
-                            this.classList.add('bg-blue-500', 'text-white');
-                            selectedDates.push(dateValue);
-                        }
-
-                        // Sort selected dates
-                        selectedDates.sort();
-
-                        // Update hidden input with selected dates
-                        selectedDatesInput.value = selectedDates.join(',');
-
-                        // Update preview
-                        updateSelectedDatesPreview();
-                    });
-                } else if (isPastDate) {
-                    // Past dates are disabled
-                    dateCell.className =
-                        'h-8 flex items-center justify-center text-gray-300 text-center text-sm bg-gray-100 opacity-50';
-                    dateCell.setAttribute('title', `${getDayName(currentDate)} - Tanggal telah lewat`);
-                } else {
-                    // Non-operation days
-                    dateCell.className =
-                        'h-8 flex items-center justify-center text-gray-300 text-center text-sm bg-gray-100';
-                    dateCell.setAttribute('title', `${getDayName(currentDate)} - Bukan hari operasi`);
-                }
-
-                calendarDates.appendChild(dateCell);
-
-                // Move to next day
-                currentDate.setDate(currentDate.getDate() + 1);
-
-                // If we're at the start of a new month, add a month divider
-                if (currentDate.getDate() === 1) {
-                    const monthDivider = document.createElement('div');
-                    monthDivider.className =
-                        'col-span-7 text-center py-2 my-2 border-t border-b text-xs font-medium text-gray-600 bg-gray-50';
-
-                    const monthNames = [
-                        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-                        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-                    ];
-                    monthDivider.innerHTML =
-                        `<i class="fas fa-calendar-alt mr-1"></i> ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-
-                    calendarDates.appendChild(monthDivider);
-
-                    // Reset calendar alignment for the new month
-                    const newMonthFirstDay = currentDate.getDay();
-                    const newDayOffset = newMonthFirstDay === 0 ? 6 : newMonthFirstDay - 1;
-
-                    for (let i = 0; i < newDayOffset; i++) {
-                        const emptyCell = document.createElement('div');
-                        emptyCell.className = 'h-8 text-center';
-                        calendarDates.appendChild(emptyCell);
-                    }
-                }
-            }
-
-            // Initialize preview
-            updateSelectedDatesPreview();
-            console.log('Calendar generation complete');
-        }
-
-        // ====== Date type switcher for Add Modal ======
-        const dateTypeSelect = document.getElementById('date_type');
-        const singleDateFields = document.getElementById('singleDateFields');
-        const rangeDateFields = document.getElementById('rangeDateFields');
-        const daysFields = document.getElementById('daysFields');
-        const multipleDateFields = document.getElementById('multipleDateFields');
-
-        if (dateTypeSelect) {
-            dateTypeSelect.addEventListener('change', function() {
-                const selectedValue = this.value;
-                console.log(`Date type changed to: ${selectedValue}`);
-
-                // Hide all fields first
-                if (singleDateFields) singleDateFields.classList.add('hidden');
-                if (rangeDateFields) rangeDateFields.classList.add('hidden');
-                if (daysFields) daysFields.classList.add('hidden');
-                if (multipleDateFields) multipleDateFields.classList.add('hidden');
-
-                // Show only relevant fields with smooth transition
-                if (selectedValue === 'single' && singleDateFields) {
-                    singleDateFields.classList.remove('hidden');
-                } else if (selectedValue === 'range' && rangeDateFields) {
-                    rangeDateFields.classList.remove('hidden');
-                    // Update preview when showing range fields
-                    updateRangeDatePreview();
-                } else if (selectedValue === 'days' && daysFields) {
-                    daysFields.classList.remove('hidden');
-                } else if (selectedValue === 'multiple' && multipleDateFields) {
-                    multipleDateFields.classList.remove('hidden');
-                    generateCalendar(); // Generate calendar when this view is selected
-                }
-
-                // Re-setup date inputs with enhanced validation after showing fields
-                setTimeout(setupDateInputs, 100);
-            });
-        }
-
-        // Add operation days header when modal is opened
-        const addDateBtn = document.getElementById('addDateBtn');
-        const emptyAddDateBtn = document.getElementById('emptyAddDateBtn');
-        const addDateForm = document.getElementById('addDateForm');
-        const closeAddModal = document.getElementById('closeAddModal');
-        const cancelAddBtn = document.getElementById('cancelAddBtn');
-
-        function prepareAddModal() {
-            // Setup date inputs with enhanced validation
-            setupDateInputs();
-
-            // If range fields are visible, update preview
-            if (rangeDateFields && !rangeDateFields.classList.contains('hidden')) {
-                updateRangeDatePreview();
-            }
-
-            // If calendar is visible, generate it
-            if (multipleDateFields && !multipleDateFields.classList.contains('hidden')) {
-                generateCalendar();
-            }
-
-            // Setup days mode if visible
-            if (daysFields && !daysFields.classList.contains('hidden')) {
-                setupDaysMode();
-            } else {
-                // Initialize days checkboxes anyway for when they become visible
-                setupDaysCheckboxes();
-            }
-        }
-
-        if (addDateBtn) {
-            addDateBtn.addEventListener('click', function() {
-                console.log('Add Date button clicked');
-                openModal('addDateModal');
-                prepareAddModal();
-            });
-        }
-
-        if (emptyAddDateBtn) {
-            emptyAddDateBtn.addEventListener('click', function() {
-                console.log('Empty Add Date button clicked');
-                openModal('addDateModal');
-                prepareAddModal();
-            });
-        }
-
-        if (closeAddModal) {
-            closeAddModal.addEventListener('click', function() {
-                closeModal('addDateModal');
-            });
-        }
-
-        if (cancelAddBtn) {
-            cancelAddBtn.addEventListener('click', function() {
-                closeModal('addDateModal');
-            });
-        }
-
-        // Form validation before submission
-        if (addDateForm) {
-            // Add debug output to help troubleshoot
-            const submitBtn = document.getElementById('submitBtn');
-            if (submitBtn) {
-                submitBtn.addEventListener('click', function(e) {
-                    console.log('Submit button clicked');
-
-                    // Debug info about form
-                    const dateType = dateTypeSelect ? dateTypeSelect.value : '';
-                    console.log('Current date_type:', dateType);
-
-                    // For 'days' type, check checkboxes
-                    if (dateType === 'days') {
-                        const daysChecked = document.querySelectorAll('input[name="days[]"]:checked');
-                        console.log('Days checked:', Array.from(daysChecked).map(cb => cb.value));
-                    }
-                });
-            }
-
-            addDateForm.addEventListener('submit', function(e) {
-                console.log('Form submitted');
-
-                // Validate form based on date type
-                const dateType = dateTypeSelect ? dateTypeSelect.value : '';
-                console.log('Validating form with date_type:', dateType);
-
-                if (dateType === 'single') {
-                    const singleDate = document.getElementById('single_date');
-                    const singleDateWarning = document.getElementById('single_date_warning');
-                    const singleDateDay = document.getElementById('single_date_day');
-
-                    if (!singleDate.value) {
-                        e.preventDefault();
-                        showToast('Silakan pilih tanggal', 'error');
-                        return false;
-                    }
-
-                    if (!validateDateInput(singleDate, singleDateWarning, singleDateDay)) {
-                        e.preventDefault();
-                        showToast('Tanggal yang dipilih tidak sesuai dengan hari operasi kapal',
-                            'error');
-                        return false;
-                    }
-                } else if (dateType === 'range') {
-                    const startDate = document.getElementById('start_date');
-                    const endDate = document.getElementById('end_date');
-                    const startDateWarning = document.getElementById('start_date_warning');
-                    const endDateWarning = document.getElementById('end_date_warning');
-                    const startDateDay = document.getElementById('start_date_day');
-                    const endDateDay = document.getElementById('end_date_day');
-
-                    if (!startDate.value || !endDate.value) {
-                        e.preventDefault();
-                        showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
-                        return false;
-                    }
-
-                    if (!validateDateInput(startDate, startDateWarning, startDateDay)) {
-                        e.preventDefault();
-                        showToast('Tanggal mulai tidak sesuai dengan hari operasi kapal', 'error');
-                        return false;
-                    }
-
-                    // Check if there are any valid operation days in the range
-                    const start = new Date(startDate.value);
-                    const end = new Date(endDate.value);
-                    let hasValidDays = false;
-
-                    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                        let currentDate = new Date(start);
-                        while (currentDate <= end) {
-                            if (isValidOperationDay(currentDate.toISOString().split('T')[0])) {
-                                hasValidDays = true;
-                                break;
-                            }
-                            currentDate.setDate(currentDate.getDate() + 1);
-                        }
-                    }
-
-                    if (!hasValidDays) {
-                        e.preventDefault();
-                        showToast('Tidak ada hari operasi dalam rentang tanggal yang dipilih', 'error');
-                        return false;
-                    }
-                } else if (dateType === 'days') {
-                    const daysChecked = document.querySelectorAll('input[name="days[]"]:checked');
-                    const daysStartDate = document.getElementById('days_start_date');
-                    const daysEndDate = document.getElementById('days_end_date');
-
-                    if (daysChecked.length === 0) {
-                        e.preventDefault();
-                        showToast('Silakan pilih minimal satu hari', 'error');
-                        console.error('No days selected');
-                        return false;
-                    }
-
-                    if (!daysStartDate.value || !daysEndDate.value) {
-                        e.preventDefault();
-                        showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
-                        console.error('Missing date range');
-                        return false;
-                    }
-
-                    // Validate start date is before or equal to end date
-                    const startDate = new Date(daysStartDate.value);
-                    const endDate = new Date(daysEndDate.value);
-
-                    if (startDate > endDate) {
-                        e.preventDefault();
-                        showToast('Tanggal mulai harus sebelum atau sama dengan tanggal akhir',
-                            'error');
-                        console.error('Start date after end date');
-                        return false;
-                    }
-
-                    // Console log all form data for debugging
-                    console.log('Form data for days mode:');
-                    console.log('- date_type:', dateType);
-                    console.log('- days:', Array.from(daysChecked).map(cb => cb.value));
-                    console.log('- days_start_date:', daysStartDate.value);
-                    console.log('- days_end_date:', daysEndDate.value);
-                    console.log('- status:', document.getElementById('status').value);
-                } else if (dateType === 'multiple') {
-                    const selectedDates = document.getElementById('selected_dates').value;
-
-                    if (!selectedDates) {
-                        e.preventDefault();
-                        showToast('Silakan pilih minimal satu tanggal', 'error');
-                        return false;
-                    }
-                }
-
-                // Form looks valid, allow submission
-                console.log('Form validation passed, submitting...');
-                return true;
-            });
         }
 
         // ====== Toast Notification System ======
@@ -1533,16 +1047,16 @@
             toast.className =
                 `${bgColor} ${textColor} py-3 px-4 rounded-lg shadow-md flex items-start max-w-xs transform transition-all duration-300 opacity-0 translate-y-2`;
             toast.innerHTML = `
-                <div class="flex-shrink-0">
-                    ${icon}
-                </div>
-                <div>
-                    ${message}
-                </div>
-                <button class="ml-auto text-gray-500 hover:text-gray-700 focus:outline-none">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
+            <div class="flex-shrink-0">
+                ${icon}
+            </div>
+            <div>
+                ${message}
+            </div>
+            <button class="ml-auto text-gray-500 hover:text-gray-700 focus:outline-none">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
 
             // Add to container
             toastContainer.appendChild(toast);
@@ -1580,7 +1094,149 @@
             }, 300);
         }
 
-        // ====== Edit Date Modal - Simplified (No Date Editing) ======
+        // ====== Date type switcher for Add Modal ======
+        const dateTypeSelect = document.getElementById('date_type');
+        const singleDateFields = document.getElementById('singleDateFields');
+        const rangeDateFields = document.getElementById('rangeDateFields');
+
+        if (dateTypeSelect) {
+            dateTypeSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                console.log(`Date type changed to: ${selectedValue}`);
+
+                // Hide all fields first
+                if (singleDateFields) singleDateFields.classList.add('hidden');
+                if (rangeDateFields) rangeDateFields.classList.add('hidden');
+
+                // Show only relevant fields with smooth transition
+                if (selectedValue === 'single' && singleDateFields) {
+                    singleDateFields.classList.remove('hidden');
+                } else if (selectedValue === 'range' && rangeDateFields) {
+                    rangeDateFields.classList.remove('hidden');
+                    // Update preview when showing range fields
+                    updateRangeDatePreview();
+                }
+
+                // Re-setup date inputs with enhanced validation after showing fields
+                setTimeout(setupDateInputs, 100);
+            });
+        }
+
+        // ====== Modal buttons and initialization ======
+        const addDateBtn = document.getElementById('addDateBtn');
+        const emptyAddDateBtn = document.getElementById('emptyAddDateBtn');
+        const addDateForm = document.getElementById('addDateForm');
+        const closeAddModal = document.getElementById('closeAddModal');
+        const cancelAddBtn = document.getElementById('cancelAddBtn');
+
+        // Function to prepare Add Modal
+        function prepareAddModal() {
+            // Make absolutely sure scheduleDays is properly set as integers
+            scheduleDays = scheduleDays.map(day => parseInt(day.trim(), 10));
+            console.log('PrepareAddModal - scheduleDays:', scheduleDays);
+
+            // Setup date inputs with enhanced validation
+            setupDateInputs();
+
+            // If range fields are visible, update preview
+            if (rangeDateFields && !rangeDateFields.classList.contains('hidden')) {
+                updateRangeDatePreview();
+            }
+        }
+
+        if (addDateBtn) {
+            addDateBtn.addEventListener('click', function() {
+                console.log('Add Date button clicked');
+                openModal('addDateModal');
+                prepareAddModal();
+            });
+        }
+
+        if (emptyAddDateBtn) {
+            emptyAddDateBtn.addEventListener('click', function() {
+                console.log('Empty Add Date button clicked');
+                openModal('addDateModal');
+                prepareAddModal();
+            });
+        }
+
+        if (closeAddModal) {
+            closeAddModal.addEventListener('click', function() {
+                closeModal('addDateModal');
+            });
+        }
+
+        if (cancelAddBtn) {
+            cancelAddBtn.addEventListener('click', function() {
+                closeModal('addDateModal');
+            });
+        }
+
+        // Form validation before submission
+        function validateAddDateForm(e) {
+            console.log('Validating form submission...');
+
+            const dateType = document.getElementById('date_type').value;
+            console.log('Date type:', dateType);
+
+            if (dateType === 'single') {
+                const singleDate = document.getElementById('single_date');
+                if (!singleDate || !singleDate.value) {
+                    e.preventDefault();
+                    showToast('Silakan pilih tanggal', 'error');
+                    return false;
+                }
+
+                // Validate operation day
+                if (!isValidOperationDay(singleDate.value)) {
+                    e.preventDefault();
+                    showToast('Tanggal yang dipilih tidak sesuai dengan hari operasi kapal', 'error');
+                    return false;
+                }
+            } else if (dateType === 'range') {
+                const startDate = document.getElementById('start_date');
+                const endDate = document.getElementById('end_date');
+
+                if (!startDate || !startDate.value || !endDate || !endDate.value) {
+                    e.preventDefault();
+                    showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
+                    return false;
+                }
+
+                // Check if there are any valid operation days in the range
+                let hasValidDays = false;
+                const start = new Date(startDate.value);
+                const end = new Date(endDate.value);
+
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+                    let currentDate = new Date(start);
+                    while (currentDate <= end) {
+                        if (isValidOperationDay(currentDate.toISOString().split('T')[0])) {
+                            hasValidDays = true;
+                            break;
+                        }
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                }
+
+                if (!hasValidDays) {
+                    e.preventDefault();
+                    showToast('Tidak ada hari operasi dalam rentang tanggal yang dipilih', 'error');
+                    return false;
+                }
+            }
+
+            console.log('Form validation passed');
+            return true;
+        }
+
+        if (addDateForm) {
+            addDateForm.addEventListener('submit', function(e) {
+                return validateAddDateForm(e);
+            });
+        }
+
+        // ====== Edit Date Modal ======
         const originalDateField = document.getElementById('original_date');
         const currentDateDisplay = document.getElementById('currentDateDisplay');
 
@@ -1686,204 +1342,6 @@
             });
         }
 
-        // Auto-hide alerts after 5 seconds
-        const autoHideAlerts = document.querySelectorAll('.fade-out-alert');
-        autoHideAlerts.forEach(alert => {
-            setTimeout(() => {
-                alert.style.opacity = '0';
-                setTimeout(() => {
-                    alert.style.display = 'none';
-                }, 500);
-            }, 5000);
-        });
-
-        // Set up the days checkboxes based on schedule operation days
-        function setupDaysCheckboxes() {
-            // Check if schedule days data is available
-            if (scheduleDays && scheduleDays.length > 0) {
-                console.log('Setting up days checkboxes with scheduleDays:', scheduleDays);
-
-                // Clear all checkboxes first
-                document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
-                    checkbox.checked = false;
-                });
-
-                // Pre-check the days that match schedule operation days
-                scheduleDays.forEach(day => {
-                    // Make sure day is treated as a number for comparison
-                    const dayNum = parseInt(day, 10);
-                    const checkbox = document.getElementById(`day_${dayNum}`);
-                    if (checkbox) {
-                        console.log(`Checking day_${dayNum}`);
-                        checkbox.checked = true;
-                    }
-                });
-
-                // Make sure at least one checkbox is checked
-                const hasChecked = Array.from(document.querySelectorAll('input[name="days[]"]')).some(cb => cb
-                    .checked);
-                if (!hasChecked && document.querySelectorAll('input[name="days[]"]').length > 0) {
-                    // If none are checked, check the first one
-                    document.querySelector('input[name="days[]"]').checked = true;
-                }
-            }
-        }
-
-        // Call setup function when form is shown
-        function setupDaysMode() {
-            console.log('Setting up days mode...');
-            setupDaysCheckboxes();
-
-            // Add change event listener to ensure at least one day is always selected
-            document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    // After this checkbox change, check if at least one is still checked
-                    const hasChecked = Array.from(document.querySelectorAll(
-                        'input[name="days[]"]')).some(cb => cb.checked);
-                    if (!hasChecked) {
-                        // If the user unchecked the last checked box, show warning and recheck it
-                        showToast('Minimal satu hari harus dipilih', 'warning');
-                        this.checked = true;
-                    }
-                });
-            });
-
-            // Initialize date fields
-            const daysStartDate = document.getElementById('days_start_date');
-            const daysEndDate = document.getElementById('days_end_date');
-
-            if (daysStartDate && daysEndDate) {
-                // Set minimum dates
-                const today = new Date().toISOString().split('T')[0];
-                daysStartDate.min = today;
-                daysEndDate.min = today;
-
-                // Set default values if not set
-                if (!daysStartDate.value) {
-                    daysStartDate.value = today;
-                }
-
-                if (!daysEndDate.value) {
-                    const defaultEndDate = new Date();
-                    defaultEndDate.setDate(defaultEndDate.getDate() + 30);
-                    daysEndDate.value = defaultEndDate.toISOString().split('T')[0];
-                }
-
-                // Add validation
-                daysStartDate.addEventListener('change', function() {
-                    if (daysEndDate.value && this.value > daysEndDate.value) {
-                        showToast('Tanggal mulai tidak boleh setelah tanggal akhir', 'error');
-                        this.value = daysEndDate.value;
-                    }
-                });
-
-                daysEndDate.addEventListener('change', function() {
-                    if (daysStartDate.value && this.value < daysStartDate.value) {
-                        showToast('Tanggal akhir tidak boleh sebelum tanggal mulai', 'error');
-                        this.value = daysStartDate.value;
-                    }
-                });
-            }
-
-            console.log('Days mode setup complete');
-        }
-
-        function validateAddDateForm(e) {
-            console.log('Validating form submission...');
-
-            const dateType = document.getElementById('date_type').value;
-            console.log('Date type:', dateType);
-
-            if (dateType === 'single') {
-                const singleDate = document.getElementById('single_date');
-                if (!singleDate || !singleDate.value) {
-                    e.preventDefault();
-                    showToast('Silakan pilih tanggal', 'error');
-                    return false;
-                }
-
-                // Validate operation day only if field exists
-                const singleDateWarning = document.getElementById('single_date_warning');
-                const singleDateDay = document.getElementById('single_date_day');
-                if (!isValidOperationDay(singleDate.value)) {
-                    e.preventDefault();
-                    showToast('Tanggal yang dipilih tidak sesuai dengan hari operasi kapal', 'error');
-                    return false;
-                }
-            } else if (dateType === 'range') {
-                const startDate = document.getElementById('start_date');
-                const endDate = document.getElementById('end_date');
-
-                if (!startDate || !startDate.value || !endDate || !endDate.value) {
-                    e.preventDefault();
-                    showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
-                    return false;
-                }
-
-                // Check if there are any valid operation days in the range
-                let hasValidDays = false;
-                const start = new Date(startDate.value);
-                const end = new Date(endDate.value);
-
-                if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-                    let currentDate = new Date(start);
-                    while (currentDate <= end) {
-                        if (isValidOperationDay(currentDate.toISOString().split('T')[0])) {
-                            hasValidDays = true;
-                            break;
-                        }
-                        currentDate.setDate(currentDate.getDate() + 1);
-                    }
-                }
-
-                if (!hasValidDays) {
-                    e.preventDefault();
-                    showToast('Tidak ada hari operasi dalam rentang tanggal yang dipilih', 'error');
-                    return false;
-                }
-            } else if (dateType === 'days') {
-                console.log('Validating days mode...');
-
-                const daysChecked = document.querySelectorAll('input[name="days[]"]:checked');
-                const daysStartDate = document.getElementById('days_start_date');
-                const daysEndDate = document.getElementById('days_end_date');
-
-                console.log('Checked days:', Array.from(daysChecked).map(cb => cb.value));
-                console.log('Start date:', daysStartDate?.value);
-                console.log('End date:', daysEndDate?.value);
-
-                if (!daysChecked || daysChecked.length === 0) {
-                    e.preventDefault();
-                    showToast('Silakan pilih minimal satu hari', 'error');
-                    return false;
-                }
-
-                if (!daysStartDate || !daysStartDate.value || !daysEndDate || !daysEndDate.value) {
-                    e.preventDefault();
-                    showToast('Silakan pilih tanggal mulai dan tanggal akhir', 'error');
-                    return false;
-                }
-
-                // Validate start date is before or equal to end date
-                if (daysStartDate.value > daysEndDate.value) {
-                    e.preventDefault();
-                    showToast('Tanggal mulai harus sebelum atau sama dengan tanggal akhir', 'error');
-                    return false;
-                }
-            } else if (dateType === 'multiple') {
-                const selectedDates = document.getElementById('selected_dates');
-
-                if (!selectedDates || !selectedDates.value) {
-                    e.preventDefault();
-                    showToast('Silakan pilih minimal satu tanggal', 'error');
-                    return false;
-                }
-            }
-
-            console.log('Form validation passed');
-            return true;
-        }
-
         // Pre-fill today's date for convenience
         const today = new Date().toISOString().split('T')[0];
         const allDateInputs = document.querySelectorAll('input[type="date"]');
@@ -1899,68 +1357,6 @@
             }
         });
 
-        // Init calendar if we start on multiple date view
-        if (dateTypeSelect && dateTypeSelect.value === 'multiple' && multipleDateFields && !multipleDateFields
-            .classList.contains('hidden')) {
-            generateCalendar();
-        }
-
         console.log('Schedule dates management initialization complete');
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-        const addDateForm = document.getElementById('addDateForm');
-
-        if (addDateForm) {
-            addDateForm.addEventListener('submit', function(e) {
-                return validateAddDateForm(e);
-            });
-        }
-
-        // Update dateTypeSelect event listener to properly handle days mode
-        const dateTypeSelect = document.getElementById('date_type');
-        if (dateTypeSelect) {
-            dateTypeSelect.addEventListener('change', function() {
-                const selectedValue = this.value;
-                console.log(`Date type changed to: ${selectedValue}`);
-
-                // Hide all fields first
-                const singleDateFields = document.getElementById('singleDateFields');
-                const rangeDateFields = document.getElementById('rangeDateFields');
-                const daysFields = document.getElementById('daysFields');
-                const multipleDateFields = document.getElementById('multipleDateFields');
-
-                if (singleDateFields) singleDateFields.classList.add('hidden');
-                if (rangeDateFields) rangeDateFields.classList.add('hidden');
-                if (daysFields) daysFields.classList.add('hidden');
-                if (multipleDateFields) multipleDateFields.classList.add('hidden');
-
-                // Show only relevant fields with smooth transition
-                if (selectedValue === 'single' && singleDateFields) {
-                    singleDateFields.classList.remove('hidden');
-                } else if (selectedValue === 'range' && rangeDateFields) {
-                    rangeDateFields.classList.remove('hidden');
-                    // Update preview when showing range fields
-                    if (typeof updateRangeDatePreview === 'function') {
-                        updateRangeDatePreview();
-                    }
-                } else if (selectedValue === 'days' && daysFields) {
-                    daysFields.classList.remove('hidden');
-                    setupDaysMode(); // Setup days mode
-                } else if (selectedValue === 'multiple' && multipleDateFields) {
-                    multipleDateFields.classList.remove('hidden');
-                    if (typeof generateCalendar === 'function') {
-                        generateCalendar(); // Generate calendar when this view is selected
-                    }
-                }
-
-                // Re-setup date inputs with enhanced validation after showing fields
-                setTimeout(function() {
-                    if (typeof setupDateInputs === 'function') {
-                        setupDateInputs();
-                    }
-                }, 100);
-            });
-        }
     });
 </script>

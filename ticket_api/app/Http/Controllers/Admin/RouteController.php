@@ -10,9 +10,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 
 /**
- * @method \Illuminate\Routing\Controller middleware($middleware, array $options = [])
+ * RouteController - Manages ferry routes in the admin panel
+ *
+ * This controller handles CRUD operations for routes and their status updates,
+ * which can affect related schedules and schedule dates.
  */
 class RouteController extends Controller
 {
@@ -25,7 +29,7 @@ class RouteController extends Controller
     }
 
     /**
-     * Display a listing of routes.
+     * Display a listing of routes with filtering options.
      *
      * @param Request $request
      * @return \Illuminate\View\View
@@ -37,6 +41,7 @@ class RouteController extends Controller
 
         $query = Route::query();
 
+        // Apply search filter if provided
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('origin', 'like', "%{$search}%")
@@ -44,11 +49,16 @@ class RouteController extends Controller
             });
         }
 
+        // Apply status filter if provided
         if ($status) {
             $query->where('status', $status);
         }
 
-        $routes = $query->orderBy('origin')->orderBy('destination')->paginate(15);
+        // Get routes with pagination
+        $routes = $query->orderBy('origin')
+            ->orderBy('destination')
+            ->paginate(15)
+            ->withQueryString(); // Maintain query parameters across pagination
 
         return view('admin.routes.index', compact('routes', 'search', 'status'));
     }
@@ -81,14 +91,14 @@ class RouteController extends Controller
             'car_price' => 'required|numeric|min:0',
             'bus_price' => 'required|numeric|min:0',
             'truck_price' => 'required|numeric|min:0',
-            'status' => 'required|in:ACTIVE,INACTIVE,WEATHER_ISSUE',
+            'status' => ['required', Rule::in(['ACTIVE', 'INACTIVE', 'WEATHER_ISSUE'])],
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
 
-        // Check if route already exists
+        // Check if route already exists with same origin and destination
         $existingRoute = Route::where('origin', $request->origin)
             ->where('destination', $request->destination)
             ->first();
@@ -99,25 +109,34 @@ class RouteController extends Controller
         }
 
         try {
-            Route::create($request->all());
+            DB::beginTransaction();
+
+            $route = Route::create($request->all());
+
+            DB::commit();
 
             return redirect()->route('admin.routes.index')
                 ->with('success', 'Route created successfully');
         } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Log the error for debugging
+            logger()->error('Failed to create route: ' . $e->getMessage());
+
             return back()->withInput()
-                ->with('error', 'Failed to create route: ' . $e->getMessage());
+                ->with('error', 'Failed to create route. Please try again later.');
         }
     }
 
     /**
-     * Display the specified route.
+     * Display the specified route with its schedules.
      *
      * @param Route $route
      * @return \Illuminate\View\View
      */
     public function show(Route $route)
     {
-        // Get schedules for this route
+        // Eager load ferry relationship to avoid N+1 query problem
         $schedules = Schedule::with('ferry')
             ->where('route_id', $route->id)
             ->orderBy('departure_time')
@@ -156,14 +175,14 @@ class RouteController extends Controller
             'car_price' => 'required|numeric|min:0',
             'bus_price' => 'required|numeric|min:0',
             'truck_price' => 'required|numeric|min:0',
-            'status' => 'required|in:ACTIVE,INACTIVE,WEATHER_ISSUE',
+            'status' => ['required', Rule::in(['ACTIVE', 'INACTIVE', 'WEATHER_ISSUE'])],
         ]);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
 
-        // Check if route already exists, excluding current route
+        // Check if route already exists with same origin and destination (excluding current route)
         $existingRoute = Route::where('origin', $request->origin)
             ->where('destination', $request->destination)
             ->where('id', '!=', $route->id)
@@ -175,18 +194,27 @@ class RouteController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+
             $route->update($request->all());
+
+            DB::commit();
 
             return redirect()->route('admin.routes.index')
                 ->with('success', 'Route updated successfully');
         } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Log the error for debugging
+            logger()->error('Failed to update route: ' . $e->getMessage());
+
             return back()->withInput()
-                ->with('error', 'Failed to update route: ' . $e->getMessage());
+                ->with('error', 'Failed to update route. Please try again later.');
         }
     }
 
     /**
-     * Remove the specified route.
+     * Remove the specified route if it has no associated schedules.
      *
      * @param Route $route
      * @return \Illuminate\Http\RedirectResponse
@@ -195,21 +223,33 @@ class RouteController extends Controller
     {
         try {
             // Check if route has any schedules
-            if (Schedule::where('route_id', $route->id)->exists()) {
+            $hasSchedules = Schedule::where('route_id', $route->id)->exists();
+
+            if ($hasSchedules) {
                 return back()->with('error', 'Cannot delete route with existing schedules');
             }
 
+            DB::beginTransaction();
+
             $route->delete();
+
+            DB::commit();
 
             return redirect()->route('admin.routes.index')
                 ->with('success', 'Route deleted successfully');
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to delete route: ' . $e->getMessage());
+            DB::rollBack();
+
+            // Log the error for debugging
+            logger()->error('Failed to delete route: ' . $e->getMessage());
+
+            return back()->with('error', 'Failed to delete route. Please try again later.');
         }
     }
 
     /**
-     * Update the status of a route with a more flexible approach.
+     * Update the status of a route with a flexible approach.
+     * This method can also update related schedules and schedule dates.
      *
      * @param Request $request
      * @param Route $route
@@ -218,7 +258,7 @@ class RouteController extends Controller
     public function updateStatus(Request $request, Route $route)
     {
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:ACTIVE,INACTIVE,WEATHER_ISSUE',
+            'status' => ['required', Rule::in(['ACTIVE', 'INACTIVE', 'WEATHER_ISSUE'])],
             'reason' => 'nullable|string|max:255',
             'apply_to_schedules' => 'boolean',
             'start_time' => 'nullable|required_if:apply_to_schedules,1|date_format:H:i',
@@ -233,10 +273,11 @@ class RouteController extends Controller
         try {
             DB::beginTransaction();
 
-            // Update route status
+            // Store previous status for comparison
             $oldStatus = $route->status;
             $newStatus = $request->status;
 
+            // Update route status
             $route->status = $newStatus;
             $route->status_reason = $request->reason ?? null;
             $route->save();
@@ -277,7 +318,6 @@ class RouteController extends Controller
 
                 // Calculate the date range for affected days
                 $startDate = Carbon::today();
-                // Fixed code
                 $endDate = $request->affect_days
                     ? Carbon::today()->addDays((int)$request->affect_days)
                     : Carbon::today()->addDay();
@@ -288,8 +328,6 @@ class RouteController extends Controller
                     $schedule->save();
 
                     // Update schedule dates based on the date range and status
-                    $scheduleDate = null;
-
                     if ($newStatus === 'WEATHER_ISSUE') {
                         // For weather issues, update dates in the specified range
                         $affected = ScheduleDate::where('schedule_id', $schedule->id)
@@ -315,6 +353,7 @@ class RouteController extends Controller
                     }
                 }
 
+                // Prepare success message
                 $message = "Status rute diperbarui menjadi {$this->getStatusLabel($newStatus)}.";
 
                 if ($affectedSchedulesCount > 0) {
@@ -333,12 +372,19 @@ class RouteController extends Controller
             return back()->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal memperbarui status rute: ' . $e->getMessage());
+
+            // Log the error for debugging
+            logger()->error('Failed to update route status: ' . $e->getMessage());
+
+            return back()->with('error', 'Gagal memperbarui status rute. Silakan coba lagi nanti.');
         }
     }
 
     /**
      * Helper method to map route status to schedule status
+     *
+     * @param string $routeStatus
+     * @return string
      */
     private function mapRouteStatusToScheduleStatus($routeStatus)
     {
@@ -355,7 +401,10 @@ class RouteController extends Controller
     }
 
     /**
-     * Helper method to format status label
+     * Helper method to format status label in Indonesian
+     *
+     * @param string $status
+     * @return string
      */
     private function getStatusLabel($status)
     {
