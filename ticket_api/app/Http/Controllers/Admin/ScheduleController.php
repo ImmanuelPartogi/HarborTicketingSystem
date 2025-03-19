@@ -86,8 +86,16 @@ class ScheduleController extends Controller
      */
     public function create()
     {
-        $routes = Route::where('status', 'ACTIVE')->orderBy('origin')->orderBy('destination')->get();
-        $ferries = Ferry::where('status', 'ACTIVE')->orderBy('name')->get();
+        // Get only active routes for selection
+        $routes = Route::where('status', 'ACTIVE')
+            ->orderBy('origin')
+            ->orderBy('destination')
+            ->get();
+
+        // Get only active ferries for selection
+        $ferries = Ferry::where('status', 'ACTIVE')
+            ->orderBy('name')
+            ->get();
 
         return view('admin.schedules.create', compact('routes', 'ferries'));
     }
@@ -537,6 +545,7 @@ class ScheduleController extends Controller
 
     /**
      * Update a specific schedule date status.
+     * Implements business rules for status editing.
      *
      * @param Request $request
      * @param Schedule $schedule
@@ -563,6 +572,24 @@ class ScheduleController extends Controller
                 return back()->with('error', 'Data jadwal tidak valid');
             }
 
+            // Get route status
+            $routeStatus = $schedule->route->status ?? 'ACTIVE';
+
+            // Check if status can be edited based on business rules
+            if (in_array($scheduleDate->status, ['FULL', 'DEPARTED'])) {
+                return back()->with('error', 'Status jadwal tidak dapat diubah karena sudah berstatus final.');
+            }
+
+            // Cannot edit status if route is not ACTIVE
+            if ($routeStatus !== 'ACTIVE') {
+                return back()->with(
+                    'error',
+                    'Status jadwal tidak dapat diubah karena rute saat ini ' .
+                        ($routeStatus === 'WEATHER_ISSUE' ? 'memiliki masalah cuaca.' : 'tidak aktif.') .
+                        ' Silakan ubah status rute terlebih dahulu.'
+                );
+            }
+
             // Check if status was changed
             $statusChanged = $request->status != $scheduleDate->status;
             $oldStatus = $scheduleDate->status;
@@ -575,6 +602,8 @@ class ScheduleController extends Controller
             // Add status reason if provided
             if ($request->filled('status_reason')) {
                 $updateData['status_reason'] = $request->status_reason;
+            } else {
+                $updateData['status_reason'] = null; // Clear reason if not provided
             }
 
             // Update the schedule date
@@ -591,7 +620,10 @@ class ScheduleController extends Controller
 
             return back()->with('success', $message);
         } catch (\Exception $e) {
-            return back()->with('error', 'Gagal memperbarui status jadwal: ' . $e->getMessage());
+            // Log error detail
+            logger()->error('Failed to update schedule date: ' . $e->getMessage());
+
+            return back()->with('error', 'Gagal memperbarui status jadwal: ' . $e->getMessage())->withInput();
         }
     }
 

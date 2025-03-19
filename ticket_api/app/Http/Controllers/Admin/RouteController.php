@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * RouteController - Manages ferry routes in the admin panel
@@ -82,8 +83,6 @@ class RouteController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'origin' => 'required|string|max:255',
-            'destination' => 'required|string|max:255|different:origin',
             'distance' => 'nullable|numeric|min:0',
             'duration' => 'required|integer|min:1',
             'base_price' => 'required|numeric|min:0',
@@ -248,9 +247,7 @@ class RouteController extends Controller
     }
 
     /**
-     * Update the status of a route with a simplified approach.
-     * This method can also update related schedules and schedule dates.
-     * For weather issues, it sets an automatic expiration date after which the status returns to active.
+     * Update the status of a route with impact on related schedules and schedule dates.
      *
      * @param Request $request
      * @param Route $route
@@ -258,17 +255,6 @@ class RouteController extends Controller
      */
     public function updateStatus(Request $request, Route $route)
     {
-        $validator = Validator::make($request->all(), [
-            'status' => ['required', Rule::in(['ACTIVE', 'INACTIVE', 'WEATHER_ISSUE'])],
-            'reason' => 'nullable|string|max:255',
-            'apply_to_schedules' => 'boolean',
-            'affect_days' => 'nullable|integer|min:1|max:30'
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withErrors($validator);
-        }
-
         try {
             DB::beginTransaction();
 
@@ -280,95 +266,211 @@ class RouteController extends Controller
             $route->status = $newStatus;
             $route->status_reason = $request->reason ?? null;
 
-            // For weather issues, store the auto-expiry date
-            if ($newStatus === 'WEATHER_ISSUE') {
+            // Jika kolom status_updated_at tersedia, update
+            if (Schema::hasColumn('routes', 'status_updated_at')) {
+                $route->status_updated_at = now();
+            }
+
+            // Jika kolom status_expiry_date tersedia dan status adalah WEATHER_ISSUE
+            if (Schema::hasColumn('routes', 'status_expiry_date') && $newStatus === 'WEATHER_ISSUE') {
                 $daysToExpire = (int)($request->affect_days ?? 3);
                 $route->status_expiry_date = Carbon::now()->addDays($daysToExpire);
-            } else {
-                $route->status_expiry_date = null; // Clear expiry date for other statuses
+            } elseif (Schema::hasColumn('routes', 'status_expiry_date')) {
+                $route->status_expiry_date = null;
             }
 
             $route->save();
 
-            $affectedSchedulesCount = 0;
-            $affectedDatesCount = 0;
+            // Jika apply_to_schedules di-check atau status non-ACTIVE, update jadwal terkait
+            if ($request->apply_to_schedules || $newStatus !== 'ACTIVE') {
+                $affectedSchedulesCount = 0;
+                $affectedDatesCount = 0;
 
-            // If checkbox apply_to_schedules is checked
-            if ($request->apply_to_schedules) {
-                // Map route status to schedule status
-                $scheduleStatus = $this->mapRouteStatusToScheduleStatus($newStatus);
-
-                // Get all schedules for this route
+                // Get schedules for this route
                 $schedules = Schedule::where('route_id', $route->id)->get();
-                $affectedSchedulesCount = $schedules->count();
 
-                // Calculate the date range for affected days
+                // Calculate the date range for affected days (default 3 days)
                 $startDate = Carbon::today();
-                $endDate = $request->affect_days
-                    ? Carbon::today()->addDays((int)$request->affect_days)
-                    : Carbon::today()->addDays(3); // Default to 3 days if not specified
+                $endDate = Carbon::today()->addDays((int)($request->affect_days ?? 3));
 
                 foreach ($schedules as $schedule) {
+                    // Skip schedules in final states
+                    if (in_array($schedule->status, ['FULL', 'DEPARTED'])) {
+                        continue;
+                    }
+
+                    // Map route status to schedule status
+                    $scheduleStatus = 'ACTIVE';
+                    if ($newStatus === 'INACTIVE') {
+                        $scheduleStatus = 'CANCELLED';
+                    } elseif ($newStatus === 'WEATHER_ISSUE') {
+                        $scheduleStatus = 'DELAYED';
+                    }
+
                     // Update schedule status
                     $schedule->status = $scheduleStatus;
                     $schedule->save();
+                    $affectedSchedulesCount++;
 
-                    // Update schedule dates based on the date range and status
+                    // Update schedule dates
+                    $query = ScheduleDate::where('schedule_id', $schedule->id)
+                        ->where('date', '>=', $startDate->format('Y-m-d'))
+                        ->whereNotIn('status', ['FULL', 'DEPARTED']);
+
                     if ($newStatus === 'WEATHER_ISSUE') {
-                        // For weather issues, update dates in the specified range
-                        $affected = ScheduleDate::where('schedule_id', $schedule->id)
-                            ->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-                            ->update([
-                                'status' => 'WEATHER_ISSUE',
-                                'status_expiry_date' => $route->status_expiry_date
-                            ]);
+                        // For weather issues, only update dates within the specified range
+                        $query->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
+
+                        // Update to WEATHER_ISSUE
+                        $affected = $query->update([
+                            'status' => 'WEATHER_ISSUE',
+                        ]);
 
                         $affectedDatesCount += $affected;
                     } elseif ($newStatus === 'INACTIVE') {
-                        // For inactive routes, mark future dates as unavailable
-                        $affected = ScheduleDate::where('schedule_id', $schedule->id)
-                            ->where('date', '>=', $startDate->format('Y-m-d'))
-                            ->update(['status' => 'UNAVAILABLE']);
+                        // For inactive routes, mark future dates as UNAVAILABLE
+                        $affected = $query->update([
+                            'status' => 'UNAVAILABLE',
+                        ]);
 
                         $affectedDatesCount += $affected;
                     } elseif ($oldStatus !== 'ACTIVE' && $newStatus === 'ACTIVE') {
-                        // If returning to active status, set previously affected dates back to available
-                        $affected = ScheduleDate::where('schedule_id', $schedule->id)
-                            ->where('date', '>=', $startDate->format('Y-m-d'))
+                        // If returning to active status from non-active
+                        $affected = $query
                             ->whereIn('status', ['WEATHER_ISSUE', 'UNAVAILABLE'])
-                            ->update(['status' => 'AVAILABLE']);
+                            ->update([
+                                'status' => 'AVAILABLE',
+                            ]);
 
                         $affectedDatesCount += $affected;
                     }
                 }
             }
 
-            // Prepare success message
-            $message = "Status rute diperbarui menjadi {$this->getStatusLabel($newStatus)}.";
-
-            if ($affectedSchedulesCount > 0) {
-                $message .= " {$affectedSchedulesCount} jadwal terkait telah diperbarui.";
-
-                if ($affectedDatesCount > 0) {
-                    $message .= " {$affectedDatesCount} tanggal keberangkatan terpengaruh.";
-                }
-            }
-
-            if ($newStatus === 'WEATHER_ISSUE') {
-                $expiryDays = $request->affect_days ?? 3;
-                $message .= " Status akan otomatis kembali ke Aktif setelah {$expiryDays} hari.";
-            }
-
             DB::commit();
 
-            return back()->with('success', $message);
+            return back()->with('success', "Status rute diperbarui menjadi {$this->getStatusLabel($newStatus)}.");
         } catch (\Exception $e) {
             DB::rollBack();
 
-            // Log the error for debugging
+            // Log the detailed error for debugging
             logger()->error('Failed to update route status: ' . $e->getMessage());
 
-            return back()->with('error', 'Gagal memperbarui status rute. Silakan coba lagi nanti.');
+            // Return a user-friendly error message with detail (for dev environment)
+            return back()->with('error', 'Gagal memperbarui status rute: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Update schedule dates based on route status changes with appropriate rules.
+     * This handles various status transition scenarios and respects final statuses.
+     *
+     * @param Schedule $schedule
+     * @param string $newRouteStatus
+     * @param string $oldRouteStatus
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     * @param Carbon|null $expiryDate
+     * @return int Number of affected dates
+     */
+    private function updateScheduleDates(Schedule $schedule, $newRouteStatus, $oldRouteStatus, $startDate, $endDate, $expiryDate = null)
+    {
+        $affectedDates = 0;
+
+        // Query to get dates that can be modified (exclude final states)
+        $query = ScheduleDate::where('schedule_id', $schedule->id)
+            ->where('date', '>=', $startDate->format('Y-m-d'))
+            ->whereNotIn('status', ['FULL', 'DEPARTED']); // Don't modify dates with final status
+
+        if ($newRouteStatus === 'WEATHER_ISSUE') {
+            // For weather issues, only update dates within the specified range
+            $query->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
+
+            // Update to WEATHER_ISSUE status with expiry date
+            $affected = $query->update([
+                'status' => 'WEATHER_ISSUE',
+                'status_expiry_date' => $expiryDate,
+                'status_reason' => 'Perubahan status karena masalah cuaca pada rute',
+                'modified_by_route' => true // Mark as modified by route
+            ]);
+
+            $affectedDates += $affected;
+        } elseif ($newRouteStatus === 'INACTIVE') {
+            // For inactive routes, mark all future dates as UNAVAILABLE
+            $affected = $query->update([
+                'status' => 'UNAVAILABLE',
+                'status_reason' => 'Rute tidak aktif',
+                'modified_by_route' => true // Mark as modified by route
+            ]);
+
+            $affectedDates += $affected;
+        } elseif ($oldRouteStatus !== 'ACTIVE' && $newRouteStatus === 'ACTIVE') {
+            // If returning to active status from a non-active state
+            // Only reset dates that were previously modified by route changes
+            $affected = $query
+                ->where('modified_by_route', true)
+                ->whereIn('status', ['WEATHER_ISSUE', 'UNAVAILABLE'])
+                ->update([
+                    'status' => 'AVAILABLE',
+                    'status_expiry_date' => null,
+                    'status_reason' => null,
+                    'modified_by_route' => false // Reset this flag
+                ]);
+
+            $affectedDates += $affected;
+        }
+
+        return $affectedDates;
+    }
+
+    /**
+     * Process schedule dates based on departure time.
+     * Changes FULL schedule dates to DEPARTED status when departure time is reached.
+     * This should be called by a scheduled command.
+     *
+     * @return array Status counts
+     */
+    public function processScheduleDatesByTime()
+    {
+        $now = Carbon::now();
+        $processedCount = 0;
+
+        try {
+            // Find all FULL schedule dates for today
+            $scheduleDates = ScheduleDate::with('schedule')
+                ->where('status', 'FULL')
+                ->whereDate('date', $now->format('Y-m-d'))
+                ->get();
+
+            foreach ($scheduleDates as $scheduleDate) {
+                if ($scheduleDate->schedule) {
+                    // Get departure time and combine with date
+                    $departureTime = $scheduleDate->schedule->departure_time;
+                    $departureDateTime = Carbon::parse(
+                        $scheduleDate->date->format('Y-m-d') . ' ' . $departureTime->format('H:i:s')
+                    );
+
+                    // If departure time has passed, mark as DEPARTED
+                    if ($now->gt($departureDateTime)) {
+                        $scheduleDate->status = 'DEPARTED';
+                        $scheduleDate->save();
+                        $processedCount++;
+                    }
+                }
+            }
+
+            return [
+                'success' => true,
+                'processed' => $processedCount
+            ];
+        } catch (\Exception $e) {
+            logger()->error('Failed to process schedule dates by time: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
 

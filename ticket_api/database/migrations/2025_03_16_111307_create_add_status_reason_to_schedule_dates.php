@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddStatusExpiryDateToRoutesAndScheduleDates extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,11 @@ class AddStatusExpiryDateToRoutesAndScheduleDates extends Migration
      */
     public function up()
     {
-        Schema::table('routes', function (Blueprint $table) {
-            $table->timestamp('status_expiry_date')->nullable()->after('status_reason');
-        });
-
         Schema::table('schedule_dates', function (Blueprint $table) {
-            $table->timestamp('status_expiry_date')->nullable()->after('status');
+            if (!Schema::hasColumn('schedule_dates', 'status_reason')) {
+                $table->string('status_reason')->nullable()->after('status')
+                    ->comment('Alasan perubahan status');
+            }
         });
     }
 
@@ -29,12 +28,10 @@ class AddStatusExpiryDateToRoutesAndScheduleDates extends Migration
      */
     public function down()
     {
-        Schema::table('routes', function (Blueprint $table) {
-            $table->dropColumn('status_expiry_date');
-        });
-
         Schema::table('schedule_dates', function (Blueprint $table) {
-            $table->dropColumn('status_expiry_date');
+            if (Schema::hasColumn('schedule_dates', 'status_reason')) {
+                $table->dropColumn('status_reason');
+            }
         });
     }
-}
+};

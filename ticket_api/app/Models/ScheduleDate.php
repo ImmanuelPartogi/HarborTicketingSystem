@@ -24,7 +24,9 @@ class ScheduleDate extends Model
         'truck_count',
         'status',
         'status_reason',
-        'adjustment_id'
+        'status_expiry_date',
+        'adjustment_id',
+        'modified_by_route'
     ];
 
     /**
@@ -34,6 +36,8 @@ class ScheduleDate extends Model
      */
     protected $casts = [
         'date' => 'date',
+        'status_expiry_date' => 'datetime',
+        'modified_by_route' => 'boolean',
     ];
 
     /**
@@ -99,6 +103,42 @@ class ScheduleDate extends Model
     public function isWeatherAffected()
     {
         return $this->status === 'WEATHER_ISSUE';
+    }
+
+    /**
+     * Check if the status is in final state (cannot be changed).
+     *
+     * @return bool
+     */
+    public function isFinalState()
+    {
+        return in_array($this->status, ['FULL', 'DEPARTED']);
+    }
+
+    /**
+     * Check if the status can be directly edited.
+     * Prevents editing schedule dates that were modified by route status changes.
+     *
+     * @return bool
+     */
+    public function canEditStatus()
+    {
+        // Cannot edit if in final state
+        if ($this->isFinalState()) {
+            return false;
+        }
+
+        // Cannot edit if modified by route and not yet expired
+        if ($this->modified_by_route &&
+            ($this->status === 'WEATHER_ISSUE' || $this->status === 'UNAVAILABLE')) {
+            // If it's a weather issue with an expiry date, check if it's expired
+            if ($this->status === 'WEATHER_ISSUE' && $this->status_expiry_date) {
+                return now()->gt($this->status_expiry_date);
+            }
+            return false;
+        }
+
+        return true;
     }
 
     /**

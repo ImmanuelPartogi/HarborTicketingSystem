@@ -24,10 +24,16 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // Run every hour to check for and reset expired weather statuses
+        // Reset routes with expired weather issues
         $schedule->command('routes:reset-weather-status')
-                 ->hourly()
-                 ->appendOutputTo(storage_path('logs/weather-status-reset.log'));
+            ->hourly()
+            ->appendOutputTo(storage_path('logs/weather-status-reset.log'));
+
+        // Process schedule dates (FULL to DEPARTED)
+        $schedule->command('schedules:process-departed')
+            ->everyFifteenMinutes()
+            ->between('5:00', '23:00') // Only run during operational hours
+            ->appendOutputTo(storage_path('logs/schedule-status-updates.log'));
     }
 
     /**
@@ -37,7 +43,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }
