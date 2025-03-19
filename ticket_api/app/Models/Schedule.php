@@ -243,4 +243,57 @@ class Schedule extends Model
 
         return $created;
     }
+
+    /**
+     * Check if the schedule status is considered final.
+     * Final statuses should not be changed automatically.
+     *
+     * @param string $status
+     * @return bool
+     */
+    public static function isStatusFinal($status)
+    {
+        return in_array($status, ['FULL', 'DEPARTED']);
+    }
+
+    /**
+     * Check if current schedule status is considered final.
+     *
+     * @return bool
+     */
+    public function hasStatusFinal()
+    {
+        return self::isStatusFinal($this->status);
+    }
+
+    /**
+     * Process schedule dates to reflect the schedule's current status,
+     * respecting the final statuses (FULL and DEPARTED).
+     *
+     * @return int Number of affected dates
+     */
+    public function updateDatesBasedOnStatus()
+    {
+        // Only process for non-active statuses
+        if ($this->status === 'ACTIVE') {
+            return 0;
+        }
+
+        $affectedCount = 0;
+        $mappedStatus = $this->status === 'CANCELLED' ? 'UNAVAILABLE' : 'WEATHER_ISSUE';
+
+        // Get future dates that are not in final status
+        $futureDates = $this->scheduleDates()
+            ->where('date', '>=', now()->format('Y-m-d'))
+            ->whereNotIn('status', ['FULL', 'DEPARTED']) // Don't modify final statuses
+            ->update([
+                'status' => $mappedStatus,
+                'status_reason' => $this->status === 'CANCELLED'
+                    ? 'Jadwal tidak aktif'
+                    : 'Jadwal tertunda karena masalah cuaca',
+                'modified_by_schedule' => true
+            ]);
+
+        return $futureDates;
+    }
 }

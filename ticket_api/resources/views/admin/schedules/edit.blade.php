@@ -29,6 +29,11 @@
                     <p class="font-medium">
                         @if (isset($schedule->route) && is_object($schedule->route))
                             {{ $schedule->route->origin }} - {{ $schedule->route->destination }}
+                            @if($schedule->route->status != 'ACTIVE')
+                                <span class="ml-2 px-2 py-1 rounded-full text-xs {{ $schedule->route->status == 'WEATHER_ISSUE' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800' }}">
+                                    {{ $schedule->route->status == 'WEATHER_ISSUE' ? 'Masalah Cuaca' : 'Tidak Aktif' }}
+                                </span>
+                            @endif
                         @else
                             -
                         @endif
@@ -66,6 +71,10 @@
                         @elseif($schedule->status == 'FULL')
                             <span class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                                 Penuh
+                            </span>
+                        @elseif($schedule->status == 'DEPARTED')
+                            <span class="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                                Selesai
                             </span>
                         @else
                             <span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
@@ -110,6 +119,42 @@
             </div>
         </div>
 
+        @php
+            $isStatusFinal = in_array($schedule->status, ['FULL', 'DEPARTED']);
+        @endphp
+
+        @if($isStatusFinal)
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            Jadwal ini memiliki status <strong>{{ $schedule->status == 'FULL' ? 'Penuh' : 'Selesai' }}</strong> yang merupakan status final.
+                            Status tidak dapat diubah, namun Anda tetap dapat mengedit detail jadwal lainnya.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            <strong>Informasi Status:</strong> Perubahan status jadwal bersifat independen dari status rute.
+                            Jika status jadwal diubah menjadi <strong>Tertunda</strong> atau <strong>Dibatalkan</strong>,
+                            semua tanggal jadwal terkait yang belum berstatus <strong>Penuh</strong> atau <strong>Selesai</strong>
+                            akan otomatis menyesuaikan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <form action="{{ route('admin.schedules.update', $schedule) }}" method="POST">
             @csrf
             @method('PUT')
@@ -125,6 +170,9 @@
                                 <option value="{{ $route->id }}"
                                     {{ old('route_id', (string) $schedule->route_id) == (string) $route->id ? 'selected' : '' }}>
                                     {{ $route->origin }} - {{ $route->destination }}
+                                    @if($route->status != 'ACTIVE')
+                                        ({{ $route->status == 'WEATHER_ISSUE' ? 'Masalah Cuaca' : 'Tidak Aktif' }})
+                                    @endif
                                 </option>
                             @endforeach
                         @endif
@@ -224,19 +272,52 @@
 
                 <div class="mb-4">
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select id="status" name="status"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('status') border-red-500 @enderror">
-                        <option value="ACTIVE"
-                            {{ old('status', strtoupper($schedule->status)) == 'ACTIVE' ? 'selected' : '' }}>Aktif</option>
-                        <option value="DELAYED"
-                            {{ old('status', strtoupper($schedule->status)) == 'DELAYED' ? 'selected' : '' }}>Tertunda
-                        </option>
-                        <option value="FULL"
-                            {{ old('status', strtoupper($schedule->status)) == 'FULL' ? 'selected' : '' }}>Penuh</option>
-                        <option value="CANCELLED"
-                            {{ old('status', strtoupper($schedule->status)) == 'CANCELLED' ? 'selected' : '' }}>Dibatalkan
-                        </option>
-                    </select>
+                    @if($isStatusFinal)
+                        <input type="hidden" name="status" value="{{ $schedule->status }}">
+                        <div class="flex items-center py-2">
+                            <span class="px-3 py-2 rounded-md bg-gray-100 text-gray-800 w-full">
+                                @if($schedule->status == 'FULL')
+                                    Penuh (Status Final)
+                                @else
+                                    Selesai (Status Final)
+                                @endif
+                            </span>
+                            <div class="ml-2 text-gray-500">
+                                <i class="fas fa-lock" title="Status final tidak dapat diubah"></i>
+                            </div>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-1">Status final tidak dapat diubah</p>
+                    @else
+                        <select id="status" name="status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('status') border-red-500 @enderror">
+                            <option value="ACTIVE"
+                                {{ old('status', strtoupper($schedule->status)) == 'ACTIVE' ? 'selected' : '' }}>
+                                Aktif
+                            </option>
+                            <option value="DELAYED"
+                                {{ old('status', strtoupper($schedule->status)) == 'DELAYED' ? 'selected' : '' }}>
+                                Tertunda (Masalah Cuaca)
+                            </option>
+                            <option value="CANCELLED"
+                                {{ old('status', strtoupper($schedule->status)) == 'CANCELLED' ? 'selected' : '' }}>
+                                Dibatalkan
+                            </option>
+                            <option value="FULL"
+                                {{ old('status', strtoupper($schedule->status)) == 'FULL' ? 'selected' : '' }}>
+                                Penuh (Status Final)
+                            </option>
+                        </select>
+                        <div class="mt-2 text-xs text-gray-600">
+                            <div class="flex items-start mb-1">
+                                <i class="fas fa-info-circle text-blue-500 mt-0.5 mr-1"></i>
+                                <span>Perubahan status akan mempengaruhi tanggal jadwal terkait.</span>
+                            </div>
+                            <div class="flex items-start text-xs text-gray-600">
+                                <i class="fas fa-exclamation-circle text-yellow-500 mt-0.5 mr-1"></i>
+                                <span>Status "Penuh" adalah status final dan tidak dapat diubah kembali.</span>
+                            </div>
+                        </div>
+                    @endif
                     @error('status')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
@@ -264,6 +345,18 @@
                     alert('Pilih minimal satu hari operasi.');
                 }
             });
+
+            // Add warning when changing to final status
+            const statusDropdown = document.getElementById('status');
+            if (statusDropdown) {
+                statusDropdown.addEventListener('change', function() {
+                    if (this.value === 'FULL') {
+                        if (!confirm('Status "Penuh" adalah status final dan tidak dapat diubah kembali. Lanjutkan?')) {
+                            this.value = '{{ old('status', strtoupper($schedule->status)) }}';
+                        }
+                    }
+                });
+            }
         });
     </script>
 @endpush

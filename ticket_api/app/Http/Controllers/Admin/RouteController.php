@@ -83,6 +83,8 @@ class RouteController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'origin' => 'required|string|max:255',
+            'destination' => 'required|string|max:255|different:origin',
             'distance' => 'nullable|numeric|min:0',
             'duration' => 'required|integer|min:1',
             'base_price' => 'required|numeric|min:0',
@@ -247,7 +249,7 @@ class RouteController extends Controller
     }
 
     /**
-     * Update the status of a route with impact on related schedules and schedule dates.
+     * Update the status of a route without affecting related schedules.
      *
      * @param Request $request
      * @param Route $route
@@ -266,12 +268,12 @@ class RouteController extends Controller
             $route->status = $newStatus;
             $route->status_reason = $request->reason ?? null;
 
-            // Jika kolom status_updated_at tersedia, update
+            // If status_updated_at column exists, update it
             if (Schema::hasColumn('routes', 'status_updated_at')) {
                 $route->status_updated_at = now();
             }
 
-            // Jika kolom status_expiry_date tersedia dan status adalah WEATHER_ISSUE
+            // If status_expiry_date column exists and status is WEATHER_ISSUE
             if (Schema::hasColumn('routes', 'status_expiry_date') && $newStatus === 'WEATHER_ISSUE') {
                 $daysToExpire = (int)($request->affect_days ?? 3);
                 $route->status_expiry_date = Carbon::now()->addDays($daysToExpire);
@@ -280,72 +282,6 @@ class RouteController extends Controller
             }
 
             $route->save();
-
-            // Jika apply_to_schedules di-check atau status non-ACTIVE, update jadwal terkait
-            if ($request->apply_to_schedules || $newStatus !== 'ACTIVE') {
-                $affectedSchedulesCount = 0;
-                $affectedDatesCount = 0;
-
-                // Get schedules for this route
-                $schedules = Schedule::where('route_id', $route->id)->get();
-
-                // Calculate the date range for affected days (default 3 days)
-                $startDate = Carbon::today();
-                $endDate = Carbon::today()->addDays((int)($request->affect_days ?? 3));
-
-                foreach ($schedules as $schedule) {
-                    // Skip schedules in final states
-                    if (in_array($schedule->status, ['FULL', 'DEPARTED'])) {
-                        continue;
-                    }
-
-                    // Map route status to schedule status
-                    $scheduleStatus = 'ACTIVE';
-                    if ($newStatus === 'INACTIVE') {
-                        $scheduleStatus = 'CANCELLED';
-                    } elseif ($newStatus === 'WEATHER_ISSUE') {
-                        $scheduleStatus = 'DELAYED';
-                    }
-
-                    // Update schedule status
-                    $schedule->status = $scheduleStatus;
-                    $schedule->save();
-                    $affectedSchedulesCount++;
-
-                    // Update schedule dates
-                    $query = ScheduleDate::where('schedule_id', $schedule->id)
-                        ->where('date', '>=', $startDate->format('Y-m-d'))
-                        ->whereNotIn('status', ['FULL', 'DEPARTED']);
-
-                    if ($newStatus === 'WEATHER_ISSUE') {
-                        // For weather issues, only update dates within the specified range
-                        $query->whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')]);
-
-                        // Update to WEATHER_ISSUE
-                        $affected = $query->update([
-                            'status' => 'WEATHER_ISSUE',
-                        ]);
-
-                        $affectedDatesCount += $affected;
-                    } elseif ($newStatus === 'INACTIVE') {
-                        // For inactive routes, mark future dates as UNAVAILABLE
-                        $affected = $query->update([
-                            'status' => 'UNAVAILABLE',
-                        ]);
-
-                        $affectedDatesCount += $affected;
-                    } elseif ($oldStatus !== 'ACTIVE' && $newStatus === 'ACTIVE') {
-                        // If returning to active status from non-active
-                        $affected = $query
-                            ->whereIn('status', ['WEATHER_ISSUE', 'UNAVAILABLE'])
-                            ->update([
-                                'status' => 'AVAILABLE',
-                            ]);
-
-                        $affectedDatesCount += $affected;
-                    }
-                }
-            }
 
             DB::commit();
 

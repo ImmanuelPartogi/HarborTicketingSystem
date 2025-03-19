@@ -6,7 +6,7 @@
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold flex items-center">
-                    <i class="fas fa-plus-circle mr-3"></i> Tambah Rute Baru
+                    <i class="fas fa-plus-circle mr-3"></i> Tambah Jadwal Baru
                 </h1>
             </div>
         </div>
@@ -21,6 +21,19 @@
                         </div>
                         <div class="ml-3">
                             <p>{{ session('error') }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if (session('success'))
+                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-r shadow-sm" role="alert">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle text-green-500 mt-1"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p>{{ session('success') }}</p>
                         </div>
                     </div>
                 </div>
@@ -44,14 +57,35 @@
                 </div>
             @endif
 
+            <!-- Progress Steps -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center">
+                            <div class="bg-blue-500 rounded-full h-8 w-8 flex items-center justify-center text-white font-bold">1</div>
+                            <div class="ml-2 text-sm font-medium text-gray-900">Informasi Dasar</div>
+                        </div>
+                    </div>
+                    <div class="w-full mx-4 h-1 bg-gray-200">
+                        <div class="h-1 bg-blue-500" style="width: 50%"></div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center">
+                            <div class="bg-gray-300 rounded-full h-8 w-8 flex items-center justify-center text-gray-700 font-bold">2</div>
+                            <div class="ml-2 text-sm font-medium text-gray-700">Hari Operasional</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Form -->
-            <form action="{{ route('admin.routes.store') }}" method="POST" novalidate class="space-y-6">
+            <form action="{{ route('admin.schedules.store') }}" method="POST" novalidate class="space-y-6" id="scheduleForm">
                 @csrf
 
                 <!-- Basic Info Section -->
                 <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                        <i class="fas fa-info-circle mr-2 text-blue-500"></i> Informasi Dasar
+                        <i class="fas fa-info-circle mr-2 text-blue-500"></i> Informasi Dasar Jadwal
                     </h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -68,7 +102,8 @@
                                     <option value="">-- Pilih Rute --</option>
                                     @foreach ($routes as $route)
                                         <option value="{{ $route->id }}"
-                                            {{ old('route_id') == $route->id ? 'selected' : '' }}>
+                                            {{ old('route_id') == $route->id ? 'selected' : '' }}
+                                            data-duration="{{ $route->duration }}">
                                             {{ $route->origin }} - {{ $route->destination }}
                                             ({{ $route->formattedDuration }})
                                         </option>
@@ -78,61 +113,70 @@
                             @error('route_id')
                                 <p id="route_id-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="text-xs text-gray-500 mt-1">Pilih rute yang akan dijadwalkan</p>
                         </div>
 
                         <div>
-                            <label for="distance" class="block text-sm font-medium text-gray-700 mb-1">Jarak (KM)</label>
+                            <label for="ferry_id" class="block text-sm font-medium text-gray-700 mb-1">Pilih Kapal <span
+                                    class="text-red-500">*</span></label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-route text-gray-400"></i>
+                                    <i class="fas fa-ship text-gray-400"></i>
                                 </div>
-                                <input type="number" id="distance" name="distance" value="{{ old('distance') }}"
-                                    step="0.01" min="0"
-                                    class="pl-10 bg-white border @error('distance') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
-                                    placeholder="Mis. 42.5" aria-describedby="distance-error">
+                                <select id="ferry_id" name="ferry_id" required
+                                    class="pl-10 bg-white border @error('ferry_id') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
+                                    aria-describedby="ferry_id-error">
+                                    <option value="">-- Pilih Kapal --</option>
+                                    @foreach ($ferries as $ferry)
+                                        <option value="{{ $ferry->id }}"
+                                            {{ old('ferry_id') == $ferry->id ? 'selected' : '' }}>
+                                            {{ $ferry->name }} (Kapasitas: {{ $ferry->passenger_capacity }} penumpang)
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
-                            @error('distance')
-                                <p id="distance-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @error('ferry_id')
+                                <p id="ferry_id-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
-                            <p class="text-xs text-gray-500 mt-1">Jarak dalam kilometer</p>
+                            <p class="text-xs text-gray-500 mt-1">Kapal yang akan beroperasi pada jadwal ini</p>
                         </div>
 
                         <div>
-                            <label for="duration" class="block text-sm font-medium text-gray-700 mb-1">Durasi (Menit) <span
+                            <label for="departure_time" class="block text-sm font-medium text-gray-700 mb-1">Waktu Keberangkatan <span
                                     class="text-red-500">*</span></label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-clock text-gray-400"></i>
                                 </div>
-                                <input type="number" id="duration" name="duration" value="{{ old('duration') }}" required
-                                    min="1"
-                                    class="pl-10 bg-white border @error('duration') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
-                                    placeholder="Mis. 90" aria-describedby="duration-error">
+                                <input type="time" id="departure_time" name="departure_time" value="{{ old('departure_time') }}" required
+                                    class="pl-10 bg-white border @error('departure_time') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
+                                    aria-describedby="departure_time-error">
                             </div>
-                            @error('duration')
-                                <p id="duration-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @error('departure_time')
+                                <p id="departure_time-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
-                            <p class="text-xs text-gray-500 mt-1">Durasi perjalanan dalam menit</p>
+                            <p class="text-xs text-gray-500 mt-1">Waktu keberangkatan kapal (format 24 jam)</p>
                         </div>
 
                         <div>
-                            <label for="base_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Dasar <span
+                            <label for="arrival_time" class="block text-sm font-medium text-gray-700 mb-1">Waktu Kedatangan <span
                                     class="text-red-500">*</span></label>
                             <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
-                                <input type="number" id="base_price" name="base_price" value="{{ old('base_price') }}"
-                                    required min="0" step="1000"
-                                    class="pl-10 bg-white border @error('base_price') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
-                                    placeholder="Mis. 50000" aria-describedby="base_price-error">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-clock text-gray-400"></i>
+                                </div>
+                                <input type="time" id="arrival_time" name="arrival_time" value="{{ old('arrival_time') }}" required
+                                    class="pl-10 bg-white border @error('arrival_time') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
+                                    aria-describedby="arrival_time-error">
                             </div>
-                            @error('base_price')
-                                <p id="base_price-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @error('arrival_time')
+                                <p id="arrival_time-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
-                            <p class="text-xs text-gray-500 mt-1">Harga dasar untuk penumpang</p>
+                            <p class="text-xs text-gray-500 mt-1">Perkiraan waktu kedatangan (format 24 jam)</p>
                         </div>
 
                         <div>
-                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status <span
+                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status Jadwal <span
                                     class="text-red-500">*</span></label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -141,101 +185,138 @@
                                 <select id="status" name="status" required
                                     class="pl-10 bg-white border @error('status') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
                                     aria-describedby="status-error">
-                                    <option value="ACTIVE" {{ old('status') == 'ACTIVE' ? 'selected' : '' }}>Aktif
-                                    </option>
-                                    <option value="INACTIVE" {{ old('status') == 'INACTIVE' ? 'selected' : '' }}>Tidak
-                                        Aktif</option>
-                                    <option value="WEATHER_ISSUE"
-                                        {{ old('status') == 'WEATHER_ISSUE' ? 'selected' : '' }}>Masalah Cuaca</option>
+                                    <option value="ACTIVE" {{ old('status', 'ACTIVE') == 'ACTIVE' ? 'selected' : '' }}>Aktif</option>
+                                    <option value="DELAYED" {{ old('status') == 'DELAYED' ? 'selected' : '' }}>Tertunda</option>
+                                    <option value="CANCELLED" {{ old('status') == 'CANCELLED' ? 'selected' : '' }}>Dibatalkan</option>
+                                    <option value="FULL" {{ old('status') == 'FULL' ? 'selected' : '' }}>Penuh</option>
                                 </select>
                             </div>
                             @error('status')
                                 <p id="status-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
-                            <p class="text-xs text-gray-500 mt-1">Status keaktifan rute</p>
+                            <p class="text-xs text-gray-500 mt-1">Status keaktifan jadwal</p>
+                        </div>
+
+                        <div>
+                            <label for="status_reason" class="block text-sm font-medium text-gray-700 mb-1">Alasan Status (Opsional)</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-comment-alt text-gray-400"></i>
+                                </div>
+                                <input type="text" id="status_reason" name="status_reason" value="{{ old('status_reason') }}"
+                                    class="pl-10 bg-white border @error('status_reason') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
+                                    placeholder="Mis. Cuaca buruk, Pemeliharaan kapal" aria-describedby="status_reason-error">
+                            </div>
+                            @error('status_reason')
+                                <p id="status_reason-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                            <p class="text-xs text-gray-500 mt-1">Alasan jika status tidak aktif</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Vehicle Prices Section -->
-                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
+                <!-- Operating Days Section -->
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm" id="operatingDaysSection">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                        <i class="fas fa-car mr-2 text-green-500"></i> Harga Tambahan untuk Kendaraan
+                        <i class="fas fa-calendar-alt mr-2 text-blue-500"></i> Hari Operasional
                     </h2>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div>
-                            <label for="motorcycle_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Motor
-                                <span class="text-red-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
-                                <input type="number" id="motorcycle_price" name="motorcycle_price"
-                                    value="{{ old('motorcycle_price') }}" required min="0" step="1000"
-                                    class="pl-10 bg-white border @error('motorcycle_price') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
-                                    aria-describedby="motorcycle_price-error">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <p class="mb-3 text-sm text-gray-700">Pilih hari-hari di mana jadwal ini beroperasi:</p>
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="day_1" name="days[]" value="1"
+                                        {{ in_array(1, old('days', [])) ? 'checked' : '' }}
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="day_1" class="ml-2 text-sm font-medium text-gray-900">Senin</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="day_2" name="days[]" value="2"
+                                        {{ in_array(2, old('days', [])) ? 'checked' : '' }}
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="day_2" class="ml-2 text-sm font-medium text-gray-900">Selasa</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="day_3" name="days[]" value="3"
+                                        {{ in_array(3, old('days', [])) ? 'checked' : '' }}
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="day_3" class="ml-2 text-sm font-medium text-gray-900">Rabu</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="day_4" name="days[]" value="4"
+                                        {{ in_array(4, old('days', [])) ? 'checked' : '' }}
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="day_4" class="ml-2 text-sm font-medium text-gray-900">Kamis</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="day_5" name="days[]" value="5"
+                                        {{ in_array(5, old('days', [])) ? 'checked' : '' }}
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="day_5" class="ml-2 text-sm font-medium text-gray-900">Jumat</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="day_6" name="days[]" value="6"
+                                        {{ in_array(6, old('days', [])) ? 'checked' : '' }}
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="day_6" class="ml-2 text-sm font-medium text-gray-900">Sabtu</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="day_7" name="days[]" value="7"
+                                        {{ in_array(7, old('days', [])) ? 'checked' : '' }}
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="day_7" class="ml-2 text-sm font-medium text-gray-900">Minggu</label>
+                                </div>
                             </div>
-                            @error('motorcycle_price')
-                                <p id="motorcycle_price-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @error('days')
+                                <p id="days-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
+                            <p class="text-xs text-gray-500 mt-2">Jadwal ini akan beroperasi setiap hari yang dipilih</p>
                         </div>
+                    </div>
 
-                        <div>
-                            <label for="car_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Mobil <span
-                                    class="text-red-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
-                                <input type="number" id="car_price" name="car_price" value="{{ old('car_price') }}"
-                                    required min="0" step="1000"
-                                    class="pl-10 bg-white border @error('car_price') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
-                                    aria-describedby="car_price-error">
+                    <!-- Schedule Summary Card -->
+                    <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h3 class="text-md font-semibold text-gray-800 mb-2">Ringkasan Jadwal</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white p-3 rounded border border-gray-200">
+                                <p class="text-sm text-gray-500">Rute:</p>
+                                <p class="font-medium text-gray-900" id="summary_route">-</p>
                             </div>
-                            @error('car_price')
-                                <p id="car_price-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="bus_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Bus <span
-                                    class="text-red-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
-                                <input type="number" id="bus_price" name="bus_price" value="{{ old('bus_price') }}"
-                                    required min="0" step="1000"
-                                    class="pl-10 bg-white border @error('bus_price') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
-                                    aria-describedby="bus_price-error">
+                            <div class="bg-white p-3 rounded border border-gray-200">
+                                <p class="text-sm text-gray-500">Kapal:</p>
+                                <p class="font-medium text-gray-900" id="summary_ferry">-</p>
                             </div>
-                            @error('bus_price')
-                                <p id="bus_price-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="truck_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Truk <span
-                                    class="text-red-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
-                                <input type="number" id="truck_price" name="truck_price"
-                                    value="{{ old('truck_price') }}" required min="0" step="1000"
-                                    class="pl-10 bg-white border @error('truck_price') border-red-300 @else border-gray-300 @enderror text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 shadow-sm"
-                                    aria-describedby="truck_price-error">
+                            <div class="bg-white p-3 rounded border border-gray-200">
+                                <p class="text-sm text-gray-500">Waktu:</p>
+                                <p class="font-medium text-gray-900" id="summary_time">-</p>
                             </div>
-                            @error('truck_price')
-                                <p id="truck_price-error" class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <div class="bg-white p-3 rounded border border-gray-200">
+                                <p class="text-sm text-gray-500">Hari Operasional:</p>
+                                <p class="font-medium text-gray-900" id="summary_days">-</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Form Actions -->
-                <div class="flex justify-end mt-6 space-x-3">
-                    <a href="{{ route('admin.routes.index') }}"
-                        class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center">
-                        <i class="fas fa-times mr-2"></i> Batal
-                    </a>
-                    <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center">
-                        <i class="fas fa-save mr-2"></i> Simpan
+                <div class="flex justify-between mt-6">
+                    <button type="button" id="prevBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center" style="display: none;">
+                        <i class="fas fa-arrow-left mr-2"></i> Kembali
                     </button>
+
+                    <div class="flex space-x-3">
+                        <a href="{{ route('admin.schedules.index') }}"
+                            class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center">
+                            <i class="fas fa-times mr-2"></i> Batal
+                        </a>
+                        <button type="button" id="nextBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center">
+                            <span>Lanjut</span> <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                        <button type="submit" id="submitBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center" style="display: none;">
+                            <i class="fas fa-save mr-2"></i> Simpan
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -245,6 +326,196 @@
 @section('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Day name mapping
+            const dayNames = {
+                1: 'Senin',
+                2: 'Selasa',
+                3: 'Rabu',
+                4: 'Kamis',
+                5: 'Jumat',
+                6: 'Sabtu',
+                7: 'Minggu'
+            };
+
+            // Format time function
+            function formatTime(timeStr) {
+                if (!timeStr) return '';
+                const [hours, minutes] = timeStr.split(':');
+                return `${hours}:${minutes}`;
+            }
+
+            // Multi-step form handling
+            const basicInfoSection = document.querySelector('.bg-gray-50');
+            const operatingDaysSection = document.getElementById('operatingDaysSection');
+            const nextBtn = document.getElementById('nextBtn');
+            const prevBtn = document.getElementById('prevBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            const progressBar = document.querySelector('.bg-blue-500');
+            const progressSteps = document.querySelectorAll('.rounded-full');
+            const progressTexts = document.querySelectorAll('.font-medium');
+
+            let currentStep = 1;
+
+            nextBtn.addEventListener('click', function() {
+                // Validate current step
+                if (currentStep === 1) {
+                    const requiredInputs = basicInfoSection.querySelectorAll('input[required], select[required]');
+                    let isValid = true;
+
+                    requiredInputs.forEach(input => {
+                        if (!input.value.trim()) {
+                            const name = input.getAttribute('name');
+                            let errorElement = document.getElementById(`${name}-error`);
+
+                            if (!errorElement) {
+                                errorElement = document.createElement('p');
+                                errorElement.id = `${name}-error`;
+                                errorElement.className = 'mt-1 text-sm text-red-600';
+                                input.parentNode.appendChild(errorElement);
+                            }
+
+                            errorElement.textContent = 'Bidang ini harus diisi';
+                            input.classList.add('border-red-300');
+                            input.classList.remove('border-gray-300');
+                            isValid = false;
+                        }
+                    });
+
+                    if (!isValid) {
+                        // Scroll to the first error
+                        const firstError = document.querySelector('.text-red-600');
+                        if (firstError) {
+                            firstError.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center'
+                            });
+                        }
+                        return;
+                    }
+
+                    // Move to next step
+                    progressBar.style.width = '100%';
+                    progressSteps[1].classList.remove('bg-gray-300', 'text-gray-700');
+                    progressSteps[1].classList.add('bg-blue-500', 'text-white');
+                    progressTexts[1].classList.remove('text-gray-700');
+                    progressTexts[1].classList.add('text-gray-900');
+
+                    // Hide basic info, show operating days
+                    basicInfoSection.style.display = 'none';
+                    operatingDaysSection.style.display = 'block';
+
+                    // Show prev button, hide next button, show submit button
+                    prevBtn.style.display = 'flex';
+                    nextBtn.style.display = 'none';
+                    submitBtn.style.display = 'flex';
+
+                    currentStep = 2;
+
+                    // Update summary
+                    updateSummary();
+
+                    // Scroll to top of form
+                    window.scrollTo({
+                        top: document.querySelector('form').offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+
+            prevBtn.addEventListener('click', function() {
+                if (currentStep === 2) {
+                    // Move back to first step
+                    progressBar.style.width = '50%';
+                    progressSteps[1].classList.remove('bg-blue-500', 'text-white');
+                    progressSteps[1].classList.add('bg-gray-300', 'text-gray-700');
+                    progressTexts[1].classList.remove('text-gray-900');
+                    progressTexts[1].classList.add('text-gray-700');
+
+                    // Show basic info, hide operating days
+                    basicInfoSection.style.display = 'block';
+                    operatingDaysSection.style.display = 'block';
+
+                    // Hide prev button, show next button, hide submit button
+                    prevBtn.style.display = 'none';
+                    nextBtn.style.display = 'flex';
+                    submitBtn.style.display = 'none';
+
+                    currentStep = 1;
+
+                    // Scroll to top of form
+                    window.scrollTo({
+                        top: document.querySelector('form').offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+
+            // Update summary
+            function updateSummary() {
+                // Get selected route
+                const routeSelect = document.getElementById('route_id');
+                const routeText = routeSelect.options[routeSelect.selectedIndex]?.text || '-';
+                document.getElementById('summary_route').textContent = routeText;
+
+                // Get selected ferry
+                const ferrySelect = document.getElementById('ferry_id');
+                const ferryText = ferrySelect.options[ferrySelect.selectedIndex]?.text || '-';
+                document.getElementById('summary_ferry').textContent = ferryText;
+
+                // Get time
+                const departureTime = document.getElementById('departure_time').value;
+                const arrivalTime = document.getElementById('arrival_time').value;
+                let timeText = '-';
+                if (departureTime && arrivalTime) {
+                    timeText = `${formatTime(departureTime)} - ${formatTime(arrivalTime)}`;
+                }
+                document.getElementById('summary_time').textContent = timeText;
+
+                // Get days
+                const selectedDays = [];
+                document.querySelectorAll('input[name="days[]"]:checked').forEach(checkbox => {
+                    selectedDays.push(dayNames[checkbox.value]);
+                });
+                document.getElementById('summary_days').textContent = selectedDays.length > 0 ? selectedDays.join(', ') : '-';
+            }
+
+            // Listen for changes to update summary
+            document.getElementById('route_id').addEventListener('change', updateSummary);
+            document.getElementById('ferry_id').addEventListener('change', updateSummary);
+            document.getElementById('departure_time').addEventListener('change', updateSummary);
+            document.getElementById('arrival_time').addEventListener('change', updateSummary);
+            document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
+                checkbox.addEventListener('change', updateSummary);
+            });
+
+            // Auto-calculate arrival time based on departure time and route duration
+            const departureTimeInput = document.getElementById('departure_time');
+            const arrivalTimeInput = document.getElementById('arrival_time');
+            const routeSelect = document.getElementById('route_id');
+
+            departureTimeInput.addEventListener('change', function() {
+                const selectedOption = routeSelect.options[routeSelect.selectedIndex];
+                const duration = selectedOption?.getAttribute('data-duration');
+
+                if (departureTimeInput.value && duration) {
+                    // Parse departure time
+                    const [hours, minutes] = departureTimeInput.value.split(':').map(Number);
+
+                    // Calculate arrival time
+                    let totalMinutes = hours * 60 + minutes + parseInt(duration);
+                    const arrivalHours = Math.floor(totalMinutes / 60) % 24;
+                    const arrivalMinutes = totalMinutes % 60;
+
+                    // Format arrival time
+                    const formattedHours = arrivalHours.toString().padStart(2, '0');
+                    const formattedMinutes = arrivalMinutes.toString().padStart(2, '0');
+                    arrivalTimeInput.value = `${formattedHours}:${formattedMinutes}`;
+
+                    // Update summary
+                    updateSummary();
+                }
+            });
+
             // Form validation
             const form = document.querySelector('form');
             const requiredInputs = form.querySelectorAll('input[required], select[required]');
@@ -271,8 +542,30 @@
                     }
                 });
 
+                // Check if at least one day is selected
+                const daysCheckboxes = document.querySelectorAll('input[name="days[]"]:checked');
+                if (daysCheckboxes.length === 0) {
+                    const errorElement = document.getElementById('days-error') || document.createElement('p');
+                    errorElement.id = 'days-error';
+                    errorElement.className = 'mt-1 text-sm text-red-600';
+                    errorElement.textContent = 'Pilih minimal satu hari operasional';
+                    document.querySelector('.grid.grid-cols-2.md\\:grid-cols-4').parentNode.appendChild(errorElement);
+                    hasError = true;
+                }
+
                 if (hasError) {
                     event.preventDefault();
+                    // Show the first step if there are errors in it
+                    if (currentStep === 2) {
+                        // Check if there are errors in the first step
+                        const firstStepErrors = Array.from(basicInfoSection.querySelectorAll('.text-red-600'))
+                            .filter(el => el.textContent.trim() !== '');
+
+                        if (firstStepErrors.length > 0) {
+                            prevBtn.click();
+                        }
+                    }
+
                     // Scroll to the first error
                     const firstError = document.querySelector('.text-red-600');
                     if (firstError) {
@@ -301,18 +594,14 @@
                 });
             });
 
-            // Price formatting
-            const priceInputs = document.querySelectorAll('input[type="number"][name$="_price"]');
-            priceInputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    if (this.value === '0') {
-                        this.value = '';
-                    }
-                });
-
-                input.addEventListener('blur', function() {
-                    if (this.value === '') {
-                        this.value = '0';
+            // Clear days error when a day is checked
+            document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    if (document.querySelectorAll('input[name="days[]"]:checked').length > 0) {
+                        const errorElement = document.getElementById('days-error');
+                        if (errorElement) {
+                            errorElement.textContent = '';
+                        }
                     }
                 });
             });

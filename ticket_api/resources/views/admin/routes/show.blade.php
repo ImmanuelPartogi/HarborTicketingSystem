@@ -146,8 +146,8 @@
                                     {{ $route->status == 'ACTIVE' ? 'checked' : '' }} class="peer hidden">
                                 <label for="status_active"
                                     class="flex items-center p-3 border rounded-lg cursor-pointer transition-colors
-                            peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-800
-                            border-gray-300 hover:bg-gray-50">
+                    peer-checked:bg-green-100 peer-checked:border-green-500 peer-checked:text-green-800
+                    border-gray-300 hover:bg-gray-50">
                                     <div
                                         class="w-4 h-4 mr-2 rounded-full border border-gray-400 flex items-center justify-center peer-checked:border-green-500">
                                         <div class="w-2 h-2 rounded-full bg-green-500 peer-checked:block hidden"></div>
@@ -163,15 +163,15 @@
                                     {{ $route->status == 'WEATHER_ISSUE' ? 'checked' : '' }} class="peer hidden">
                                 <label for="status_weather"
                                     class="flex items-center p-3 border rounded-lg cursor-pointer transition-colors
-                            peer-checked:bg-yellow-100 peer-checked:border-yellow-500 peer-checked:text-yellow-800
-                            border-gray-300 hover:bg-gray-50">
+                    peer-checked:bg-yellow-100 peer-checked:border-yellow-500 peer-checked:text-yellow-800
+                    border-gray-300 hover:bg-gray-50">
                                     <div
                                         class="w-4 h-4 mr-2 rounded-full border border-gray-400 flex items-center justify-center peer-checked:border-yellow-500">
                                         <div class="w-2 h-2 rounded-full bg-yellow-500 peer-checked:block hidden"></div>
                                     </div>
                                     <i class="fas fa-cloud-rain mr-2 text-yellow-500"></i>
                                     <span class="font-medium">Masalah Cuaca</span>
-                                    <span class="text-sm text-gray-500 ml-2">(Jadwal Tertunda)</span>
+                                    <span class="text-sm text-gray-500 ml-2">(Status Rute)</span>
                                 </label>
                             </div>
 
@@ -180,15 +180,15 @@
                                     {{ $route->status == 'INACTIVE' ? 'checked' : '' }} class="peer hidden">
                                 <label for="status_inactive"
                                     class="flex items-center p-3 border rounded-lg cursor-pointer transition-colors
-                            peer-checked:bg-red-100 peer-checked:border-red-500 peer-checked:text-red-800
-                            border-gray-300 hover:bg-gray-50">
+                    peer-checked:bg-red-100 peer-checked:border-red-500 peer-checked:text-red-800
+                    border-gray-300 hover:bg-gray-50">
                                     <div
                                         class="w-4 h-4 mr-2 rounded-full border border-gray-400 flex items-center justify-center peer-checked:border-red-500">
                                         <div class="w-2 h-2 rounded-full bg-red-500 peer-checked:block hidden"></div>
                                     </div>
                                     <i class="fas fa-ban mr-2 text-red-500"></i>
                                     <span class="font-medium">Tidak Aktif</span>
-                                    <span class="text-sm text-gray-500 ml-2">(Jadwal Dibatalkan)</span>
+                                    <span class="text-sm text-gray-500 ml-2">(Status Rute)</span>
                                 </label>
                             </div>
                         </div>
@@ -204,7 +204,7 @@
                         </div>
                     </div>
 
-                    <!-- Right Column: Reason and Settings -->
+                    <!-- Right Column: Reason -->
                     <div>
                         <!-- Reason Input -->
                         <div class="mb-4">
@@ -217,42 +217,16 @@
                             <p class="mt-1 text-sm text-gray-500">Alasan ini akan ditampilkan kepada penumpang</p>
                         </div>
 
-                        <!-- Apply to Schedules Option -->
-                        <div class="mt-6">
-                            <div class="flex items-center mb-3">
-                                <input type="checkbox" id="apply_to_schedules" name="apply_to_schedules" value="1"
-                                    class="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" checked>
-                                <label for="apply_to_schedules" class="ml-2 font-medium text-gray-700">
-                                    Terapkan perubahan ke jadwal terkait
-                                </label>
-                            </div>
-
-                            <div class="ml-7 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                <p class="text-sm text-blue-800 font-medium mb-2">Perubahan status akan mempengaruhi
-                                    jadwal:</p>
-                                <ul class="space-y-1 text-sm text-blue-700">
-                                    <li class="flex items-center">
-                                        <i class="fas fa-check-circle text-green-500 mr-2"></i>
-                                        Rute <span class="text-green-600 font-medium mx-1">Aktif</span> → Jadwal <span
-                                            class="text-green-600 font-medium mx-1">Aktif</span>
-                                    </li>
-                                    <li class="flex items-center">
-                                        <i class="fas fa-cloud-rain text-yellow-500 mr-2"></i>
-                                        Rute <span class="text-yellow-600 font-medium mx-1">Masalah Cuaca</span> → Jadwal
-                                        <span class="text-yellow-600 font-medium mx-1">Tertunda</span>
-                                    </li>
-                                    <li class="flex items-center">
-                                        <i class="fas fa-ban text-red-500 mr-2"></i>
-                                        Rute <span class="text-red-600 font-medium mx-1">Tidak Aktif</span> → Jadwal <span
-                                            class="text-red-600 font-medium mx-1">Dibatalkan</span>
-                                    </li>
-                                </ul>
-                            </div>
+                        <!-- Remove the "Apply to Schedules" checkbox as it's no longer relevant -->
+                        <div class="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <p class="text-sm text-blue-800 font-medium mb-2">Perubahan Status Rute:</p>
+                            <p class="text-sm text-blue-700">Perubahan status rute tidak akan mempengaruhi status jadwal
+                                yang terkait. Status jadwal dapat diubah secara independen melalui menu jadwal.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Duration Settings - Simplified to just days -->
+                <!-- Duration Settings - Only for WEATHER_ISSUE status -->
                 <div id="durationSettings" class="mt-6 p-5 bg-gray-50 rounded-lg border border-gray-200">
                     <h4 class="text-md font-semibold mb-4 flex items-center text-gray-800">
                         <i class="fas fa-calendar-alt mr-2 text-indigo-500"></i> Durasi Perubahan Status
@@ -286,16 +260,12 @@
                             </span>
                         </p>
                     </div>
-
-                    <!-- Add hidden inputs to ensure time settings are not used -->
-                    <input type="hidden" name="start_time" value="">
-                    <input type="hidden" name="end_time" value="">
                 </div>
 
                 <div class="flex justify-end mt-6">
                     <button type="submit"
                         class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg flex items-center transition-colors shadow-md">
-                        <i class="fas fa-save mr-2"></i> Update Status
+                        <i class="fas fa-save mr-2"></i> Update Status Rute
                     </button>
                 </div>
             </form>
@@ -532,7 +502,6 @@
             const statusRadios = document.querySelectorAll('input[name="status"]');
             const statusNote = document.getElementById('status_note');
             const durationSettings = document.getElementById('durationSettings');
-            const applyToSchedulesCheckbox = document.getElementById('apply_to_schedules');
             const affectDaysSelect = document.getElementById('affect_days');
             const durationExplanation = document.getElementById('duration_explanation');
 
@@ -553,9 +522,6 @@
             // Affect days change event
             affectDaysSelect.addEventListener('change', updateDurationExplanation);
 
-            // Apply to schedules change event
-            applyToSchedulesCheckbox.addEventListener('change', toggleDurationSettings);
-
             // Functions
             function getSelectedStatus() {
                 return document.querySelector('input[name="status"]:checked').value;
@@ -566,22 +532,21 @@
 
                 if (status === 'ACTIVE') {
                     statusNote.innerHTML =
-                        'Mengubah status menjadi <strong>Aktif</strong> akan membuka kembali rute ini untuk keberangkatan.';
+                        'Mengubah status menjadi <strong>Aktif</strong> akan membuka kembali rute ini untuk operasi.';
                 } else if (status === 'WEATHER_ISSUE') {
                     statusNote.innerHTML =
                         'Status <strong>Masalah Cuaca</strong> bersifat sementara dan akan otomatis berubah kembali menjadi <strong>Aktif</strong> setelah periode waktu yang ditentukan.';
                 } else {
                     statusNote.innerHTML =
-                        'Status <strong>Tidak Aktif</strong> akan membatalkan semua jadwal keberangkatan untuk rute ini sampai diaktifkan kembali secara manual.';
+                        'Status <strong>Tidak Aktif</strong> menandai rute ini tidak beroperasi sampai diaktifkan kembali secara manual.';
                 }
             }
 
             function toggleDurationSettings() {
                 const status = getSelectedStatus();
-                const applyToSchedules = applyToSchedulesCheckbox.checked;
 
-                // Only show duration settings for WEATHER_ISSUE status and when applying to schedules
-                if (status === 'WEATHER_ISSUE' && applyToSchedules) {
+                // Only show duration settings for WEATHER_ISSUE status
+                if (status === 'WEATHER_ISSUE') {
                     durationSettings.classList.remove('hidden');
                 } else {
                     durationSettings.classList.add('hidden');
@@ -592,151 +557,6 @@
                 const days = affectDaysSelect.value;
                 durationExplanation.innerHTML =
                     `Setelah <span class="font-medium">${days} hari</span>, status akan otomatis kembali ke <span class="text-green-600 font-medium">Aktif</span> jika saat ini diubah ke <span class="text-yellow-600 font-medium">Masalah Cuaca</span>.`;
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Function to open modal
-            function openModal(modalId) {
-                const modal = document.getElementById(modalId);
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    setTimeout(() => {
-                        modal.style.opacity = '1';
-                    }, 10);
-                }
-            }
-
-            // Function to close modal
-            function closeModal(modalId) {
-                const modal = document.getElementById(modalId);
-                if (modal) {
-                    modal.style.opacity = '0';
-                    setTimeout(() => {
-                        modal.classList.add('hidden');
-                    }, 300);
-                }
-            }
-
-            // Apply to schedules checkbox toggle
-            const applyToSchedulesCheckbox = document.getElementById('apply_to_schedules');
-            const timeWindowOptions = document.getElementById('timeWindowOptions');
-
-            if (applyToSchedulesCheckbox && timeWindowOptions) {
-                function toggleTimeWindow() {
-                    timeWindowOptions.style.display = applyToSchedulesCheckbox.checked ? 'block' : 'none';
-                }
-
-                // Initialize visibility
-                toggleTimeWindow();
-
-                applyToSchedulesCheckbox.addEventListener('change', toggleTimeWindow);
-            }
-
-            // Toggle affected dates container based on reschedule type
-            const rescheduleAllRadio = document.getElementById('reschedule_all');
-            const rescheduleSelectedRadio = document.getElementById('reschedule_selected');
-            const affectedDatesContainer = document.getElementById('affected_dates_container');
-
-            if (rescheduleAllRadio && rescheduleSelectedRadio && affectedDatesContainer) {
-                function toggleAffectedDatesContainer() {
-                    affectedDatesContainer.classList.toggle('hidden', rescheduleAllRadio.checked);
-                }
-
-                rescheduleAllRadio.addEventListener('change', toggleAffectedDatesContainer);
-                rescheduleSelectedRadio.addEventListener('change', toggleAffectedDatesContainer);
-            }
-
-            // Reschedule button event handlers
-            const rescheduleButtons = document.querySelectorAll('.reschedule-btn');
-            const rescheduleForm = document.getElementById('rescheduleForm');
-            const closeRescheduleModal = document.getElementById('closeRescheduleModal');
-            const cancelRescheduleBtn = document.getElementById('cancelRescheduleBtn');
-            const affectedDatesList = document.getElementById('affected_dates_list');
-
-            rescheduleButtons.forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const scheduleId = this.getAttribute('data-id');
-                    const departureTime = this.getAttribute('data-departure');
-
-                    // Atur nilai default form (tanggal besok dan waktu asli)
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const tomorrowFormatted = tomorrow.toISOString().split('T')[0];
-
-                    document.getElementById('reschedule_schedule_id').value = scheduleId;
-                    document.getElementById('reschedule_date').value = tomorrowFormatted;
-                    document.getElementById('reschedule_time').value = departureTime;
-
-                    // Set URL action
-                    rescheduleForm.action = `/admin/schedules/${scheduleId}/reschedule`;
-
-                    // Fetch affected dates for this schedule
-                    if (affectedDatesList) {
-                        affectedDatesList.innerHTML =
-                            '<p class="text-gray-500 text-sm italic">Memuat tanggal...</p>';
-
-                        fetch(`/admin/schedules/${scheduleId}/weather-affected-dates`)
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.dates && data.dates.length > 0) {
-                                    affectedDatesList.innerHTML = '';
-                                    data.dates.forEach(date => {
-                                        const checkbox = document.createElement('div');
-                                        checkbox.className = 'flex items-center';
-                                        checkbox.innerHTML = `
-                                        <input type="checkbox" id="date_${date.id}" name="affected_dates[]" value="${date.date}" class="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4" checked>
-                                        <label for="date_${date.id}" class="text-sm">${date.formatted_date}</label>
-                                    `;
-                                        affectedDatesList.appendChild(checkbox);
-                                    });
-                                } else {
-                                    affectedDatesList.innerHTML =
-                                        '<p class="text-gray-500 text-sm italic">Tidak ada tanggal terdampak cuaca</p>';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching affected dates:', error);
-                                affectedDatesList.innerHTML =
-                                    '<p class="text-red-500 text-sm italic">Gagal memuat tanggal</p>';
-                            });
-                    }
-
-                    openModal('rescheduleModal');
-                });
-            });
-
-            if (closeRescheduleModal) {
-                closeRescheduleModal.addEventListener('click', function() {
-                    closeModal('rescheduleModal');
-                });
-            }
-
-            if (cancelRescheduleBtn) {
-                cancelRescheduleBtn.addEventListener('click', function() {
-                    closeModal('rescheduleModal');
-                });
-            }
-
-            // Form validation
-            const statusForm = document.getElementById('statusForm');
-            if (statusForm) {
-                statusForm.addEventListener('submit', function(e) {
-                    const applyToSchedules = document.getElementById('apply_to_schedules').checked;
-
-                    if (applyToSchedules) {
-                        const startTime = document.getElementById('start_time').value;
-                        const endTime = document.getElementById('end_time').value;
-
-                        if ((startTime && !endTime) || (!startTime && endTime)) {
-                            e.preventDefault();
-                            alert(
-                                'Jika Anda menentukan waktu, silakan isi kedua waktu mulai dan waktu selesai.'
-                                );
-                        }
-                    }
-                });
             }
         });
     </script>

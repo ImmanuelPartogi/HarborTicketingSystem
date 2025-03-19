@@ -204,7 +204,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Update the specified schedule.
+     * Update the specified schedule with status propagation to schedule dates.
      *
      * @param Request $request
      * @param Schedule $schedule
@@ -227,24 +227,69 @@ class ScheduleController extends Controller
         }
 
         try {
+            DB::beginTransaction();
+
             // Format days as comma-separated string
             $days = implode(',', $request->days);
 
+            // Store old status for comparison
+            $oldStatus = $schedule->status;
+            $newStatus = $request->status;
+
+            // Update schedule
             $schedule->update([
                 'route_id' => $request->route_id,
                 'ferry_id' => $request->ferry_id,
                 'departure_time' => $request->departure_time,
                 'arrival_time' => $request->arrival_time,
                 'days' => $days,
-                'status' => $request->status,
+                'status' => $newStatus,
             ]);
+
+            // If status has changed, update related schedule dates
+            if ($oldStatus !== $newStatus) {
+                $this->updateScheduleDatesByScheduleStatus($schedule, $newStatus);
+            }
+
+            DB::commit();
 
             return redirect()->route('admin.schedules.index')
                 ->with('success', 'Schedule updated successfully');
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->withInput()
                 ->with('error', 'Failed to update schedule: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Update schedule dates based on schedule status.
+     * Only updates dates that are not in final status (FULL or DEPARTED).
+     *
+     * @param Schedule $schedule
+     * @param string $newStatus
+     * @return int Number of affected dates
+     */
+    private function updateScheduleDatesByScheduleStatus(Schedule $schedule, $newStatus)
+    {
+        // Only process if schedule status is CANCELLED (Inactive) or DELAYED (Weather Issue)
+        if (!in_array($newStatus, ['CANCELLED', 'DELAYED'])) {
+            return 0;
+        }
+
+        $mappedStatus = $newStatus === 'CANCELLED' ? 'UNAVAILABLE' : 'WEATHER_ISSUE';
+
+        // Update only future dates that are not in final status
+        return ScheduleDate::where('schedule_id', $schedule->id)
+            ->where('date', '>=', now()->format('Y-m-d'))
+            ->whereNotIn('status', ['FULL', 'DEPARTED']) // Don't update final statuses
+            ->update([
+                'status' => $mappedStatus,
+                'status_reason' => $newStatus === 'CANCELLED'
+                    ? 'Jadwal tidak aktif'
+                    : 'Jadwal tertunda karena masalah cuaca',
+                'modified_by_schedule' => true // Mark as modified by schedule
+            ]);
     }
 
     /**
@@ -545,7 +590,7 @@ class ScheduleController extends Controller
 
     /**
      * Update a specific schedule date status.
-     * Implements business rules for status editing.
+     * Implements business rules for status editing that respect final statuses.
      *
      * @param Request $request
      * @param Schedule $schedule
@@ -572,22 +617,9 @@ class ScheduleController extends Controller
                 return back()->with('error', 'Data jadwal tidak valid');
             }
 
-            // Get route status
-            $routeStatus = $schedule->route->status ?? 'ACTIVE';
-
             // Check if status can be edited based on business rules
             if (in_array($scheduleDate->status, ['FULL', 'DEPARTED'])) {
                 return back()->with('error', 'Status jadwal tidak dapat diubah karena sudah berstatus final.');
-            }
-
-            // Cannot edit status if route is not ACTIVE
-            if ($routeStatus !== 'ACTIVE') {
-                return back()->with(
-                    'error',
-                    'Status jadwal tidak dapat diubah karena rute saat ini ' .
-                        ($routeStatus === 'WEATHER_ISSUE' ? 'memiliki masalah cuaca.' : 'tidak aktif.') .
-                        ' Silakan ubah status rute terlebih dahulu.'
-                );
             }
 
             // Check if status was changed
@@ -628,8 +660,8 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Reschedule a delayed schedule (typically due to weather issues).
-     * Enhanced to support the more flexible status system.
+     * Reschedule a schedule (typically due to weather issues).
+     * Enhanced to work with the new independent status system.
      *
      * @param Request $request
      * @param Schedule $schedule
@@ -718,10 +750,6 @@ class ScheduleController extends Controller
                 }
             }
 
-            // You might want to store the adjustment history in a dedicated table
-            // For now, we'll assume there's a method to handle this
-            // $this->storeScheduleAdjustment($adjustmentDetails);
-
             DB::commit();
 
             // Format dates for display
@@ -732,6 +760,56 @@ class ScheduleController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal melakukan penyesuaian jadwal: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Process schedule dates based on status and time.
+     * Changes FULL schedule dates to DEPARTED status when arrival time has passed.
+     * This should be called by a scheduled command.
+     *
+     * @return array Status counts
+     */
+    public function processScheduleDatesByStatus()
+    {
+        $now = Carbon::now();
+        $processedCount = 0;
+
+        try {
+            // Find all FULL schedule dates for today
+            $scheduleDates = ScheduleDate::with('schedule')
+                ->where('status', 'FULL')
+                ->whereDate('date', $now->format('Y-m-d'))
+                ->get();
+
+            foreach ($scheduleDates as $scheduleDate) {
+                if ($scheduleDate->schedule) {
+                    // Get arrival time and combine with date
+                    $arrivalTime = $scheduleDate->schedule->arrival_time;
+                    $arrivalDateTime = Carbon::parse(
+                        $scheduleDate->date->format('Y-m-d') . ' ' . $arrivalTime->format('H:i:s')
+                    );
+
+                    // If arrival time has passed, mark as DEPARTED
+                    if ($now->gt($arrivalDateTime)) {
+                        $scheduleDate->status = 'DEPARTED';
+                        $scheduleDate->save();
+                        $processedCount++;
+                    }
+                }
+            }
+
+            return [
+                'success' => true,
+                'processed' => $processedCount
+            ];
+        } catch (\Exception $e) {
+            logger()->error('Failed to process schedule dates by status: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
 
@@ -757,5 +835,65 @@ class ScheduleController extends Controller
             });
 
         return response()->json(['dates' => $dates]);
+    }
+
+    /**
+     * Get all affected dates for a specific schedule.
+     * This includes all dates with WEATHER_ISSUE or UNAVAILABLE status.
+     *
+     * @param Schedule $schedule
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\View\View
+     */
+    public function getAffectedDates(Schedule $schedule, Request $request)
+    {
+        // Get dates with WEATHER_ISSUE or UNAVAILABLE status
+        $affectedDates = ScheduleDate::where('schedule_id', $schedule->id)
+            ->where('date', '>=', now()->format('Y-m-d'))
+            ->whereIn('status', ['WEATHER_ISSUE', 'UNAVAILABLE'])
+            ->orderBy('date')
+            ->get();
+
+        // If request is AJAX, return JSON
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'dates' => $affectedDates->map(function ($date) {
+                    return [
+                        'id' => $date->id,
+                        'date' => $date->date->format('Y-m-d'),
+                        'formatted_date' => $date->date->format('d/m/Y'),
+                        'status' => $date->status,
+                        'status_label' => $date->getStatusLabelAttribute(),
+                        'passenger_count' => $date->passenger_count
+                    ];
+                })
+            ]);
+        }
+
+        // For regular request, return view with data
+        return view('admin.schedules.reschedule', [
+            'schedule' => $schedule,
+            'affectedDates' => $affectedDates
+        ]);
+    }
+
+    /**
+     * Show reschedule form for a schedule.
+     *
+     * @param Schedule $schedule
+     * @return \Illuminate\View\View
+     */
+    public function showRescheduleForm(Schedule $schedule)
+    {
+        // Get dates with WEATHER_ISSUE or UNAVAILABLE status
+        $affectedDates = ScheduleDate::where('schedule_id', $schedule->id)
+            ->where('date', '>=', now()->format('Y-m-d'))
+            ->whereIn('status', ['WEATHER_ISSUE', 'UNAVAILABLE'])
+            ->orderBy('date')
+            ->get();
+
+        return view('admin.schedules.reschedule', [
+            'schedule' => $schedule,
+            'affectedDates' => $affectedDates
+        ]);
     }
 }
