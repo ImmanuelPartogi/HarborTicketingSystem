@@ -37,7 +37,7 @@
     <div class="mb-6">
         <h3 class="text-lg font-medium mb-3">Tanggal Keberangkatan yang Terdampak</h3>
 
-        @if($affectedDates->count() > 0)
+        @if($weatherAffectedDates->count() > 0)
             <div class="border rounded-md overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -54,14 +54,13 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach($affectedDates as $date)
+                        @foreach($weatherAffectedDates as $date)
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 {{ $date->date->format('d/m/Y') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 py-1 text-xs rounded-full
-                                    {{ $date->status == 'WEATHER_ISSUE' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800' }}">
+                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
                                     {{ $date->getStatusLabelAttribute() }}
                                 </span>
                             </td>
@@ -75,7 +74,7 @@
             </div>
         @else
             <div class="bg-gray-50 p-4 rounded border text-center">
-                <p class="text-gray-600">Tidak ada tanggal yang terdampak status tertunda</p>
+                <p class="text-gray-600">Tidak ada tanggal yang terdampak masalah cuaca</p>
             </div>
         @endif
     </div>
@@ -93,10 +92,8 @@
                 <div class="ml-3">
                     <h3 class="text-sm font-medium text-blue-800">Tentang Penjadwalan Ulang</h3>
                     <div class="mt-2 text-sm text-blue-700">
-                        <p>Penjadwalan ulang akan membuat jadwal baru pada tanggal dan waktu yang Anda pilih.
-                        Tanggal jadwal yang terdampak akan diubah statusnya menjadi Dibatalkan,
-                        dan penumpang akan diarahkan ke jadwal baru.</p>
-                        <p class="mt-1">Status jadwal ini akan diubah sesuai pilihan "Status Setelah Reschedule" di bawah.</p>
+                        <p>Perubahan jadwal baru akan berlaku untuk tanggal baru yang Anda pilih.
+                        Semua tanggal yang terdampak masalah cuaca akan dibatalkan dan penumpang akan diarahkan ke jadwal baru.</p>
                     </div>
                 </div>
             </div>
@@ -125,7 +122,7 @@
                     <input type="radio" id="reschedule_type_all" name="reschedule_type" value="all" checked
                         class="w-4 h-4 text-blue-600 focus:ring-blue-500">
                     <label for="reschedule_type_all" class="ml-2 block text-sm font-medium text-gray-700">
-                        Reschedule semua tanggal yang terdampak status tertunda
+                        Reschedule semua tanggal yang terdampak masalah cuaca
                     </label>
                 </div>
                 <div class="flex items-center">
@@ -140,15 +137,12 @@
             <div id="affected_dates_select" class="mb-4 hidden">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tanggal untuk Di-reschedule</label>
                 <div class="max-h-48 overflow-y-auto p-4 bg-gray-50 rounded border">
-                    @foreach($affectedDates as $date)
+                    @foreach($weatherAffectedDates as $date)
                     <div class="flex items-center mb-2">
                         <input type="checkbox" id="date_{{ $date->id }}" name="affected_dates[]" value="{{ $date->date->format('Y-m-d') }}"
                             class="w-4 h-4 text-blue-600 focus:ring-blue-500">
                         <label for="date_{{ $date->id }}" class="ml-2 text-sm text-gray-700">
                             {{ $date->date->format('d/m/Y') }} - {{ $date->passenger_count }} penumpang
-                            <span class="ml-1 text-xs {{ $date->status == 'WEATHER_ISSUE' ? 'text-yellow-800' : 'text-red-800' }}">
-                                ({{ $date->getStatusLabelAttribute() }})
-                            </span>
                         </label>
                     </div>
                     @endforeach
@@ -158,15 +152,12 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div>
-                <label for="status_after_reschedule" class="block text-sm font-medium text-gray-700 mb-1">
-                    Status Jadwal Setelah Reschedule
-                </label>
+                <label for="status_after_reschedule" class="block text-sm font-medium text-gray-700 mb-1">Status Setelah Reschedule</label>
                 <select id="status_after_reschedule" name="status_after_reschedule"
                     class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
                     <option value="ACTIVE">Aktif</option>
                     <option value="DELAYED">Tetap Tertunda</option>
                 </select>
-                <p class="text-xs text-gray-500 mt-1">Status ini akan diterapkan pada jadwal setelah penjadwalan ulang</p>
             </div>
 
             <div>
@@ -174,22 +165,6 @@
                 <textarea id="notification_message" name="notification_message" rows="2"
                     class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     placeholder="Pesan untuk penumpang tentang perubahan jadwal"></textarea>
-                <p class="text-xs text-gray-500 mt-1">Pesan ini akan ditampilkan kepada penumpang yang jadwalnya diubah</p>
-            </div>
-        </div>
-
-        <div class="mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-            <div class="flex items-start">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle text-yellow-500 mt-1"></i>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-yellow-800">Perhatian</h3>
-                    <div class="mt-2 text-sm text-yellow-700">
-                        <p>Penjadwalan ulang akan membuat tanggal jadwal baru dan mengubah tanggal terdampak menjadi "Dibatalkan".</p>
-                        <p class="mt-1">Jadwal yang sudah memiliki status final (Penuh atau Selesai) tidak akan terpengaruh.</p>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -198,7 +173,7 @@
                 Batal
             </a>
             <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                <i class="fas fa-calendar-alt mr-1"></i> Jadwalkan Ulang
+                <i class="fas fa-calendar-alt mr-1"></i> Reschedule
             </button>
         </div>
     </form>
@@ -220,8 +195,5 @@
 
         rescheduleTypeAll.addEventListener('change', toggleAffectedDatesSelect);
         rescheduleTypeSelected.addEventListener('change', toggleAffectedDatesSelect);
-
-        // Initialize view
-        toggleAffectedDatesSelect();
     });
 </script>

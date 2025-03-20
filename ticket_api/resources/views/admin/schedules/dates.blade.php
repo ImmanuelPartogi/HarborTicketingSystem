@@ -110,32 +110,7 @@
                                 {{ implode(', ', $dayLabels) }}
                             </p>
                         </div>
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-sm text-gray-500 mb-1">Status:</p>
-                            <p class="font-medium">
-                                @if ($schedule->status == 'ACTIVE')
-                                    <span
-                                        class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 flex items-center w-fit">
-                                        <i class="fas fa-check-circle mr-1"></i> Aktif
-                                    </span>
-                                @elseif($schedule->status == 'DELAYED')
-                                    <span
-                                        class="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800 flex items-center w-fit">
-                                        <i class="fas fa-exclamation-triangle mr-1"></i> Tertunda
-                                    </span>
-                                @elseif($schedule->status == 'FULL')
-                                    <span
-                                        class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 flex items-center w-fit">
-                                        <i class="fas fa-users mr-1"></i> Penuh
-                                    </span>
-                                @else
-                                    <span
-                                        class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 flex items-center w-fit">
-                                        <i class="fas fa-ban mr-1"></i> Dibatalkan
-                                    </span>
-                                @endif
-                            </p>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -184,6 +159,13 @@
                                     <option value="">Semua Status</option>
                                     <option value="AVAILABLE" {{ request('status') == 'AVAILABLE' ? 'selected' : '' }}>
                                         Tersedia</option>
+                                    <option value="WEATHER_ISSUE"
+                                        {{ request('status') == 'WEATHER_ISSUE' ? 'selected' : '' }}>
+                                        Masalah Cuaca</option>
+                                    <option value="FULL" {{ request('status') == 'FULL' ? 'selected' : '' }}>
+                                        Penuh</option>
+                                    <option value="DEPARTED" {{ request('status') == 'DEPARTED' ? 'selected' : '' }}>
+                                        Selesai</option>
                                     <option value="UNAVAILABLE" {{ request('status') == 'UNAVAILABLE' ? 'selected' : '' }}>
                                         Tidak Tersedia</option>
                                 </select>
@@ -295,11 +277,27 @@
                                         <span class="text-gray-400">-</span>
                                     @endif
                                 </td>
+                                <!-- Status display in table -->
                                 <td class="py-3 px-4 border-b text-sm">
                                     @if ($date->status == 'AVAILABLE')
                                         <span
                                             class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 flex items-center w-fit">
                                             <i class="fas fa-check-circle mr-1"></i> Tersedia
+                                        </span>
+                                    @elseif ($date->status == 'WEATHER_ISSUE')
+                                        <span
+                                            class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 flex items-center w-fit">
+                                            <i class="fas fa-cloud-rain mr-1"></i> Masalah Cuaca
+                                        </span>
+                                    @elseif ($date->status == 'FULL')
+                                        <span
+                                            class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 flex items-center w-fit">
+                                            <i class="fas fa-users mr-1"></i> Penuh
+                                        </span>
+                                    @elseif ($date->status == 'DEPARTED')
+                                        <span
+                                            class="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 flex items-center w-fit">
+                                            <i class="fas fa-check-double mr-1"></i> Selesai
                                         </span>
                                     @else
                                         <span
@@ -465,6 +463,7 @@
                         <div id="range_date_preview" class="bg-white rounded p-3 border border-gray-200"></div>
                     </div>
 
+                    <!-- Status options in add date modal -->
                     <div>
                         <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
                         <div class="relative">
@@ -472,11 +471,13 @@
                                 class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="AVAILABLE">Tersedia</option>
                                 <option value="UNAVAILABLE">Tidak Tersedia</option>
+                                <option value="WEATHER_ISSUE">Masalah Cuaca</option>
                             </select>
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-toggle-on text-gray-400"></i>
                             </div>
                         </div>
+                        <p class="text-xs text-gray-500 mt-1">Status dapat diubah sesuai kondisi operasional.</p>
                     </div>
 
                     <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
@@ -494,7 +495,7 @@
         </div>
     </div>
 
-    <!-- Edit Date Modal - Simplified Version (No Date Editing) -->
+    <!-- Edit Date Modal with 5 Status Options -->
     <div id="editDateModal"
         class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="flex items-center justify-center h-full w-full p-4">
@@ -527,6 +528,19 @@
                         </div>
                     </div>
 
+                    <div id="date_status_info" class="hidden bg-blue-50 p-3 rounded-lg mb-4 border border-blue-200">
+                        <div class="flex">
+                            <div class="text-blue-500 mr-2">
+                                <i class="fas fa-exclamation-circle text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-blue-800">
+                                    Status jadwal ini tidak dapat diubah karena merupakan status final.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-4">
                         <label for="edit_status" class="block text-sm font-medium text-gray-700 mb-2">Status
                             Jadwal</label>
@@ -534,12 +548,17 @@
                             <select id="edit_status" name="status"
                                 class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="AVAILABLE">Tersedia</option>
+                                <option value="FULL">Penuh</option>
+                                <option value="DEPARTED">Selesai</option>
                                 <option value="UNAVAILABLE">Tidak Tersedia</option>
+                                <option value="WEATHER_ISSUE">Masalah Cuaca</option>
                             </select>
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-toggle-on text-gray-400"></i>
                             </div>
                         </div>
+                        <p class="text-xs text-gray-500 mt-1">Status "Penuh" dan "Selesai" merupakan status final yang
+                            tidak dapat diubah kembali.</p>
                     </div>
 
                     <div class="mb-4">
@@ -549,7 +568,7 @@
                         <div class="relative">
                             <input type="text" id="edit_status_reason" name="status_reason"
                                 class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Contoh: Maintenance, Libur, dll">
+                                placeholder="Contoh: Maintenance, Libur, Cuaca buruk, dll">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-comment-alt text-gray-400"></i>
                             </div>
@@ -561,7 +580,7 @@
                             class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
                             Batal
                         </button>
-                        <button type="submit"
+                        <button type="submit" id="edit_submit_btn"
                             class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded transition-colors duration-200">
                             <i class="fas fa-save mr-1"></i> Simpan Perubahan
                         </button>
@@ -951,9 +970,9 @@
             if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
                 previewElement.innerHTML =
                     `<div class="flex items-center text-red-600 text-sm">
-                    <i class="fas fa-exclamation-circle mr-2"></i>
-                    <span>Rentang tanggal tidak valid</span>
-                </div>`;
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                <span>Rentang tanggal tidak valid</span>
+            </div>`;
                 return;
             }
 
@@ -973,27 +992,27 @@
             if (validDates.length === 0) {
                 previewElement.innerHTML =
                     `<div class="flex items-center text-yellow-600 text-sm">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>
-                    <span>Tidak ada tanggal operasi dalam rentang ini</span>
-                </div>`;
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span>Tidak ada tanggal operasi dalam rentang ini</span>
+            </div>`;
             } else {
                 previewElement.innerHTML = `
-            <div class="text-sm">
-                <div class="flex items-center text-blue-600 font-medium mb-2">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    <span>Tanggal operasi yang akan dibuat (${validDates.length}):</span>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto bg-gray-50 p-2 rounded border border-gray-200">
-                    ${validDates.map(date => `
-                        <div class="text-xs bg-white p-1.5 rounded border border-gray-200 flex items-center">
-                            <i class="fas fa-calendar-day text-green-500 mr-1.5"></i>
-                            ${formatDisplayDate(date.toISOString().split('T')[0])}
-                            <span class="ml-1 text-green-600">(${getDayName(date)})</span>
-                        </div>
-                    `).join('')}
-                </div>
+        <div class="text-sm">
+            <div class="flex items-center text-blue-600 font-medium mb-2">
+                <i class="fas fa-info-circle mr-2"></i>
+                <span>Tanggal operasi yang akan dibuat (${validDates.length}):</span>
             </div>
-        `;
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto bg-gray-50 p-2 rounded border border-gray-200">
+                ${validDates.map(date => `
+                    <div class="text-xs bg-white p-1.5 rounded border border-gray-200 flex items-center">
+                        <i class="fas fa-calendar-day text-green-500 mr-1.5"></i>
+                        ${formatDisplayDate(date.toISOString().split('T')[0])}
+                        <span class="ml-1 text-green-600">(${getDayName(date)})</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
             }
         }
 
@@ -1047,16 +1066,16 @@
             toast.className =
                 `${bgColor} ${textColor} py-3 px-4 rounded-lg shadow-md flex items-start max-w-xs transform transition-all duration-300 opacity-0 translate-y-2`;
             toast.innerHTML = `
-            <div class="flex-shrink-0">
-                ${icon}
-            </div>
-            <div>
-                ${message}
-            </div>
-            <button class="ml-auto text-gray-500 hover:text-gray-700 focus:outline-none">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
+        <div class="flex-shrink-0">
+            ${icon}
+        </div>
+        <div>
+            ${message}
+        </div>
+        <button class="ml-auto text-gray-500 hover:text-gray-700 focus:outline-none">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
 
             // Add to container
             toastContainer.appendChild(toast);
@@ -1250,6 +1269,8 @@
         const editDateForm = document.getElementById('editDateForm');
         const closeEditModal = document.getElementById('closeEditModal');
         const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const dateStatusInfo = document.getElementById('date_status_info');
+        const editSubmitBtn = document.getElementById('edit_submit_btn');
 
         editButtons.forEach(button => {
             button.addEventListener('click', function(e) {
@@ -1275,8 +1296,69 @@
                         `<i class="fas fa-calendar-day mr-1"></i> Jadwal tanggal <strong>${formattedDate}</strong> (${dayName})`;
                 }
 
-                // Set status
-                document.getElementById('edit_status').value = status;
+                // Check if status is final
+                const isFinalStatus = ['FULL', 'DEPARTED'].includes(status);
+
+                // Handle final status
+                if (isFinalStatus) {
+                    // Show info message
+                    if (dateStatusInfo) {
+                        dateStatusInfo.classList.remove('hidden');
+                    }
+
+                    // Disable the status dropdown and submit button
+                    const statusDropdown = document.getElementById('edit_status');
+                    if (statusDropdown) {
+                        statusDropdown.disabled = true;
+                        statusDropdown.value = status;
+                    }
+
+                    // Disable reason field
+                    const reasonField = document.getElementById('edit_status_reason');
+                    if (reasonField) {
+                        reasonField.disabled = true;
+                        reasonField.placeholder = 'Status final tidak dapat diubah';
+                    }
+
+                    // Disable submit button
+                    if (editSubmitBtn) {
+                        editSubmitBtn.disabled = true;
+                        editSubmitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+                } else {
+                    // Hide info message
+                    if (dateStatusInfo) {
+                        dateStatusInfo.classList.add('hidden');
+                    }
+
+                    // Enable the form controls
+                    const statusDropdown = document.getElementById('edit_status');
+                    if (statusDropdown) {
+                        statusDropdown.disabled = false;
+                        statusDropdown.value = status;
+
+                        // REMOVE THIS CODE BLOCK - it's removing FULL and DEPARTED options
+                        // for (let i = statusDropdown.options.length - 1; i >= 0; i--) {
+                        //     if (['FULL', 'DEPARTED'].includes(statusDropdown.options[i].value)) {
+                        //         statusDropdown.remove(i);
+                        //     }
+                        // }
+                    }
+
+                    // Enable reason field
+                    const reasonField = document.getElementById('edit_status_reason');
+                    if (reasonField) {
+                        reasonField.disabled = false;
+                        reasonField.placeholder =
+                            'Contoh: Maintenance, Libur, Cuaca buruk, dll';
+                    }
+
+                    // Enable submit button
+                    if (editSubmitBtn) {
+                        editSubmitBtn.disabled = false;
+                        editSubmitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                }
 
                 // Set form action URL
                 if (editDateForm && scheduleId) {
@@ -1356,6 +1438,71 @@
                 input.dispatchEvent(changeEvent);
             }
         });
+
+        // Function to update date status badge
+        function updateStatusBadge(statusElement, status) {
+            if (!statusElement) return;
+
+            // Remove all existing classes
+            statusElement.classList.remove(
+                'bg-green-100', 'text-green-800',
+                'bg-red-100', 'text-red-800',
+                'bg-yellow-100', 'text-yellow-800',
+                'bg-blue-100', 'text-blue-800',
+                'bg-purple-100', 'text-purple-800'
+            );
+
+            // Set new classes and icon based on status
+            let iconHTML = '';
+            switch (status) {
+                case 'AVAILABLE':
+                    statusElement.classList.add('bg-green-100', 'text-green-800');
+                    iconHTML = '<i class="fas fa-check-circle mr-1"></i> Tersedia';
+                    break;
+                case 'UNAVAILABLE':
+                    statusElement.classList.add('bg-red-100', 'text-red-800');
+                    iconHTML = '<i class="fas fa-ban mr-1"></i> Tidak Tersedia';
+                    break;
+                case 'WEATHER_ISSUE':
+                    statusElement.classList.add('bg-yellow-100', 'text-yellow-800');
+                    iconHTML = '<i class="fas fa-cloud-rain mr-1"></i> Masalah Cuaca';
+                    break;
+                case 'FULL':
+                    statusElement.classList.add('bg-blue-100', 'text-blue-800');
+                    iconHTML = '<i class="fas fa-users mr-1"></i> Penuh';
+                    break;
+                case 'DEPARTED':
+                    statusElement.classList.add('bg-purple-100', 'text-purple-800');
+                    iconHTML = '<i class="fas fa-check-double mr-1"></i> Selesai';
+                    break;
+                default:
+                    statusElement.classList.add('bg-gray-100', 'text-gray-800');
+                    iconHTML = '<i class="fas fa-question-circle mr-1"></i> ' + status;
+            }
+
+            statusElement.innerHTML = iconHTML;
+        }
+
+        // Update status display when status changes in edit modal
+        const editStatusDropdown = document.getElementById('edit_status');
+        if (editStatusDropdown) {
+            editStatusDropdown.addEventListener('change', function() {
+                // Change reason field placeholder based on selected status
+                const reasonField = document.getElementById('edit_status_reason');
+                if (reasonField) {
+                    switch (this.value) {
+                        case 'WEATHER_ISSUE':
+                            reasonField.placeholder = 'Contoh: Gelombang tinggi, angin kencang, dll';
+                            break;
+                        case 'UNAVAILABLE':
+                            reasonField.placeholder = 'Contoh: Maintenance, libur, dll';
+                            break;
+                        default:
+                            reasonField.placeholder = 'Alasan perubahan status (opsional)';
+                    }
+                }
+            });
+        }
 
         console.log('Schedule dates management initialization complete');
     });

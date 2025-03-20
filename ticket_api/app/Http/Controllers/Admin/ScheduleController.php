@@ -204,7 +204,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Update the specified schedule with status propagation to schedule dates.
+     * Update the specified schedule without price fields.
      *
      * @param Request $request
      * @param Schedule $schedule
@@ -218,8 +218,8 @@ class ScheduleController extends Controller
             'departure_time' => 'required|date_format:H:i',
             'arrival_time' => 'required|date_format:H:i',
             'days' => 'required|array|min:1',
-            'days.*' => 'required|in:1,2,3,4,5,6,7',
-            'status' => 'required|in:ACTIVE,CANCELLED,DELAYED,FULL',
+            'days.*' => 'required|in:1,2,3,4,5,6,7,0',
+            'status' => 'required|in:ACTIVE,CANCELLED',
         ]);
 
         if ($validator->fails()) {
@@ -236,7 +236,13 @@ class ScheduleController extends Controller
             $oldStatus = $schedule->status;
             $newStatus = $request->status;
 
-            // Update schedule
+            // Check if the schedule has a final status
+            if (Schedule::isStatusFinal($oldStatus)) {
+                // If it's a final status, ignore status change
+                $newStatus = $oldStatus;
+            }
+
+            // Update schedule without price fields (removed)
             $schedule->update([
                 'route_id' => $request->route_id,
                 'ferry_id' => $request->ferry_id,
@@ -246,24 +252,26 @@ class ScheduleController extends Controller
                 'status' => $newStatus,
             ]);
 
-            // If status has changed, update related schedule dates
-            if ($oldStatus !== $newStatus) {
+            // If status has changed and is not final, update related schedule dates
+            if ($oldStatus !== $newStatus && !Schedule::isStatusFinal($oldStatus)) {
                 $this->updateScheduleDatesByScheduleStatus($schedule, $newStatus);
             }
 
             DB::commit();
 
             return redirect()->route('admin.schedules.index')
-                ->with('success', 'Schedule updated successfully');
+                ->with('success', 'Jadwal berhasil diperbarui');
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Failed to update schedule: ' . $e->getMessage());
             return back()->withInput()
-                ->with('error', 'Failed to update schedule: ' . $e->getMessage());
+                ->with('error', 'Gagal memperbarui jadwal: ' . $e->getMessage());
         }
     }
 
+
     /**
-     * Update schedule dates based on schedule status.
+     * Update schedule dates based on simplified schedule status.
      * Only updates dates that are not in final status (FULL or DEPARTED).
      *
      * @param Schedule $schedule
@@ -272,24 +280,33 @@ class ScheduleController extends Controller
      */
     private function updateScheduleDatesByScheduleStatus(Schedule $schedule, $newStatus)
     {
-        // Only process if schedule status is CANCELLED (Inactive) or DELAYED (Weather Issue)
-        if (!in_array($newStatus, ['CANCELLED', 'DELAYED'])) {
-            return 0;
+        // For inactive schedules, mark dates as unavailable
+        if ($newStatus === 'CANCELLED') {
+            // Update only future dates that are not in final status
+            return ScheduleDate::where('schedule_id', $schedule->id)
+                ->where('date', '>=', now()->format('Y-m-d'))
+                ->whereNotIn('status', ['FULL', 'DEPARTED']) // Don't update final statuses
+                ->update([
+                    'status' => 'UNAVAILABLE',
+                    'status_reason' => 'Jadwal tidak aktif'
+                    // Removed 'modified_by_schedule' column reference
+                ]);
+        }
+        // For active schedules, reset dates to available
+        elseif ($newStatus === 'ACTIVE') {
+            // Update future dates that are not in final status
+            return ScheduleDate::where('schedule_id', $schedule->id)
+                ->where('date', '>=', now()->format('Y-m-d'))
+                ->whereIn('status', ['UNAVAILABLE']) // Only update unavailable dates
+                ->whereNotIn('status', ['FULL', 'DEPARTED'])
+                ->update([
+                    'status' => 'AVAILABLE',
+                    'status_reason' => null
+                    // Removed 'modified_by_schedule' column reference
+                ]);
         }
 
-        $mappedStatus = $newStatus === 'CANCELLED' ? 'UNAVAILABLE' : 'WEATHER_ISSUE';
-
-        // Update only future dates that are not in final status
-        return ScheduleDate::where('schedule_id', $schedule->id)
-            ->where('date', '>=', now()->format('Y-m-d'))
-            ->whereNotIn('status', ['FULL', 'DEPARTED']) // Don't update final statuses
-            ->update([
-                'status' => $mappedStatus,
-                'status_reason' => $newStatus === 'CANCELLED'
-                    ? 'Jadwal tidak aktif'
-                    : 'Jadwal tertunda karena masalah cuaca',
-                'modified_by_schedule' => true // Mark as modified by schedule
-            ]);
+        return 0;
     }
 
     /**
@@ -600,7 +617,7 @@ class ScheduleController extends Controller
     public function updateDate(Request $request, Schedule $schedule, $dateId)
     {
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:AVAILABLE,UNAVAILABLE',
+            'status' => 'required|in:AVAILABLE,UNAVAILABLE,WEATHER_ISSUE,FULL,DEPARTED',
             'status_reason' => 'nullable|string|max:255',
         ]);
 
@@ -617,8 +634,14 @@ class ScheduleController extends Controller
                 return back()->with('error', 'Data jadwal tidak valid');
             }
 
-            // Check if status can be edited based on business rules
-            if (in_array($scheduleDate->status, ['FULL', 'DEPARTED'])) {
+            // Check if current status is final
+            $isCurrentStatusFinal = in_array($scheduleDate->status, ['FULL', 'DEPARTED']);
+
+            // Check if new status is final
+            $isNewStatusFinal = in_array($request->status, ['FULL', 'DEPARTED']);
+
+            // If current status is final, prevent changes
+            if ($isCurrentStatusFinal) {
                 return back()->with('error', 'Status jadwal tidak dapat diubah karena sudah berstatus final.');
             }
 
@@ -638,14 +661,24 @@ class ScheduleController extends Controller
                 $updateData['status_reason'] = null; // Clear reason if not provided
             }
 
+            // If changing to final status, add a warning
+            if ($isNewStatusFinal) {
+                $updateData['modified_by_schedule'] = false; // Prevent auto-updates
+            }
+
             // Update the schedule date
             $scheduleDate->update($updateData);
 
             // Prepare success message
             if ($statusChanged) {
-                $oldStatusLabel = $oldStatus == 'AVAILABLE' ? 'Tersedia' : 'Tidak Tersedia';
-                $newStatusLabel = $request->status == 'AVAILABLE' ? 'Tersedia' : 'Tidak Tersedia';
+                $oldStatusLabel = $this->getStatusLabel($oldStatus);
+                $newStatusLabel = $this->getStatusLabel($request->status);
+
                 $message = "Status jadwal berhasil diubah dari \"{$oldStatusLabel}\" menjadi \"{$newStatusLabel}\"";
+
+                if ($isNewStatusFinal) {
+                    $message .= ". Perhatian: Status ini adalah status final dan tidak dapat diubah kembali.";
+                }
             } else {
                 $message = "Status jadwal berhasil diperbarui";
             }
@@ -656,6 +689,30 @@ class ScheduleController extends Controller
             logger()->error('Failed to update schedule date: ' . $e->getMessage());
 
             return back()->with('error', 'Gagal memperbarui status jadwal: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    /**
+     * Helper function to get a human-readable status label
+     *
+     * @param string $status
+     * @return string
+     */
+    private function getStatusLabel($status)
+    {
+        switch ($status) {
+            case 'AVAILABLE':
+                return 'Tersedia';
+            case 'UNAVAILABLE':
+                return 'Tidak Tersedia';
+            case 'WEATHER_ISSUE':
+                return 'Masalah Cuaca';
+            case 'FULL':
+                return 'Penuh';
+            case 'DEPARTED':
+                return 'Selesai';
+            default:
+                return $status;
         }
     }
 

@@ -285,16 +285,32 @@
                                             <span class="text-gray-500 italic">Data tidak tersedia</span>
                                         @endif
                                     </td>
+                                    <!-- Replace the simplified status code in the schedules.show view with this updated version -->
                                     <td class="py-3 px-4 border-b border-gray-200 text-sm">
                                         @if ($date->status == 'AVAILABLE')
                                             <span
-                                                class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 font-medium">
+                                                class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 flex items-center w-fit">
                                                 <i class="fas fa-check-circle mr-1"></i> Tersedia
+                                            </span>
+                                        @elseif ($date->status == 'WEATHER_ISSUE')
+                                            <span
+                                                class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 flex items-center w-fit">
+                                                <i class="fas fa-cloud-rain mr-1"></i> Masalah Cuaca
+                                            </span>
+                                        @elseif ($date->status == 'FULL')
+                                            <span
+                                                class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 flex items-center w-fit">
+                                                <i class="fas fa-users mr-1"></i> Penuh
+                                            </span>
+                                        @elseif ($date->status == 'DEPARTED')
+                                            <span
+                                                class="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 flex items-center w-fit">
+                                                <i class="fas fa-check-double mr-1"></i> Selesai
                                             </span>
                                         @else
                                             <span
-                                                class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 font-medium">
-                                                <i class="fas fa-times-circle mr-1"></i> Tidak Tersedia
+                                                class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 flex items-center w-fit">
+                                                <i class="fas fa-ban mr-1"></i> Tidak Tersedia
                                             </span>
                                         @endif
                                     </td>

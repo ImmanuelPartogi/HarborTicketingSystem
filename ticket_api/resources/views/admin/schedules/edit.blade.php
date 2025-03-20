@@ -78,18 +78,10 @@
                             </span>
                         @else
                             <span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
-                                Dibatalkan
+                                Tidak Aktif
                             </span>
                         @endif
                     </p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-600">Harga Ekonomi:</p>
-                    <p class="font-medium">Rp {{ number_format($schedule->price_economy ?? 0, 0, ',', '.') }}</p>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-600">Harga Bisnis:</p>
-                    <p class="font-medium">Rp {{ number_format($schedule->price_business ?? 0, 0, ',', '.') }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-600">Hari Operasi:</p>
@@ -146,9 +138,8 @@
                     <div class="ml-3">
                         <p class="text-sm text-blue-700">
                             <strong>Informasi Status:</strong> Perubahan status jadwal bersifat independen dari status rute.
-                            Jika status jadwal diubah menjadi <strong>Tertunda</strong> atau <strong>Dibatalkan</strong>,
-                            semua tanggal jadwal terkait yang belum berstatus <strong>Penuh</strong> atau <strong>Selesai</strong>
-                            akan otomatis menyesuaikan.
+                            Jika status diubah menjadi <strong>Tidak Aktif</strong>, tanggal jadwal terkait yang belum berstatus final
+                            akan otomatis diubah menjadi <strong>Tidak Tersedia</strong>.
                         </p>
                     </div>
                 </div>
@@ -212,7 +203,6 @@
                     @enderror
                 </div>
 
-                <!-- Perbaikan untuk field estimasi waktu tiba -->
                 <div class="mb-4">
                     <label for="arrival_time" class="block text-sm font-medium text-gray-700 mb-2">Estimasi Waktu
                         Tiba</label>
@@ -251,26 +241,6 @@
                 </div>
 
                 <div class="mb-4">
-                    <label for="price_economy" class="block text-sm font-medium text-gray-700 mb-2">Harga Ekonomi</label>
-                    <input type="number" id="price_economy" name="price_economy"
-                        value="{{ old('price_economy', $schedule->price_economy) }}"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('price_economy') border-red-500 @enderror">
-                    @error('price_economy')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="mb-4">
-                    <label for="price_business" class="block text-sm font-medium text-gray-700 mb-2">Harga Bisnis</label>
-                    <input type="number" id="price_business" name="price_business"
-                        value="{{ old('price_business', $schedule->price_business) }}"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 @error('price_business') border-red-500 @enderror">
-                    @error('price_business')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="mb-4">
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
                     @if($isStatusFinal)
                         <input type="hidden" name="status" value="{{ $schedule->status }}">
@@ -294,27 +264,15 @@
                                 {{ old('status', strtoupper($schedule->status)) == 'ACTIVE' ? 'selected' : '' }}>
                                 Aktif
                             </option>
-                            <option value="DELAYED"
-                                {{ old('status', strtoupper($schedule->status)) == 'DELAYED' ? 'selected' : '' }}>
-                                Tertunda (Masalah Cuaca)
-                            </option>
                             <option value="CANCELLED"
                                 {{ old('status', strtoupper($schedule->status)) == 'CANCELLED' ? 'selected' : '' }}>
-                                Dibatalkan
-                            </option>
-                            <option value="FULL"
-                                {{ old('status', strtoupper($schedule->status)) == 'FULL' ? 'selected' : '' }}>
-                                Penuh (Status Final)
+                                Tidak Aktif
                             </option>
                         </select>
                         <div class="mt-2 text-xs text-gray-600">
                             <div class="flex items-start mb-1">
                                 <i class="fas fa-info-circle text-blue-500 mt-0.5 mr-1"></i>
                                 <span>Perubahan status akan mempengaruhi tanggal jadwal terkait.</span>
-                            </div>
-                            <div class="flex items-start text-xs text-gray-600">
-                                <i class="fas fa-exclamation-circle text-yellow-500 mt-0.5 mr-1"></i>
-                                <span>Status "Penuh" adalah status final dan tidak dapat diubah kembali.</span>
                             </div>
                         </div>
                     @endif
@@ -345,18 +303,6 @@
                     alert('Pilih minimal satu hari operasi.');
                 }
             });
-
-            // Add warning when changing to final status
-            const statusDropdown = document.getElementById('status');
-            if (statusDropdown) {
-                statusDropdown.addEventListener('change', function() {
-                    if (this.value === 'FULL') {
-                        if (!confirm('Status "Penuh" adalah status final dan tidak dapat diubah kembali. Lanjutkan?')) {
-                            this.value = '{{ old('status', strtoupper($schedule->status)) }}';
-                        }
-                    }
-                });
-            }
         });
     </script>
 @endpush
