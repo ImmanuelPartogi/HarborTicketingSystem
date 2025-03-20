@@ -129,8 +129,10 @@ class ScheduleDate extends Model
         }
 
         // Cannot edit if modified by route and not yet expired
-        if ($this->modified_by_route &&
-            ($this->status === 'WEATHER_ISSUE' || $this->status === 'UNAVAILABLE')) {
+        if (
+            $this->modified_by_route &&
+            ($this->status === 'WEATHER_ISSUE' || $this->status === 'UNAVAILABLE')
+        ) {
             // If it's a weather issue with an expiry date, check if it's expired
             if ($this->status === 'WEATHER_ISSUE' && $this->status_expiry_date) {
                 return now()->gt($this->status_expiry_date);
@@ -224,5 +226,13 @@ class ScheduleDate extends Model
             default:
                 return 'secondary';
         }
+    }
+
+    /**
+     * Get the bookings for the schedule date.
+     */
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'schedule_date_id');
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Models\Booking;
 
 /**
  * @method \Illuminate\Routing\Controller middleware($middleware, array $options = [])
@@ -329,6 +330,51 @@ class ScheduleController extends Controller
                 ->with('success', 'Schedule deleted successfully');
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to delete schedule: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Delete a specific schedule date.
+     *
+     * @param int $dateId
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function deleteDate($dateId)
+    {
+        try {
+            // Find the schedule date
+            $scheduleDate = ScheduleDate::findOrFail($dateId);
+
+            // Get the schedule ID for redirect
+            $scheduleId = $scheduleDate->schedule_id;
+
+            // Get the date of this schedule date
+            $dateValue = $scheduleDate->date;
+
+            // Check if this date has any bookings
+            // We're assuming bookings have a travel_date and are linked to the schedule
+            $hasBookings = Booking::where('schedule_id', $scheduleId)
+                ->exists();
+
+            if ($hasBookings) {
+                return back()->with('error', 'Tidak dapat menghapus tanggal yang memiliki pemesanan.');
+            }
+
+            // Check if status is final (FULL or DEPARTED)
+            if (in_array($scheduleDate->status, ['FULL', 'DEPARTED'])) {
+                return back()->with('error', 'Tidak dapat menghapus tanggal dengan status final (Penuh atau Selesai).');
+            }
+
+            // Delete the schedule date
+            $scheduleDate->delete();
+
+            return redirect()->route('admin.schedules.dates', $scheduleId)
+                ->with('success', 'Tanggal jadwal berhasil dihapus.');
+        } catch (\Exception $e) {
+            // Log error
+            Log::error('Failed to delete schedule date: ' . $e->getMessage());
+
+            return back()->with('error', 'Gagal menghapus tanggal jadwal: ' . $e->getMessage());
         }
     }
 

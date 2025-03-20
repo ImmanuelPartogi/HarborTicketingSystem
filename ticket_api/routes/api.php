@@ -51,7 +51,7 @@ Route::prefix('v1')->group(function () {
 });
 
 // Protected Routes (requires authentication)
-Route::prefix('v1')->middleware(['api.auth', 'throttle:60,1'])->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // User Profile
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/profile', [AuthController::class, 'updateProfile']);
@@ -76,7 +76,7 @@ Route::prefix('v1')->middleware(['api.auth', 'throttle:60,1'])->group(function (
 });
 
 // Staff/Operator Routes (requires special token)
-Route::prefix('v1/staff')->middleware(['api.auth', 'throttle:60,1'])->group(function () {
+Route::prefix('v1/staff')->middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('/tickets/validate', [TicketController::class, 'validate']);
     Route::post('/tickets/mark-boarded', [TicketController::class, 'markAsBoarded']);
 });
