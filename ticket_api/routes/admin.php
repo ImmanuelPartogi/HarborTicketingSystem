@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\RouteController;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\HelpController;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,18 +72,15 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth:admi
     Route::get('reports/export/routes', [ReportController::class, 'exportRoutes'])->name('reports.export.routes');
     Route::get('reports/export/occupancy', [ReportController::class, 'exportOccupancy'])->name('reports.export.occupancy');
 
-    // Perbaikan route untuk Settings dan Help
-    // Tempatkan di dalam route group yang memiliki middleware 'auth:admin'
-
     // Settings Routes
-    Route::get('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings');
-    Route::post('/settings/update-system', [App\Http\Controllers\Admin\SettingsController::class, 'updateSystem'])->name('settings.update-system');
-    Route::get('/settings/profile', [App\Http\Controllers\Admin\SettingsController::class, 'profile'])->name('settings.profile');
-    Route::post('/settings/update-profile', [App\Http\Controllers\Admin\SettingsController::class, 'updateProfile'])->name('settings.update-profile');
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+    Route::post('/settings/update-system', [SettingsController::class, 'updateSystem'])->name('settings.update-system');
+    Route::get('/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
+    Route::post('/settings/update-profile', [SettingsController::class, 'updateProfile'])->name('settings.update-profile');
 
     // Help Routes
-    Route::get('/help', [App\Http\Controllers\Admin\HelpController::class, 'index'])->name('help');
-    Route::get('/help/topic/{topic}', [App\Http\Controllers\Admin\HelpController::class, 'topic'])->name('help.topic');
-    Route::get('/help/contact', [App\Http\Controllers\Admin\HelpController::class, 'contactSupport'])->name('help.contact');
-    Route::post('/help/send-support', [App\Http\Controllers\Admin\HelpController::class, 'sendSupportRequest'])->name('help.send-support');
+    Route::get('/help', [HelpController::class, 'index'])->name('help');
+    Route::get('/help/topic/{topic}', [HelpController::class, 'topic'])->name('help.topic');
+    Route::get('/help/contact', [HelpController::class, 'contactSupport'])->name('help.contact');
+    Route::post('/help/send-support', [HelpController::class, 'sendSupportRequest'])->name('help.send-support');
 });

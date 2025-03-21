@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "844163266260",
+    "project_id": "harbor-ticketing-system",
+    "storage_bucket": "harbor-ticketing-system.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:844163266260:android:a665cabaf6764813fc6d41",
+        "android_client_info": {
+          "package_name": "com.ticket_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPolhM4QMZGDCHaqwnGQV-v6xkBRLZm1A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

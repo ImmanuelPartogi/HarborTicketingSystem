@@ -146,11 +146,11 @@
                                     Log in
                                 </a>
 
-                                @if (Route::has('register'))
+                                {{-- @if (Route::has('register'))
                                     <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                         Register
                                     </a>
-                                @endif
+                                @endif --}}
                             @endauth
                         </div>
                     @endif
@@ -196,11 +196,11 @@
                             <a href="{{ route('login') }}" class="block px-4 py-2 text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-gray-100">
                                 Log in
                             </a>
-                            @if (Route::has('register'))
+                            {{-- @if (Route::has('register'))
                                 <a href="{{ route('register') }}" class="block px-4 py-2 text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-gray-100">
                                     Register
                                 </a>
-                            @endif
+                            @endif --}}
                         @endauth
                     </div>
                 @endif
@@ -513,11 +513,11 @@
                 </div>
             </div>
 
-            <div class="mt-16 text-center">
+            {{-- <div class="mt-16 text-center">
                 <a href="{{ route('register') }}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                     Create an Account to Start Booking
                 </a>
-            </div>
+            </div> --}}
         </div>
     </section>
 
@@ -661,11 +661,11 @@
                 <a href="#routes" class="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-medium rounded-md text-primary-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
                     <i class="fas fa-ship mr-2"></i> Explore Routes
                 </a>
-                @if (Route::has('register'))
+                {{-- @if (Route::has('register'))
                     <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-8 py-4 border border-white text-base font-medium rounded-md text-white hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
                         <i class="fas fa-user-plus mr-2"></i> Sign Up Now
                     </a>
-                @endif
+                @endif --}}
             </div>
         </div>
     </section>
