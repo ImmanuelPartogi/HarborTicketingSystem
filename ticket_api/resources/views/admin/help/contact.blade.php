@@ -1,228 +1,228 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Hubungi Dukungan')
-@section('header', 'Hubungi Dukungan')
+@section('title', 'Pusat Bantuan')
+@section('header', 'Pusat Bantuan')
 
 @section('styles')
 <style>
-    .support-card {
+    .category-card {
         transition: all 0.3s ease;
+        border: 1px solid transparent;
     }
-    .support-card:hover {
+    .category-card:hover {
+        transform: translateY(-5px);
+        border-color: #e0e7ff;
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1), 0 4px 6px -2px rgba(79, 70, 229, 0.05);
+    }
+    .guide-card {
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+    .guide-card:hover {
+        transform: translateY(-3px);
+        border-color: #e0e7ff;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
-    .help-banner {
-        background: linear-gradient(to right, #4f46e5, #818cf8);
+    .search-input:focus {
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    }
+    .header-gradient {
+        background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%);
+    }
+    .category-icon {
+        transition: all 0.3s ease;
+    }
+    .category-card:hover .category-icon {
+        transform: scale(1.1);
+    }
+    .question-button {
+        transition: all 0.2s ease;
+    }
+    .question-button:hover {
+        background-color: #f5f5f9;
+    }
+    .faq-answer {
+        transition: all 0.3s ease;
+    }
+    .contact-card {
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        border: 1px solid transparent;
+    }
+    .contact-card:hover {
+        border-color: #e0e7ff;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 </style>
 @endsection
 
 @section('content')
 <div>
-    <div class="mb-6">
-        <a href="{{ route('admin.help') }}" class="text-primary-600 hover:text-primary-900 flex items-center">
-            <i class="fas fa-arrow-left mr-2"></i> Kembali ke Pusat Bantuan
-        </a>
-    </div>
+    <!-- Help Banner -->
+    <div class="header-gradient rounded-xl text-white p-6 sm:p-8 md:p-10 mb-8 shadow-lg">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-2xl sm:text-3xl font-bold mb-4">Apa yang bisa kami bantu hari ini?</h1>
+            <p class="text-base sm:text-lg text-indigo-100 mb-6">Cari di pusat bantuan kami atau telusuri kategori di bawah</p>
 
-    <div class="lg:flex lg:items-start lg:space-x-8">
-        <!-- Contact Form -->
-        <div class="lg:w-2/3 mb-8 lg:mb-0">
-            <div class="support-card bg-white shadow rounded-lg overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                    <h3 class="text-lg font-medium text-gray-900">Kirim Permintaan Dukungan</h3>
-                    <p class="mt-1 text-sm text-gray-500">Isi formulir di bawah ini untuk mendapatkan bantuan dari tim dukungan kami.</p>
+            <div class="relative max-w-2xl mx-auto">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-indigo-300"></i>
                 </div>
-
-                <div class="p-6">
-                    <form action="{{ route('admin.help.send-support') }}" method="POST">
-                        @csrf
-                        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                            <div class="sm:col-span-6">
-                                <label for="subject" class="block text-sm font-medium text-gray-700">Subjek</label>
-                                <div class="mt-1">
-                                    <input type="text" name="subject" id="subject" value="{{ old('subject') }}" required
-                                        class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                                </div>
-                                @error('subject')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <div class="sm:col-span-3">
-                                <label for="priority" class="block text-sm font-medium text-gray-700">Prioritas</label>
-                                <div class="mt-1">
-                                    <select id="priority" name="priority" required
-                                        class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                                        <option value="low" {{ old('priority') == 'low' ? 'selected' : '' }}>Rendah</option>
-                                        <option value="medium" {{ old('priority') == 'medium' ? 'selected' : '' }}>Sedang</option>
-                                        <option value="high" {{ old('priority') == 'high' ? 'selected' : '' }}>Tinggi</option>
-                                        <option value="urgent" {{ old('priority') == 'urgent' ? 'selected' : '' }}>Mendesak</option>
-                                    </select>
-                                </div>
-                                @error('priority')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <div class="sm:col-span-3">
-                                <label for="category" class="block text-sm font-medium text-gray-700">Kategori</label>
-                                <div class="mt-1">
-                                    <select id="category" name="category" required
-                                        class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md">
-                                        <option value="general" {{ old('category') == 'general' ? 'selected' : '' }}>Pertanyaan Umum</option>
-                                        <option value="booking" {{ old('category') == 'booking' ? 'selected' : '' }}>Manajemen Pemesanan</option>
-                                        <option value="ferry" {{ old('category') == 'ferry' ? 'selected' : '' }}>Manajemen Kapal</option>
-                                        <option value="route" {{ old('category') == 'route' ? 'selected' : '' }}>Rute & Jadwal</option>
-                                        <option value="report" {{ old('category') == 'report' ? 'selected' : '' }}>Laporan & Analitik</option>
-                                        <option value="technical" {{ old('category') == 'technical' ? 'selected' : '' }}>Masalah Teknis</option>
-                                        <option value="other" {{ old('category') == 'other' ? 'selected' : '' }}>Lainnya</option>
-                                    </select>
-                                </div>
-                                @error('category')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <div class="sm:col-span-6">
-                                <label for="message" class="block text-sm font-medium text-gray-700">Pesan</label>
-                                <div class="mt-1">
-                                    <textarea id="message" name="message" rows="6" required
-                                        class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md">{{ old('message') }}</textarea>
-                                </div>
-                                <p class="mt-2 text-sm text-gray-500">Silakan jelaskan masalah Anda secara detail. Sertakan pesan kesalahan yang Anda lihat.</p>
-                                @error('message')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <div class="sm:col-span-6">
-                                <label for="attachment" class="block text-sm font-medium text-gray-700">Lampiran (opsional)</label>
-                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                                    <div class="space-y-1 text-center">
-                                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                        <div class="flex text-sm text-gray-600">
-                                            <label for="file-upload" class="relative cursor-pointer rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500">
-                                                <span>Unggah file</span>
-                                                <input id="file-upload" name="attachment" type="file" class="sr-only">
-                                            </label>
-                                            <p class="pl-1">atau seret dan lepas</p>
-                                        </div>
-                                        <p class="text-xs text-gray-500">
-                                            PNG, JPG, PDF, DOC, DOCX sampai 10MB
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-6 bg-gray-50 border rounded-md p-4">
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0">
-                                    <i class="fas fa-info-circle text-blue-500"></i>
-                                </div>
-                                <div class="ml-3">
-                                    <h3 class="text-sm font-medium text-blue-800">Waktu respon dukungan</h3>
-                                    <div class="mt-2 text-sm text-blue-700">
-                                        <p>Tim dukungan kami biasanya merespon dalam waktu 24 jam pada hari kerja. Untuk masalah mendesak, silakan pilih prioritas "Mendesak".</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pt-6 text-right">
-                            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                                <i class="fas fa-paper-plane mr-2"></i> Kirim Permintaan
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <input type="text"
+                    class="search-input w-full py-3 pl-10 pr-16 rounded-lg bg-white bg-opacity-10 border border-indigo-300 placeholder-indigo-200 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
+                    placeholder="Cari bantuan...">
+                <button type="button"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 bg-white text-indigo-700 rounded-md hover:bg-indigo-50 transition shadow-sm">
+                    Cari
+                </button>
             </div>
         </div>
+    </div>
 
-        <!-- Support Info -->
-        <div class="lg:w-1/3">
-            <div class="support-card bg-white shadow rounded-lg overflow-hidden mb-6">
-                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                    <h3 class="text-lg font-medium text-gray-900">Informasi Kontak</h3>
+    <!-- Help Categories -->
+    <div class="mb-12">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6 flex items-center">
+            <span class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mr-3">
+                <i class="fas fa-th-large"></i>
+            </span>
+            Telusuri berdasarkan Kategori
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <a href="#"
+                class="category-card bg-white rounded-lg shadow p-5 text-center hover:shadow-lg transition">
+                <div
+                    class="h-16 w-16 mx-auto bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+                    <i class="category-icon fas fa-ship text-2xl"></i>
                 </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Manajemen Kapal Ferry</h3>
+                <p class="text-gray-600">Mengelola kapal ferry, kapasitas, dan pemeliharaan</p>
+            </a>
 
-                <div class="p-6">
-                    <div class="space-y-4">
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <i class="fas fa-envelope text-blue-600"></i>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <h4 class="text-sm font-medium text-gray-900">Email Dukungan</h4>
-                                <p class="mt-1 text-sm text-gray-600">support@ferryticket.com</p>
-                                <p class="mt-1 text-xs text-gray-500">Respon dalam waktu 24 jam</p>
-                            </div>
+            <a href="#"
+                class="category-card bg-white rounded-lg shadow p-5 text-center hover:shadow-lg transition">
+                <div
+                    class="h-16 w-16 mx-auto bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+                    <i class="category-icon fas fa-route text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Rute & Jadwal</h3>
+                <p class="text-gray-600">Menyiapkan rute, waktu, dan harga</p>
+            </a>
+
+            <a href="#"
+                class="category-card bg-white rounded-lg shadow p-5 text-center hover:shadow-lg transition">
+                <div
+                    class="h-16 w-16 mx-auto bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-4">
+                    <i class="category-icon fas fa-ticket-alt text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Manajemen Pemesanan</h3>
+                <p class="text-gray-600">Memproses dan mengelola pemesanan</p>
+            </a>
+
+            <a href="#"
+                class="category-card bg-white rounded-lg shadow p-5 text-center hover:shadow-lg transition">
+                <div
+                    class="h-16 w-16 mx-auto bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-4">
+                    <i class="category-icon fas fa-chart-bar text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Laporan & Analitik</h3>
+                <p class="text-gray-600">Memahami data dan menghasilkan laporan</p>
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Guides -->
+    <div class="mb-12">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6 flex items-center">
+            <span class="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center mr-3">
+                <i class="fas fa-book"></i>
+            </span>
+            Panduan Cepat
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            @foreach ($guides as $guide)
+                <a href="{{ $guide['link'] }}"
+                    class="guide-card block bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition">
+                    <div class="p-5 border-l-4 border-indigo-500">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-start">
+                            <i class="fas fa-file-alt text-indigo-500 mt-1 mr-3"></i>
+                            <span>{{ $guide['title'] }}</span>
+                        </h3>
+                        <p class="text-gray-600 mb-4">{{ $guide['description'] }}</p>
+                        <div class="text-indigo-600 font-medium flex items-center">
+                            Baca panduan <i class="fas fa-arrow-right ml-2"></i>
                         </div>
+                    </div>
+                </a>
+            @endforeach
+        </div>
+    </div>
 
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                                    <i class="fas fa-phone-alt text-green-600"></i>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <h4 class="text-sm font-medium text-gray-900">Dukungan Telepon</h4>
-                                <p class="mt-1 text-sm text-gray-600">+62 812 3456 7890</p>
-                                <p class="mt-1 text-xs text-gray-500">Senin-Jumat: 9:00-17:00 WIB</p>
-                            </div>
+    <!-- Frequently Asked Questions -->
+    <div x-data="{ activeTab: null }" class="mb-12">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-6 flex items-center">
+            <span class="w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mr-3">
+                <i class="fas fa-question"></i>
+            </span>
+            Pertanyaan yang Sering Diajukan
+        </h2>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            @foreach ($faqs as $index => $faq)
+                <div class="border-b border-gray-200 last:border-b-0">
+                    <button
+                        x-on:click="activeTab === {{ json_encode($index) }} ? activeTab = null : activeTab = {{ json_encode($index) }}"
+                        class="question-button w-full px-6 py-4 text-left focus:outline-none transition-colors">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-base sm:text-lg font-medium text-gray-900 flex items-center">
+                                <i class="fas fa-question-circle text-indigo-500 mr-3"></i>
+                                {{ $faq['question'] }}
+                            </h3>
+                            <span class="ml-6 flex-shrink-0">
+                                <i class="fas"
+                                    x-bind:class="activeTab === {{ json_encode($index) }} ? 'fa-chevron-up text-indigo-600' :
+                                        'fa-chevron-down text-gray-400'"></i>
+                            </span>
                         </div>
+                    </button>
 
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <div class="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                                    <i class="fas fa-comments text-yellow-600"></i>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <h4 class="text-sm font-medium text-gray-900">Live Chat</h4>
-                                <p class="mt-1 text-sm text-gray-600">Tersedia pada hari kerja</p>
-                                <p class="mt-1 text-xs text-gray-500">9:00-17:00 WIB</p>
-                            </div>
+                    <div x-show="activeTab === {{ json_encode($index) }}"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 -translate-y-1"
+                         class="faq-answer px-6 pb-4">
+                        <div class="pl-9 text-gray-600 border-l-2 border-indigo-100">
+                            {{ $faq['answer'] }}
                         </div>
                     </div>
                 </div>
-            </div>
+            @endforeach
+        </div>
+    </div>
 
-            <div class="support-card bg-gradient-to-br from-primary-500 to-primary-700 shadow rounded-lg overflow-hidden text-white">
-                <div class="p-6">
-                    <h3 class="text-lg font-medium mb-3">Tautan Bantuan Cepat</h3>
-                    <ul class="space-y-3">
-                        <li>
-                            <a href="#" class="flex items-center text-primary-100 hover:text-white transition">
-                                <i class="fas fa-book-open mr-3"></i>
-                                <span>Basis Pengetahuan</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" class="flex items-center text-primary-100 hover:text-white transition">
-                                <i class="fas fa-video mr-3"></i>
-                                <span>Video Tutorial</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" class="flex items-center text-primary-100 hover:text-white transition">
-                                <i class="fas fa-question-circle mr-3"></i>
-                                <span>FAQ</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" class="flex items-center text-primary-100 hover:text-white transition">
-                                <i class="fas fa-life-ring mr-3"></i>
-                                <span>Status Sistem</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+    <!-- Contact Support -->
+    <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6 shadow-sm">
+        <div class="md:flex md:items-center md:justify-between">
+            <div class="md:flex-shrink-0 mb-4 md:mb-0">
+                <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-headset text-indigo-500 mr-3"></i>
+                    Masih membutuhkan bantuan?
+                </h2>
+                <p class="text-gray-600 mt-1">Tim dukungan kami siap membantu Anda</p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <a href="{{ route('admin.help.contact') }}"
+                    class="contact-card inline-flex justify-center items-center px-4 py-2 text-sm font-medium shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition">
+                    <i class="fas fa-headset mr-2"></i> Hubungi Dukungan
+                </a>
+                <a href="#"
+                    class="contact-card inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium shadow-sm text-gray-700 bg-white hover:bg-gray-50 transition">
+                    <i class="fas fa-book mr-2"></i> Lihat Dokumentasi
+                </a>
             </div>
         </div>
     </div>
