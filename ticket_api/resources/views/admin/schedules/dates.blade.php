@@ -1,367 +1,438 @@
 @extends('admin.layouts.app')
 
 @section('content')
-    <div class="bg-white shadow rounded-lg p-6">
+    <div class="bg-white shadow-md rounded-xl overflow-hidden">
         <!-- Header Section -->
-        <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800 mb-3 md:mb-0">Kelola Jadwal Operasi</h1>
-            <div class="flex flex-col sm:flex-row gap-2">
-                <a href="{{ route('admin.schedules.show', $schedule) }}"
-                    class="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded transition-colors duration-200 flex items-center justify-center">
-                    <i class="fas fa-arrow-left mr-2"></i> Kembali
-                </a>
-                <button type="button" id="addDateBtn"
-                    class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors duration-200 flex items-center justify-center">
-                    <i class="fas fa-plus mr-2"></i> Tambah Jadwal
-                </button>
+        <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 p-6 text-white relative">
+            <div class="absolute inset-0 overflow-hidden">
+                <svg class="absolute right-0 bottom-0 opacity-10 h-64 w-64" viewBox="0 0 200 200"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill="white"
+                        d="M46.5,-75.3C58.9,-68.9,67.3,-53.9,74.4,-38.7C81.6,-23.5,87.6,-8.1,85.8,6.3C84,20.7,74.2,34,63,44.4C51.8,54.8,39.2,62.3,25.2,68.2C11.1,74,-4.4,78.2,-19.6,76.1C-34.8,74,-49.6,65.7,-59.5,53.6C-69.4,41.5,-74.3,25.5,-77.6,8.5C-80.9,-8.5,-82.5,-26.5,-75.8,-40C-69.1,-53.5,-54.1,-62.4,-39.3,-67.4C-24.6,-72.5,-10.1,-73.7,4.4,-80.8C18.9,-87.9,34.1,-81.8,46.5,-75.3Z"
+                        transform="translate(100 100)" />
+                </svg>
+            </div>
+            <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-0 gap-4 relative z-10">
+                <h1 class="text-2xl font-bold text-white flex items-center">
+                    <i class="fas fa-calendar-alt mr-3 text-blue-200"></i> Kelola Jadwal Operasi
+                </h1>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <a href="{{ route('admin.schedules.show', $schedule) }}"
+                        class="bg-white/20 hover:bg-white/30 text-white py-2 px-4 rounded-lg transition backdrop-blur-sm flex items-center justify-center shadow-sm">
+                        <i class="fas fa-arrow-left mr-2"></i> Kembali
+                    </a>
+                    <button type="button" id="addDateBtn"
+                        class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center shadow-sm">
+                        <i class="fas fa-plus mr-2"></i> Tambah Jadwal
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- Alerts Section -->
-        @if (session('success'))
-            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-md fade-out-alert"
-                role="alert">
-                <div class="flex items-center">
-                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
-                    <p>{{ session('success') }}</p>
+        <div class="p-6">
+            @if (session('success'))
+                <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg shadow-sm fade-out-alert"
+                    role="alert">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 text-green-500 text-xl">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p>{{ session('success') }}</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        @endif
+            @endif
 
-        @if (session('error'))
-            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md fade-out-alert"
-                role="alert">
-                <div class="flex items-center">
-                    <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
-                    <p>{{ session('error') }}</p>
+            @if (session('error'))
+                <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg shadow-sm fade-out-alert"
+                    role="alert">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 text-red-500 text-xl">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p>{{ session('error') }}</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        @endif
+            @endif
 
-        <!-- Schedule Info Card -->
-        <div class="mb-6">
-            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-800">
-                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>Informasi Jadwal
-                    </h2>
-                </div>
-                <div class="p-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-sm text-gray-500 mb-1">Rute:</p>
-                            <p class="font-medium text-gray-800">
-                                @if (is_object($schedule->route))
-                                    <i class="fas fa-route text-blue-500 mr-1"></i>
-                                    {{ $schedule->route->origin }} - {{ $schedule->route->destination }}
-                                @else
-                                    <span class="text-red-500">Rute tidak tersedia</span>
-                                @endif
-                            </p>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-sm text-gray-500 mb-1">Waktu Keberangkatan:</p>
-                            <p class="font-medium text-gray-800">
-                                <i class="fas fa-clock text-green-500 mr-1"></i>
-                                {{ $schedule->departure_time->format('H:i') }}
-                            </p>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-sm text-gray-500 mb-1">Estimasi Tiba:</p>
-                            <p class="font-medium text-gray-800">
-                                <i class="fas fa-hourglass-end text-green-500 mr-1"></i>
-                                {{ $schedule->arrival_time->format('H:i') }}
-                            </p>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-sm text-gray-500 mb-1">Kapal:</p>
-                            <p class="font-medium text-gray-800">
-                                @if (is_object($schedule->ferry))
-                                    <i class="fas fa-ship text-blue-500 mr-1"></i>
-                                    {{ $schedule->ferry->name }}
-                                @else
-                                    <span class="text-red-500">Kapal tidak tersedia</span>
-                                @endif
-                            </p>
-                        </div>
-                        <div class="bg-gray-50 p-3 rounded-lg">
-                            <p class="text-sm text-gray-500 mb-1">Hari Operasi:</p>
-                            <p class="font-medium text-gray-800">
-                                @php
-                                    $days = explode(',', $schedule->days);
-                                    $dayNames = [
-                                        '1' => 'Senin',
-                                        '2' => 'Selasa',
-                                        '3' => 'Rabu',
-                                        '4' => 'Kamis',
-                                        '5' => 'Jumat',
-                                        '6' => 'Sabtu',
-                                        '7' => 'Minggu',
-                                        '0' => 'Minggu',
-                                    ];
-                                    $dayLabels = [];
-                                    foreach ($days as $day) {
-                                        if (isset($dayNames[$day])) {
-                                            $dayLabels[] = $dayNames[$day];
+            <!-- Schedule Info Card -->
+            <div class="mb-6">
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-5 py-4 bg-gray-50 border-b border-gray-200 rounded-t-xl">
+                        <h2 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <i class="fas fa-info-circle text-blue-600 mr-2"></i>Informasi Jadwal
+                        </h2>
+                    </div>
+                    <div class="p-5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div class="bg-gray-50 p-4 rounded-lg shadow-sm hover:bg-gray-100 transition">
+                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Rute:</p>
+                                <p class="font-medium text-gray-800 flex items-center">
+                                    @if (is_object($schedule->route))
+                                        <i class="fas fa-route text-blue-600 mr-2"></i>
+                                        {{ $schedule->route->origin }} - {{ $schedule->route->destination }}
+                                    @else
+                                        <span class="text-red-500">Rute tidak tersedia</span>
+                                    @endif
+                                </p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg shadow-sm hover:bg-gray-100 transition">
+                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Waktu
+                                    Keberangkatan:</p>
+                                <p class="font-medium text-gray-800 flex items-center">
+                                    <i class="fas fa-clock text-green-600 mr-2"></i>
+                                    {{ $schedule->departure_time->format('H:i') }}
+                                </p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg shadow-sm hover:bg-gray-100 transition">
+                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Estimasi Tiba:
+                                </p>
+                                <p class="font-medium text-gray-800 flex items-center">
+                                    <i class="fas fa-hourglass-end text-red-600 mr-2"></i>
+                                    {{ $schedule->arrival_time->format('H:i') }}
+                                </p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg shadow-sm hover:bg-gray-100 transition">
+                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Kapal:</p>
+                                <p class="font-medium text-gray-800 flex items-center">
+                                    @if (is_object($schedule->ferry))
+                                        <i class="fas fa-ship text-blue-600 mr-2"></i>
+                                        {{ $schedule->ferry->name }}
+                                    @else
+                                        <span class="text-red-500">Kapal tidak tersedia</span>
+                                    @endif
+                                </p>
+                            </div>
+                            <div
+                                class="bg-gray-50 p-4 rounded-lg shadow-sm hover:bg-gray-100 transition md:col-span-2 lg:col-span-1">
+                                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Hari Operasi:</p>
+                                <p class="font-medium text-gray-800 flex items-center">
+                                    @php
+                                        $days = explode(',', $schedule->days);
+                                        $dayNames = [
+                                            '1' => 'Senin',
+                                            '2' => 'Selasa',
+                                            '3' => 'Rabu',
+                                            '4' => 'Kamis',
+                                            '5' => 'Jumat',
+                                            '6' => 'Sabtu',
+                                            '7' => 'Minggu',
+                                            '0' => 'Minggu',
+                                        ];
+                                        $dayLabels = [];
+                                        foreach ($days as $day) {
+                                            if (isset($dayNames[$day])) {
+                                                $dayLabels[] = $dayNames[$day];
+                                            }
                                         }
-                                    }
-                                @endphp
-                                <i class="fas fa-calendar-day text-indigo-500 mr-1"></i>
-                                {{ implode(', ', $dayLabels) }}
-                            </p>
+                                    @endphp
+                                    <i class="fas fa-calendar-day text-indigo-600 mr-2"></i>
+                                <div class="flex flex-wrap gap-1">
+                                    @foreach ($dayLabels as $day)
+                                        <span class="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-md shadow-sm">
+                                            {{ $day }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                                </p>
+                            </div>
                         </div>
-
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Filter Card -->
-        <div class="mb-6">
-            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-800">
-                        <i class="fas fa-filter text-indigo-500 mr-2"></i>Filter Tanggal
+            <!-- Filter Card -->
+            <div class="mb-6">
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-5 py-4 bg-gray-50 border-b border-gray-200 rounded-t-xl">
+                        <h2 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <i class="fas fa-filter text-indigo-600 mr-2"></i>Filter Tanggal
+                        </h2>
+                    </div>
+                    <div class="p-5">
+                        <form action="{{ url()->current() }}" method="GET" id="filterForm">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div>
+                                    <label for="month"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Bulan:</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-calendar-alt text-gray-400"></i>
+                                        </div>
+                                        <select id="month" name="month"
+                                            class="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-colors">
+                                            <option value="">Semua Bulan</option>
+                                            @foreach (range(1, 12) as $month)
+                                                <option value="{{ $month }}"
+                                                    {{ request('month') == $month ? 'selected' : '' }}>
+                                                    {{ \Carbon\Carbon::create(null, $month)->translatedFormat('F') }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="year"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Tahun:</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-calendar-alt text-gray-400"></i>
+                                        </div>
+                                        <select id="year" name="year"
+                                            class="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-colors">
+                                            <option value="">Semua Tahun</option>
+                                            @foreach (range(date('Y'), date('Y') + 1) as $year)
+                                                <option value="{{ $year }}"
+                                                    {{ request('year') == $year ? 'selected' : '' }}>
+                                                    {{ $year }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="status"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Status:</label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-tag text-gray-400"></i>
+                                        </div>
+                                        <select id="status" name="status"
+                                            class="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-colors">
+                                            <option value="">Semua Status</option>
+                                            <option value="AVAILABLE"
+                                                {{ request('status') == 'AVAILABLE' ? 'selected' : '' }}>
+                                                Tersedia</option>
+                                            <option value="WEATHER_ISSUE"
+                                                {{ request('status') == 'WEATHER_ISSUE' ? 'selected' : '' }}>
+                                                Masalah Cuaca</option>
+                                            <option value="FULL" {{ request('status') == 'FULL' ? 'selected' : '' }}>
+                                                Penuh</option>
+                                            <option value="DEPARTED"
+                                                {{ request('status') == 'DEPARTED' ? 'selected' : '' }}>
+                                                Selesai</option>
+                                            <option value="UNAVAILABLE"
+                                                {{ request('status') == 'UNAVAILABLE' ? 'selected' : '' }}>
+                                                Tidak Tersedia</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="submit"
+                                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition shadow-sm flex items-center justify-center">
+                                        <i class="fas fa-filter mr-2"></i> Terapkan Filter
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dates Table Card -->
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+                <div class="px-5 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center rounded-t-xl">
+                    <h2 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-calendar-alt text-green-600 mr-2"></i>Daftar Tanggal Jadwal
                     </h2>
+                    <span class="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1.5 rounded-full shadow-sm">
+                        Total: {{ $scheduleDates->total() ?? 0 }}
+                    </span>
                 </div>
-                <div class="p-4">
-                    <form action="{{ url()->current() }}" method="GET" id="filterForm">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                                <label for="month" class="block text-sm font-medium text-gray-700 mb-1">Bulan:</label>
-                                <select id="month" name="month"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                    <option value="">Semua Bulan</option>
-                                    @foreach (range(1, 12) as $month)
-                                        <option value="{{ $month }}"
-                                            {{ request('month') == $month ? 'selected' : '' }}>
-                                            {{ \Carbon\Carbon::create(null, $month)->translatedFormat('F') }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div>
-                                <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Tahun:</label>
-                                <select id="year" name="year"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                    <option value="">Semua Tahun</option>
-                                    @foreach (range(date('Y'), date('Y') + 1) as $year)
-                                        <option value="{{ $year }}"
-                                            {{ request('year') == $year ? 'selected' : '' }}>
-                                            {{ $year }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div>
-                                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status:</label>
-                                <select id="status" name="status"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                    <option value="">Semua Status</option>
-                                    <option value="AVAILABLE" {{ request('status') == 'AVAILABLE' ? 'selected' : '' }}>
-                                        Tersedia</option>
-                                    <option value="WEATHER_ISSUE"
-                                        {{ request('status') == 'WEATHER_ISSUE' ? 'selected' : '' }}>
-                                        Masalah Cuaca</option>
-                                    <option value="FULL" {{ request('status') == 'FULL' ? 'selected' : '' }}>
-                                        Penuh</option>
-                                    <option value="DEPARTED" {{ request('status') == 'DEPARTED' ? 'selected' : '' }}>
-                                        Selesai</option>
-                                    <option value="UNAVAILABLE" {{ request('status') == 'UNAVAILABLE' ? 'selected' : '' }}>
-                                        Tidak Tersedia</option>
-                                </select>
-                            </div>
-                            <div class="flex items-end">
-                                <button type="submit"
-                                    class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded transition-colors duration-200">
-                                    <i class="fas fa-filter mr-2"></i> Terapkan Filter
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Dates Table Card -->
-        <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
-            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-gray-800">
-                    <i class="fas fa-calendar-alt text-green-500 mr-2"></i>Daftar Tanggal Jadwal
-                </h2>
-                <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                    Total: {{ $scheduleDates->total() ?? 0 }}
-                </span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white">
-                    <thead>
-                        <tr class="bg-gray-50 text-gray-600 text-left text-sm">
-                            <th class="py-3 px-4 font-medium border-b">#</th>
-                            <th class="py-3 px-4 font-medium border-b">Tanggal</th>
-                            <th class="py-3 px-4 font-medium border-b">Hari</th>
-                            <th class="py-3 px-4 font-medium border-b">Penumpang</th>
-                            <th class="py-3 px-4 font-medium border-b">Kendaraan</th>
-                            <th class="py-3 px-4 font-medium border-b">Status</th>
-                            <th class="py-3 px-4 font-medium border-b">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($scheduleDates ?? [] as $date)
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="py-3 px-4 border-b text-sm text-gray-500">{{ $loop->iteration }}</td>
-                                <td class="py-3 px-4 border-b text-sm font-medium">
-                                    {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->format('d/m/Y') : '-' }}
-                                </td>
-                                <td class="py-3 px-4 border-b text-sm">
-                                    {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->translatedFormat('l') : '-' }}
-                                </td>
-                                <td class="py-3 px-4 border-b text-sm">
-                                    @if (is_object($schedule->ferry))
-                                        <div class="flex items-center">
-                                            <i class="fas fa-users text-blue-500 mr-2"></i>
-                                            <span
-                                                class="font-medium">{{ is_object($date) ? $date->passenger_count ?? 0 : 0 }}</span>
-                                            /
-                                            <span>{{ $schedule->ferry->capacity_passenger }}</span>
-                                            @php
-                                                $passengerPercentage =
-                                                    is_object($date) && $schedule->ferry->capacity_passenger > 0
-                                                        ? min(
-                                                            100,
-                                                            round(
-                                                                (($date->passenger_count ?? 0) /
-                                                                    $schedule->ferry->capacity_passenger) *
-                                                                    100,
-                                                            ),
-                                                        )
-                                                        : 0;
-                                            @endphp
-                                            <div class="w-16 h-2 ml-2 bg-gray-200 rounded-full overflow-hidden">
-                                                <div class="h-full rounded-full {{ $passengerPercentage > 80 ? 'bg-red-500' : 'bg-blue-500' }}"
-                                                    style="width: {{ $passengerPercentage }}%"></div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 text-left text-xs font-medium uppercase tracking-wider">
+                                <th class="py-3.5 px-4 font-medium border-b">#</th>
+                                <th class="py-3.5 px-4 font-medium border-b">Tanggal</th>
+                                <th class="py-3.5 px-4 font-medium border-b">Hari</th>
+                                <th class="py-3.5 px-4 font-medium border-b">Penumpang</th>
+                                <th class="py-3.5 px-4 font-medium border-b">Kendaraan</th>
+                                <th class="py-3.5 px-4 font-medium border-b">Status</th>
+                                <th class="py-3.5 px-4 font-medium border-b">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($scheduleDates ?? [] as $date)
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="py-3 px-4 border-b text-sm text-gray-500">{{ $loop->iteration }}</td>
+                                    <td class="py-3 px-4 border-b text-sm">
+                                        <div class="font-medium flex items-center">
+                                            <div
+                                                class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center mr-2 shadow-sm">
+                                                <i class="fas fa-calendar-day"></i>
                                             </div>
+                                            {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->format('d/m/Y') : '-' }}
                                         </div>
-                                    @else
-                                        <span
-                                            class="text-gray-400">{{ is_object($date) ? $date->passenger_count ?? 0 : 0 }}
-                                            / -</span>
-                                    @endif
-                                </td>
-                                <td class="py-3 px-4 border-b text-sm">
-                                    @if (is_object($schedule->ferry))
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <div class="flex items-center text-xs">
-                                                <i class="fas fa-motorcycle text-gray-500 mr-1"></i>
+                                    </td>
+                                    <td class="py-3 px-4 border-b text-sm">
+                                        <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs">
+                                            {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->translatedFormat('l') : '-' }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 border-b text-sm">
+                                        @if (is_object($schedule->ferry))
+                                            <div class="flex items-center">
+                                                <div class="flex items-center bg-blue-50 px-2 py-1 rounded-md">
+                                                    <i class="fas fa-users text-blue-600 mr-2"></i>
+                                                    <span
+                                                        class="font-medium">{{ is_object($date) ? $date->passenger_count ?? 0 : 0 }}</span>
+                                                    <span class="text-gray-400 mx-1">/</span>
+                                                    <span>{{ $schedule->ferry->capacity_passenger }}</span>
+                                                </div>
+                                                @php
+                                                    $passengerPercentage =
+                                                        is_object($date) && $schedule->ferry->capacity_passenger > 0
+                                                            ? min(
+                                                                100,
+                                                                round(
+                                                                    (($date->passenger_count ?? 0) /
+                                                                        $schedule->ferry->capacity_passenger) *
+                                                                        100,
+                                                                ),
+                                                            )
+                                                            : 0;
+                                                @endphp
+                                                <div
+                                                    class="w-20 h-2 ml-2 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+                                                    <div class="h-full rounded-full {{ $passengerPercentage > 80 ? 'bg-red-500' : 'bg-blue-500' }}"
+                                                        style="width: {{ $passengerPercentage }}%"></div>
+                                                </div>
                                                 <span
-                                                    class="font-medium">{{ is_object($date) ? $date->motorcycle_count ?? 0 : 0 }}</span>
-                                                /
-                                                <span>{{ $schedule->ferry->capacity_vehicle_motorcycle }}</span>
+                                                    class="ml-1 text-xs text-gray-500">{{ $passengerPercentage }}%</span>
                                             </div>
-                                            <div class="flex items-center text-xs">
-                                                <i class="fas fa-car text-gray-500 mr-1"></i>
-                                                <span class="font-medium">{{ $date->car_count ?? 0 }}</span> /
-                                                <span>{{ $schedule->ferry->capacity_vehicle_car }}</span>
+                                        @else
+                                            <span
+                                                class="text-gray-400">{{ is_object($date) ? $date->passenger_count ?? 0 : 0 }}
+                                                / -</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-4 border-b text-sm">
+                                        @if (is_object($schedule->ferry))
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div class="flex items-center text-xs bg-green-50 px-2 py-1 rounded-md">
+                                                    <i class="fas fa-motorcycle text-green-600 mr-1"></i>
+                                                    <span
+                                                        class="font-medium">{{ is_object($date) ? $date->motorcycle_count ?? 0 : 0 }}</span>
+                                                    <span class="text-gray-400 mx-0.5">/</span>
+                                                    <span>{{ $schedule->ferry->capacity_vehicle_motorcycle }}</span>
+                                                </div>
+                                                <div class="flex items-center text-xs bg-yellow-50 px-2 py-1 rounded-md">
+                                                    <i class="fas fa-car text-yellow-600 mr-1"></i>
+                                                    <span class="font-medium">{{ $date->car_count ?? 0 }}</span>
+                                                    <span class="text-gray-400 mx-0.5">/</span>
+                                                    <span>{{ $schedule->ferry->capacity_vehicle_car }}</span>
+                                                </div>
+                                                <div class="flex items-center text-xs bg-purple-50 px-2 py-1 rounded-md">
+                                                    <i class="fas fa-bus text-purple-600 mr-1"></i>
+                                                    <span class="font-medium">{{ $date->bus_count ?? 0 }}</span>
+                                                    <span class="text-gray-400 mx-0.5">/</span>
+                                                    <span>{{ $schedule->ferry->capacity_vehicle_bus }}</span>
+                                                </div>
+                                                <div class="flex items-center text-xs bg-red-50 px-2 py-1 rounded-md">
+                                                    <i class="fas fa-truck text-red-600 mr-1"></i>
+                                                    <span class="font-medium">{{ $date->truck_count ?? 0 }}</span>
+                                                    <span class="text-gray-400 mx-0.5">/</span>
+                                                    <span>{{ $schedule->ferry->capacity_vehicle_truck }}</span>
+                                                </div>
                                             </div>
-                                            <div class="flex items-center text-xs">
-                                                <i class="fas fa-bus text-gray-500 mr-1"></i>
-                                                <span class="font-medium">{{ $date->bus_count ?? 0 }}</span> /
-                                                <span>{{ $schedule->ferry->capacity_vehicle_bus }}</span>
-                                            </div>
-                                            <div class="flex items-center text-xs">
-                                                <i class="fas fa-truck text-gray-500 mr-1"></i>
-                                                <span class="font-medium">{{ $date->truck_count ?? 0 }}</span> /
-                                                <span>{{ $schedule->ferry->capacity_vehicle_truck }}</span>
-                                            </div>
+                                        @else
+                                            <span class="text-gray-400">-</span>
+                                        @endif
+                                    </td>
+                                    <!-- Status display in table -->
+                                    <td class="py-3 px-4 border-b text-sm">
+                                        @if ($date->status == 'AVAILABLE')
+                                            <span
+                                                class="px-3 py-1.5 rounded-full text-xs bg-green-100 text-green-800 flex items-center w-fit shadow-sm">
+                                                <i class="fas fa-check-circle mr-1.5"></i> Tersedia
+                                            </span>
+                                        @elseif ($date->status == 'WEATHER_ISSUE')
+                                            <span
+                                                class="px-3 py-1.5 rounded-full text-xs bg-yellow-100 text-yellow-800 flex items-center w-fit shadow-sm">
+                                                <i class="fas fa-cloud-rain mr-1.5"></i> Masalah Cuaca
+                                            </span>
+                                        @elseif ($date->status == 'FULL')
+                                            <span
+                                                class="px-3 py-1.5 rounded-full text-xs bg-blue-100 text-blue-800 flex items-center w-fit shadow-sm">
+                                                <i class="fas fa-users mr-1.5"></i> Penuh
+                                            </span>
+                                        @elseif ($date->status == 'DEPARTED')
+                                            <span
+                                                class="px-3 py-1.5 rounded-full text-xs bg-purple-100 text-purple-800 flex items-center w-fit shadow-sm">
+                                                <i class="fas fa-check-double mr-1.5"></i> Selesai
+                                            </span>
+                                        @else
+                                            <span
+                                                class="px-3 py-1.5 rounded-full text-xs bg-red-100 text-red-800 flex items-center w-fit shadow-sm">
+                                                <i class="fas fa-ban mr-1.5"></i> Tidak Tersedia
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 px-4 border-b text-sm">
+                                        <div class="flex space-x-1">
+                                            <button
+                                                class="edit-date-btn bg-yellow-100 text-yellow-600 hover:bg-yellow-200 p-2 rounded-lg shadow-sm"
+                                                data-id="{{ $date->id }}" data-date="{{ $date->date }}"
+                                                data-status="{{ $date->status }}" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button
+                                                class="delete-date-btn bg-red-100 text-red-600 hover:bg-red-200 p-2 rounded-lg shadow-sm"
+                                                data-id="{{ $date->id }}"
+                                                data-date="{{ \Carbon\Carbon::parse($date->date)->format('d/m/Y') }}"
+                                                title="Hapus">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
-                                    @else
-                                        <span class="text-gray-400">-</span>
-                                    @endif
-                                </td>
-                                <!-- Status display in table -->
-                                <td class="py-3 px-4 border-b text-sm">
-                                    @if ($date->status == 'AVAILABLE')
-                                        <span
-                                            class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 flex items-center w-fit">
-                                            <i class="fas fa-check-circle mr-1"></i> Tersedia
-                                        </span>
-                                    @elseif ($date->status == 'WEATHER_ISSUE')
-                                        <span
-                                            class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 flex items-center w-fit">
-                                            <i class="fas fa-cloud-rain mr-1"></i> Masalah Cuaca
-                                        </span>
-                                    @elseif ($date->status == 'FULL')
-                                        <span
-                                            class="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 flex items-center w-fit">
-                                            <i class="fas fa-users mr-1"></i> Penuh
-                                        </span>
-                                    @elseif ($date->status == 'DEPARTED')
-                                        <span
-                                            class="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 flex items-center w-fit">
-                                            <i class="fas fa-check-double mr-1"></i> Selesai
-                                        </span>
-                                    @else
-                                        <span
-                                            class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 flex items-center w-fit">
-                                            <i class="fas fa-ban mr-1"></i> Tidak Tersedia
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="py-3 px-4 border-b text-sm">
-                                    <div class="flex space-x-1">
-                                        <button
-                                            class="edit-date-btn bg-yellow-100 text-yellow-600 hover:bg-yellow-200 p-1.5 rounded"
-                                            data-id="{{ $date->id }}" data-date="{{ $date->date }}"
-                                            data-status="{{ $date->status }}" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button
-                                            class="delete-date-btn bg-red-100 text-red-600 hover:bg-red-200 p-1.5 rounded"
-                                            data-id="{{ $date->id }}"
-                                            data-date="{{ \Carbon\Carbon::parse($date->date)->format('d/m/Y') }}"
-                                            title="Hapus">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="py-8 px-4 text-center text-gray-500">
-                                    <div class="flex flex-col items-center justify-center">
-                                        <i class="fas fa-calendar-times text-5xl text-gray-300 mb-3"></i>
-                                        <p class="text-lg font-medium mb-2">Tidak ada tanggal terjadwal</p>
-                                        <p class="text-sm mb-4">Tambahkan jadwal baru untuk kapal ini</p>
-                                        <button id="emptyAddDateBtn"
-                                            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors duration-200">
-                                            <i class="fas fa-plus mr-2"></i> Tambah Jadwal Baru
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="py-10 px-4 text-center text-gray-500">
+                                        <div class="flex flex-col items-center justify-center">
+                                            <div
+                                                class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                                <i class="fas fa-calendar-times text-gray-300 text-3xl"></i>
+                                            </div>
+                                            <p class="text-lg font-medium text-gray-700 mb-2">Tidak ada tanggal terjadwal
+                                            </p>
+                                            <p class="text-sm text-gray-500 mb-6">Tambahkan jadwal baru untuk kapal ini</p>
+                                            <button id="emptyAddDateBtn"
+                                                class="bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-5 rounded-lg transition shadow-sm">
+                                                <i class="fas fa-plus mr-2"></i> Tambah Jadwal Baru
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <!-- Pagination -->
-        @if (isset($scheduleDates) &&
-                $scheduleDates instanceof \Illuminate\Pagination\LengthAwarePaginator &&
-                $scheduleDates->hasPages())
-            <div class="mt-4 flex justify-center">
-                {{ $scheduleDates->appends(request()->except('page'))->links() }}
-            </div>
-        @endif
+            <!-- Pagination -->
+            @if (isset($scheduleDates) &&
+                    $scheduleDates instanceof \Illuminate\Pagination\LengthAwarePaginator &&
+                    $scheduleDates->hasPages())
+                <div class="mt-4 flex justify-center">
+                    {{ $scheduleDates->appends(request()->except('page'))->links() }}
+                </div>
+            @endif
+        </div>
     </div>
 
     <!-- Add Date Modal - Fixed Structure -->
     <div id="addDateModal"
         class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="flex items-center justify-center h-full w-full p-4">
-            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-xl relative animate-modalFadeIn">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-xl relative animate-modalFadeIn">
                 <div class="flex justify-between items-center mb-4 pb-3 border-b">
                     <h3 class="text-xl font-semibold text-gray-800 flex items-center">
-                        <i class="fas fa-calendar-plus text-blue-500 mr-2"></i>Tambah Jadwal
+                        <i class="fas fa-calendar-plus text-blue-600 mr-2"></i>Tambah Jadwal
                     </h3>
                     <button type="button" id="closeAddModal"
                         class="text-gray-400 hover:text-gray-600 transition-colors">
@@ -370,16 +441,16 @@
                 </div>
 
                 <!-- Operation Days Info -->
-                <div class="bg-blue-50 p-3 rounded-lg mb-4 border border-blue-200">
+                <div class="bg-blue-50 p-4 rounded-lg mb-5 border border-blue-200 shadow-sm">
                     <div class="flex">
-                        <div class="text-blue-500 mr-2">
-                            <i class="fas fa-info-circle text-xl"></i>
+                        <div class="text-blue-600 mr-3 text-xl">
+                            <i class="fas fa-info-circle"></i>
                         </div>
                         <div>
                             <p class="text-sm font-medium text-blue-800">
                                 Hari operasi: <strong>{{ implode(', ', $dayLabels) }}</strong>
                             </p>
-                            <p class="text-xs text-blue-600 mt-1">Hanya tanggal yang jatuh pada hari operasi yang dapat
+                            <p class="text-xs text-blue-700 mt-1">Hanya tanggal yang jatuh pada hari operasi yang dapat
                                 dipilih.</p>
                         </div>
                     </div>
@@ -393,7 +464,7 @@
                             Penambahan</label>
                         <div class="relative">
                             <select id="date_type" name="date_type"
-                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                                 <option value="single">Tanggal Tunggal</option>
                                 <option value="range">Rentang Tanggal</option>
                             </select>
@@ -404,42 +475,45 @@
                     </div>
 
                     <!-- Single date fields section -->
-                    <div id="singleDateFields" class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div id="singleDateFields" class="bg-gray-50 p-5 rounded-lg border border-gray-200 shadow-sm">
                         <div>
                             <label for="single_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal</label>
                             <div class="flex items-center">
                                 <div class="relative flex-grow">
                                     <input type="date" id="single_date" name="single_date"
-                                        class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        class="date-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i class="fas fa-calendar text-gray-400"></i>
                                     </div>
                                 </div>
-                                <span id="single_date_day" class="ml-2 px-2 py-1 rounded font-medium"></span>
+                                <span id="single_date_day" class="ml-2 px-3 py-1 rounded-md font-medium shadow-sm"></span>
                             </div>
                             <div id="single_date_warning"
-                                class="hidden mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-200"></div>
+                                class="hidden mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 shadow-sm">
+                            </div>
                             <div class="date-type-info text-xs text-blue-600 mt-1"></div>
                         </div>
                     </div>
 
                     <!-- Range date fields section -->
-                    <div id="rangeDateFields" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
+                    <div id="rangeDateFields"
+                        class="hidden bg-gray-50 p-5 rounded-lg border border-gray-200 shadow-sm space-y-4">
                         <div>
                             <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">Tanggal
                                 Mulai</label>
                             <div class="flex items-center">
                                 <div class="relative flex-grow">
                                     <input type="date" id="start_date" name="start_date"
-                                        class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        class="date-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i class="fas fa-calendar text-gray-400"></i>
                                     </div>
                                 </div>
-                                <span id="start_date_day" class="ml-2 px-2 py-1 rounded font-medium"></span>
+                                <span id="start_date_day" class="ml-2 px-3 py-1 rounded-md font-medium shadow-sm"></span>
                             </div>
                             <div id="start_date_warning"
-                                class="hidden mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-200"></div>
+                                class="hidden mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 shadow-sm">
+                            </div>
                         </div>
 
                         <div>
@@ -448,19 +522,21 @@
                             <div class="flex items-center">
                                 <div class="relative flex-grow">
                                     <input type="date" id="end_date" name="end_date"
-                                        class="date-input w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                        class="date-input w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i class="fas fa-calendar text-gray-400"></i>
                                     </div>
                                 </div>
-                                <span id="end_date_day" class="ml-2 px-2 py-1 rounded font-medium"></span>
+                                <span id="end_date_day" class="ml-2 px-3 py-1 rounded-md font-medium shadow-sm"></span>
                             </div>
                             <div id="end_date_warning"
-                                class="hidden mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-200"></div>
+                                class="hidden mt-2 text-xs text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 shadow-sm">
+                            </div>
                         </div>
 
                         <!-- Preview of valid operation days in the range -->
-                        <div id="range_date_preview" class="bg-white rounded p-3 border border-gray-200"></div>
+                        <div id="range_date_preview" class="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        </div>
                     </div>
 
                     <!-- Status options in add date modal -->
@@ -468,7 +544,7 @@
                         <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
                         <div class="relative">
                             <select id="status" name="status"
-                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                                 <option value="AVAILABLE">Tersedia</option>
                                 <option value="UNAVAILABLE">Tidak Tersedia</option>
                                 <option value="WEATHER_ISSUE">Masalah Cuaca</option>
@@ -482,12 +558,12 @@
 
                     <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
                         <button type="button" id="cancelAddBtn"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2.5 px-5 rounded-lg transition shadow-sm">
                             Batal
                         </button>
                         <button type="submit" id="submitBtn"
-                            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors duration-200">
-                            <i class="fas fa-save mr-1"></i> Simpan
+                            class="bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-5 rounded-lg transition shadow-sm">
+                            <i class="fas fa-save mr-2"></i> Simpan
                         </button>
                     </div>
                 </form>
@@ -499,10 +575,10 @@
     <div id="editDateModal"
         class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="flex items-center justify-center h-full w-full p-4">
-            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative animate-modalFadeIn">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md relative animate-modalFadeIn">
                 <div class="flex justify-between items-center mb-4 pb-3 border-b">
                     <h3 class="text-xl font-semibold text-gray-800 flex items-center">
-                        <i class="fas fa-edit text-yellow-500 mr-2"></i>Edit Status Jadwal
+                        <i class="fas fa-edit text-yellow-600 mr-2"></i>Edit Status Jadwal
                     </h3>
                     <button type="button" id="closeEditModal"
                         class="text-gray-400 hover:text-gray-600 transition-colors">
@@ -515,10 +591,10 @@
                     <input type="hidden" id="edit_date_id" name="date_id">
                     <input type="hidden" id="original_date" name="date">
 
-                    <div class="bg-yellow-50 p-3 rounded-lg mb-4 border border-yellow-200">
+                    <div class="bg-yellow-50 p-4 rounded-lg mb-5 border border-yellow-200 shadow-sm">
                         <div class="flex">
-                            <div class="text-yellow-500 mr-2">
-                                <i class="fas fa-info-circle text-xl"></i>
+                            <div class="text-yellow-600 mr-3 text-xl">
+                                <i class="fas fa-info-circle"></i>
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-yellow-800" id="currentDateDisplay">
@@ -528,10 +604,11 @@
                         </div>
                     </div>
 
-                    <div id="date_status_info" class="hidden bg-blue-50 p-3 rounded-lg mb-4 border border-blue-200">
+                    <div id="date_status_info"
+                        class="hidden bg-blue-50 p-4 rounded-lg mb-5 border border-blue-200 shadow-sm">
                         <div class="flex">
-                            <div class="text-blue-500 mr-2">
-                                <i class="fas fa-exclamation-circle text-xl"></i>
+                            <div class="text-blue-600 mr-3 text-xl">
+                                <i class="fas fa-exclamation-circle"></i>
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-blue-800">
@@ -546,7 +623,7 @@
                             Jadwal</label>
                         <div class="relative">
                             <select id="edit_status" name="status"
-                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                                 <option value="AVAILABLE">Tersedia</option>
                                 <option value="FULL">Penuh</option>
                                 <option value="DEPARTED">Selesai</option>
@@ -567,7 +644,7 @@
                         </label>
                         <div class="relative">
                             <input type="text" id="edit_status_reason" name="status_reason"
-                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
                                 placeholder="Contoh: Maintenance, Libur, Cuaca buruk, dll">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-comment-alt text-gray-400"></i>
@@ -577,12 +654,12 @@
 
                     <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
                         <button type="button" id="cancelEditBtn"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2.5 px-5 rounded-lg transition shadow-sm">
                             Batal
                         </button>
                         <button type="submit" id="edit_submit_btn"
-                            class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded transition-colors duration-200">
-                            <i class="fas fa-save mr-1"></i> Simpan Perubahan
+                            class="bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 px-5 rounded-lg transition shadow-sm">
+                            <i class="fas fa-save mr-2"></i> Simpan Perubahan
                         </button>
                     </div>
                 </form>
@@ -594,20 +671,22 @@
     <div id="deleteDateModal"
         class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="flex items-center justify-center h-full w-full p-4">
-            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative animate-modalFadeIn">
+            <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md relative animate-modalFadeIn">
                 <div class="flex justify-between items-center mb-4 pb-3 border-b">
                     <h3 class="text-xl font-semibold text-gray-800 flex items-center">
-                        <i class="fas fa-trash text-red-500 mr-2"></i>Konfirmasi Hapus
+                        <i class="fas fa-trash text-red-600 mr-2"></i>Konfirmasi Hapus
                     </h3>
                     <button type="button" id="closeDeleteModal"
                         class="text-gray-400 hover:text-gray-600 transition-colors">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="bg-red-50 p-4 rounded-lg mb-6 flex items-start border border-red-200">
-                    <i class="fas fa-exclamation-triangle text-red-500 text-2xl mr-3 mt-0.5"></i>
+                <div class="bg-red-50 p-5 rounded-lg mb-6 flex items-start border border-red-200 shadow-sm">
+                    <div class="text-red-600 mr-3 text-xl">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
                     <div>
-                        <p class="font-medium text-red-800 mb-1">Perhatian!</p>
+                        <p class="font-medium text-red-800 mb-2">Perhatian!</p>
                         <p id="deleteConfirmText" class="text-gray-700 text-sm">Apakah Anda yakin ingin menghapus tanggal
                             ini?</p>
                         <p class="text-gray-500 text-xs mt-2">Tindakan ini tidak dapat dibatalkan.</p>
@@ -618,12 +697,12 @@
                     @method('DELETE')
                     <div class="flex justify-end gap-2">
                         <button type="button" id="cancelDeleteBtn"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded transition-colors duration-200">
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-2.5 px-5 rounded-lg transition shadow-sm">
                             Batal
                         </button>
                         <button type="submit"
-                            class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded transition-colors duration-200">
-                            <i class="fas fa-trash mr-1"></i> Hapus
+                            class="bg-red-600 hover:bg-red-700 text-white py-2.5 px-5 rounded-lg transition shadow-sm">
+                            <i class="fas fa-trash mr-2"></i> Hapus
                         </button>
                     </div>
                 </form>
@@ -1002,12 +1081,12 @@
                 <i class="fas fa-info-circle mr-2"></i>
                 <span>Tanggal operasi yang akan dibuat (${validDates.length}):</span>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-36 overflow-y-auto bg-gray-50 p-2 rounded border border-gray-200">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-inner">
                 ${validDates.map(date => `
-                    <div class="text-xs bg-white p-1.5 rounded border border-gray-200 flex items-center">
-                        <i class="fas fa-calendar-day text-green-500 mr-1.5"></i>
+                    <div class="text-xs bg-white p-2 rounded-lg border border-gray-200 flex items-center shadow-sm hover:bg-blue-50 transition-colors">
+                        <i class="fas fa-calendar-day text-green-600 mr-1.5"></i>
                         ${formatDisplayDate(date.toISOString().split('T')[0])}
-                        <span class="ml-1 text-green-600">(${getDayName(date)})</span>
+                        <span class="ml-1 text-blue-600">(${getDayName(date)})</span>
                     </div>
                 `).join('')}
             </div>
@@ -1045,22 +1124,22 @@
                 case 'success':
                     bgColor = 'bg-green-100';
                     textColor = 'text-green-800';
-                    icon = '<i class="fas fa-check-circle text-green-500 mr-2"></i>';
+                    icon = '<i class="fas fa-check-circle text-green-600 mr-2"></i>';
                     break;
                 case 'error':
                     bgColor = 'bg-red-100';
                     textColor = 'text-red-800';
-                    icon = '<i class="fas fa-exclamation-circle text-red-500 mr-2"></i>';
+                    icon = '<i class="fas fa-exclamation-circle text-red-600 mr-2"></i>';
                     break;
                 case 'warning':
                     bgColor = 'bg-yellow-100';
                     textColor = 'text-yellow-800';
-                    icon = '<i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>';
+                    icon = '<i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>';
                     break;
                 default: // info
                     bgColor = 'bg-blue-100';
                     textColor = 'text-blue-800';
-                    icon = '<i class="fas fa-info-circle text-blue-500 mr-2"></i>';
+                    icon = '<i class="fas fa-info-circle text-blue-600 mr-2"></i>';
             }
 
             toast.className =
@@ -1293,7 +1372,7 @@
                     const formattedDate = formatDisplayDate(dateValue);
                     const dayName = getDayName(dateValue);
                     currentDateDisplay.innerHTML =
-                        `<i class="fas fa-calendar-day mr-1"></i> Jadwal tanggal <strong>${formattedDate}</strong> (${dayName})`;
+                        `<i class="fas fa-calendar-day mr-1.5"></i> Jadwal tanggal <strong>${formattedDate}</strong> (${dayName})`;
                 }
 
                 // Check if status is final
