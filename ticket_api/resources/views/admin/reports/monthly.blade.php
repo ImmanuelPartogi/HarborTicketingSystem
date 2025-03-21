@@ -1,93 +1,232 @@
+<!-- Monthly Report Template -->
 @extends('admin.layouts.app')
 
 @section('content')
-<div class="bg-white shadow rounded-lg p-6">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Laporan Bulanan</h1>
-        <a href="{{ route('admin.reports.export.monthly') }}?year={{ $year }}&month={{ $month }}" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded">
+<div class="bg-white shadow-lg rounded-xl p-5 sm:p-7 transition-all duration-300 hover:shadow-xl">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8">
+        <div class="mb-4 sm:mb-0">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center">
+                <i class="fas fa-calendar-alt text-indigo-600 mr-3"></i>
+                Laporan Bulanan
+            </h1>
+            <p class="text-gray-500 mt-1">Ringkasan aktivitas dan pendapatan bulanan</p>
+        </div>
+        <a href="{{ route('admin.reports.export.monthly') }}?year={{ $year }}&month={{ $month }}" class="flex items-center justify-center px-4 py-2.5 bg-green-600 text-white rounded-lg transition-all duration-300 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium text-sm">
             <i class="fas fa-file-excel mr-2"></i> Export Excel
         </a>
     </div>
 
-    <div class="mb-6">
-        <form action="{{ route('admin.reports.monthly') }}" method="GET" class="flex flex-wrap items-end gap-4">
-            <div>
-                <label for="month" class="block text-sm font-medium text-gray-700 mb-1">Bulan</label>
-                <select id="month" name="month" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                    @for ($i = 1; $i <= 12; $i++)
-                    <option value="{{ $i }}" {{ $month == $i ? 'selected' : '' }}>
-                        {{ \Carbon\Carbon::create(null, $i, 1)->format('F') }}
-                    </option>
-                    @endfor
-                </select>
-            </div>
-            <div>
-                <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
-                <select id="year" name="year" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
-                    @for ($i = date('Y'); $i >= date('Y') - 5; $i--)
-                    <option value="{{ $i }}" {{ $year == $i ? 'selected' : '' }}>{{ $i }}</option>
-                    @endfor
-                </select>
-            </div>
-            <div>
-                <button type="submit" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
-                    Tampilkan
-                </button>
+    <!-- Filter Section -->
+    <div class="mb-8 bg-gray-50 rounded-xl p-5 shadow-sm">
+        <form action="{{ route('admin.reports.monthly') }}" method="GET">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label for="month" class="block text-sm font-medium text-gray-700 mb-2">Bulan</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                        <select id="month" name="month" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-3 transition-all duration-200 hover:border-indigo-300">
+                            @for ($i = 1; $i <= 12; $i++)
+                            <option value="{{ $i }}" {{ $month == $i ? 'selected' : '' }}>
+                                {{ \Carbon\Carbon::create(null, $i, 1)->format('F') }}
+                            </option>
+                            @endfor
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label for="year" class="block text-sm font-medium text-gray-700 mb-2">Tahun</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <select id="year" name="year" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-3 transition-all duration-200 hover:border-indigo-300">
+                            @for ($i = date('Y'); $i >= date('Y') - 5; $i--)
+                            <option value="{{ $i }}" {{ $year == $i ? 'selected' : '' }}>{{ $i }}</option>
+                            @endfor
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-5 py-3 flex items-center justify-center transition-all duration-300">
+                        <i class="fas fa-search mr-2"></i> Tampilkan
+                    </button>
+                </div>
             </div>
         </form>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h3 class="text-lg font-semibold text-blue-700">Total Pemesanan</h3>
-            <p class="text-3xl font-bold mt-2">{{ $bookingsCount }}</p>
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-blue-50 p-5 rounded-xl border border-blue-200 transition-all duration-300 hover:shadow-md">
+            <div class="flex items-center mb-3">
+                <div class="bg-blue-100 p-3 rounded-lg mr-4">
+                    <i class="fas fa-ticket-alt text-blue-600 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-blue-700">Total Pemesanan</h3>
+            </div>
+            <p class="text-3xl font-bold text-blue-800">{{ $bookingsCount }}</p>
         </div>
-        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
-            <h3 class="text-lg font-semibold text-green-700">Total Pendapatan</h3>
-            <p class="text-3xl font-bold mt-2">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</p>
+        <div class="bg-green-50 p-5 rounded-xl border border-green-200 transition-all duration-300 hover:shadow-md">
+            <div class="flex items-center mb-3">
+                <div class="bg-green-100 p-3 rounded-lg mr-4">
+                    <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-green-700">Total Pendapatan</h3>
+            </div>
+            <p class="text-3xl font-bold text-green-800">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</p>
         </div>
-        <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
-            <h3 class="text-lg font-semibold text-purple-700">Total Penumpang</h3>
-            <p class="text-3xl font-bold mt-2">{{ $passengerCount }}</p>
+        <div class="bg-purple-50 p-5 rounded-xl border border-purple-200 transition-all duration-300 hover:shadow-md">
+            <div class="flex items-center mb-3">
+                <div class="bg-purple-100 p-3 rounded-lg mr-4">
+                    <i class="fas fa-users text-purple-600 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-purple-700">Total Penumpang</h3>
+            </div>
+            <p class="text-3xl font-bold text-purple-800">{{ $passengerCount }}</p>
         </div>
     </div>
 
+    <!-- Daily Revenue Chart -->
     <div class="mb-8">
-        <h2 class="text-xl font-semibold mb-4">Pendapatan Harian</h2>
-        <div class="bg-white p-4 rounded-lg border border-gray-200">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <i class="fas fa-chart-line text-indigo-500 mr-2"></i>
+            Pendapatan Harian
+        </h2>
+        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
             <canvas id="dailyRevenueChart" height="100"></canvas>
         </div>
     </div>
 
-    <h2 class="text-xl font-semibold mb-4">Performa Rute</h2>
+    <!-- Route Performance -->
+    <div>
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <i class="fas fa-route text-indigo-500 mr-2"></i>
+            Performa Rute
+        </h2>
 
-    <div class="overflow-x-auto">
-        <table class="min-w-full bg-white">
-            <thead>
-                <tr>
-                    <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">Rute</th>
-                    <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">Jumlah Pemesanan</th>
-                    <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">Jumlah Penumpang</th>
-                    <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">Pendapatan</th>
-                    <th class="py-3 px-4 border-b border-gray-200 text-left text-sm font-semibold text-gray-700">Rata-rata per Booking</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($routeStats as $route)
-                <tr>
-                    <td class="py-3 px-4 border-b border-gray-200 text-sm">{{ $route->origin }} - {{ $route->destination }}</td>
-                    <td class="py-3 px-4 border-b border-gray-200 text-sm">{{ $route->booking_count }}</td>
-                    <td class="py-3 px-4 border-b border-gray-200 text-sm">{{ $route->passenger_count }}</td>
-                    <td class="py-3 px-4 border-b border-gray-200 text-sm">Rp {{ number_format($route->revenue, 0, ',', '.') }}</td>
-                    <td class="py-3 px-4 border-b border-gray-200 text-sm">Rp {{ number_format($route->booking_count > 0 ? $route->revenue / $route->booking_count : 0, 0, ',', '.') }}</td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="5" class="py-3 px-4 border-b border-gray-200 text-sm text-center">Tidak ada data untuk ditampilkan</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+        <!-- Desktop view - Table -->
+        <div class="hidden md:block overflow-x-auto rounded-xl border border-gray-200">
+            <table class="min-w-full bg-white divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3.5 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rute</th>
+                        <th class="py-3.5 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah Pemesanan</th>
+                        <th class="py-3.5 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah Penumpang</th>
+                        <th class="py-3.5 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pendapatan</th>
+                        <th class="py-3.5 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rata-rata per Booking</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @forelse($routeStats as $route)
+                    <tr class="hover:bg-gray-50 transition-colors duration-200">
+                        <td class="py-3.5 px-4 text-sm font-medium text-gray-900">
+                            <div class="flex items-center">
+                                <i class="fas fa-map-marker-alt text-red-500 mr-2"></i>
+                                {{ $route->origin }}
+                                <i class="fas fa-long-arrow-alt-right mx-2 text-gray-400"></i>
+                                {{ $route->destination }}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-sm text-gray-600">
+                            <div class="flex items-center">
+                                <i class="fas fa-ticket-alt text-blue-500 mr-2"></i>
+                                {{ $route->booking_count }}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-sm text-gray-600">
+                            <div class="flex items-center">
+                                <i class="fas fa-users text-purple-500 mr-2"></i>
+                                {{ $route->passenger_count }}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-sm font-medium text-gray-900">
+                            <div class="flex items-center">
+                                <i class="fas fa-money-bill-wave text-green-500 mr-2"></i>
+                                Rp {{ number_format($route->revenue, 0, ',', '.') }}
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4 text-sm text-gray-600">
+                            <div class="flex items-center">
+                                <i class="fas fa-calculator text-indigo-500 mr-2"></i>
+                                Rp {{ number_format($route->booking_count > 0 ? $route->revenue / $route->booking_count : 0, 0, ',', '.') }}
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="5" class="py-8 px-4 text-center text-gray-500 bg-gray-50 italic">
+                            <div class="flex flex-col items-center justify-center">
+                                <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                                <p>Tidak ada data untuk ditampilkan</p>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile view - Cards -->
+        <div class="md:hidden space-y-4">
+            @forelse($routeStats as $route)
+            <div class="bg-white border rounded-xl shadow-sm p-4 transition-all duration-300 hover:shadow-md">
+                <div class="mb-3">
+                    <span class="font-medium text-gray-800 text-lg flex items-center">
+                        <i class="fas fa-map-marker-alt text-red-500 mr-2"></i>
+                        {{ $route->origin }}
+                        <i class="fas fa-long-arrow-alt-right mx-2 text-gray-400"></i>
+                        {{ $route->destination }}
+                    </span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm mb-2">
+                    <div>
+                        <p class="text-gray-500 mb-1">Jumlah Pemesanan</p>
+                        <p class="font-medium text-gray-900 flex items-center">
+                            <i class="fas fa-ticket-alt text-blue-500 mr-1.5"></i>
+                            {{ $route->booking_count }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1">Jumlah Penumpang</p>
+                        <p class="font-medium text-gray-900 flex items-center">
+                            <i class="fas fa-users text-purple-500 mr-1.5"></i>
+                            {{ $route->passenger_count }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1">Pendapatan</p>
+                        <p class="font-medium text-gray-900 flex items-center">
+                            <i class="fas fa-money-bill-wave text-green-500 mr-1.5"></i>
+                            Rp {{ number_format($route->revenue, 0, ',', '.') }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 mb-1">Rata-rata per Booking</p>
+                        <p class="font-medium text-gray-900 flex items-center">
+                            <i class="fas fa-calculator text-indigo-500 mr-1.5"></i>
+                            Rp {{ number_format($route->booking_count > 0 ? $route->revenue / $route->booking_count : 0, 0, ',', '.') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            @empty
+            <div class="bg-white border rounded-xl p-6 text-center text-gray-500 shadow-sm">
+                <div class="flex flex-col items-center justify-center">
+                    <i class="fas fa-inbox text-4xl mb-3 text-gray-300"></i>
+                    <p>Tidak ada data untuk ditampilkan</p>
+                </div>
+            </div>
+            @endforelse
+        </div>
     </div>
 </div>
 
@@ -101,6 +240,11 @@
         const labels = dailyData.map(item => item.date);
         const values = dailyData.map(item => item.total);
 
+        // Create gradient for area under line
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)');
+        gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -108,26 +252,67 @@
                 datasets: [{
                     label: 'Pendapatan Harian (Rp)',
                     data: values,
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    borderWidth: 2,
-                    tension: 0.1
+                    backgroundColor: gradient,
+                    borderColor: 'rgba(79, 70, 229, 1)',
+                    borderWidth: 3,
+                    tension: 0.2,
+                    fill: true,
+                    pointBackgroundColor: 'rgba(79, 70, 229, 1)',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: true,
                 scales: {
                     y: {
                         beginAtZero: true,
+                        grid: {
+                            color: 'rgba(156, 163, 175, 0.15)'
+                        },
                         ticks: {
                             callback: function(value) {
                                 return 'Rp ' + value.toLocaleString('id-ID');
+                            },
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(156, 163, 175, 0.15)'
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45,
+                            font: {
+                                size: 11
                             }
                         }
                     }
                 },
                 plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
                     tooltip: {
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        bodySpacing: 6,
+                        padding: 12,
+                        boxPadding: 6,
+                        usePointStyle: true,
+                        cornerRadius: 8,
                         callbacks: {
                             label: function(context) {
                                 return 'Pendapatan: Rp ' + context.raw.toLocaleString('id-ID');

@@ -5,20 +5,21 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
   // Notification channels
   static const String _bookingChannel = 'booking_notifications';
   static const String _paymentChannel = 'payment_notifications';
   static const String _departureChannel = 'departure_notifications';
   static const String _generalChannel = 'general_notifications';
-  
+
   // Notification IDs for local notifications
   static int _notificationId = 0;
-  
+
   // Callback for handling notification taps
   Function(String? payload)? onNotificationTap;
-  
+
   Future<void> initialize() async {
     // Request permission for iOS
     if (Platform.isIOS) {
@@ -28,22 +29,23 @@ class NotificationService {
         sound: true,
       );
     }
-    
+
     // Configure local notifications
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    
-    final DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
-      requestSoundPermission: true,
-      requestBadgePermission: true,
-      requestAlertPermission: true,
-      onDidReceiveLocalNotification: _onDidReceiveLocalNotification,
-    );
-    
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings(
+          requestSoundPermission: true,
+          requestBadgePermission: true,
+          requestAlertPermission: true,
+        );
+
     final InitializationSettings initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
-    
+
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse details) {
@@ -52,24 +54,24 @@ class NotificationService {
         }
       },
     );
-    
+
     // Create notification channels for Android
     if (Platform.isAndroid) {
       await _createNotificationChannels();
     }
-    
+
     // Handle FCM messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _handleRemoteMessage(message);
     });
-    
+
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       if (onNotificationTap != null) {
         onNotificationTap!(message.data['route']);
       }
     });
   }
-  
+
   Future<void> _createNotificationChannels() async {
     final List<AndroidNotificationChannel> channels = [
       AndroidNotificationChannel(
@@ -97,21 +99,23 @@ class NotificationService {
         importance: Importance.defaultImportance,
       ),
     ];
-    
+
     for (final channel in channels) {
       await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.createNotificationChannel(channel);
     }
   }
-  
+
   void _handleRemoteMessage(RemoteMessage message) {
     final notification = message.notification;
     final data = message.data;
-    
+
     if (notification != null) {
       String channelId = _generalChannel;
-      
+
       // Determine the channel based on notification type
       if (data.containsKey('type')) {
         switch (data['type']) {
@@ -134,7 +138,7 @@ class NotificationService {
             channelId = _generalChannel;
         }
       }
-      
+
       // Show local notification
       _showLocalNotification(
         title: notification.title ?? 'New Notification',
@@ -144,33 +148,34 @@ class NotificationService {
       );
     }
   }
-  
+
   Future<void> _showLocalNotification({
     required String title,
     required String body,
     String? payload,
     String channelId = 'general_notifications',
   }) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      _generalChannel,
-      'General Notifications',
-      channelDescription: 'General app notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: true,
-    );
-    
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          _generalChannel,
+          'General Notifications',
+          channelDescription: 'General app notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+        );
+
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
     );
-    
+
     const NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
-    
+
     await _localNotifications.show(
       _getNextNotificationId(),
       title,
@@ -179,23 +184,28 @@ class NotificationService {
       payload: payload,
     );
   }
-  
-  void _onDidReceiveLocalNotification(int id, String? title, String? body, String? payload) {
+
+  void _onDidReceiveLocalNotification(
+    int id,
+    String? title,
+    String? body,
+    String? payload,
+  ) {
     debugPrint('Local notification received: $id, $title, $body, $payload');
   }
-  
+
   Future<String?> getToken() async {
     return await _firebaseMessaging.getToken();
   }
-  
+
   Future<void> subscribeToTopic(String topic) async {
     await _firebaseMessaging.subscribeToTopic(topic);
   }
-  
+
   Future<void> unsubscribeFromTopic(String topic) async {
     await _firebaseMessaging.unsubscribeFromTopic(topic);
   }
-  
+
   Future<void> showBookingConfirmationNotification(String bookingNumber) async {
     await _showLocalNotification(
       title: 'Booking Confirmed',
@@ -204,7 +214,7 @@ class NotificationService {
       payload: '/booking-confirmation',
     );
   }
-  
+
   Future<void> showPaymentConfirmationNotification(String bookingNumber) async {
     await _showLocalNotification(
       title: 'Payment Successful',
@@ -213,8 +223,11 @@ class NotificationService {
       payload: '/payment-success',
     );
   }
-  
-  Future<void> showDepartureReminderNotification(String departureTime, String route) async {
+
+  Future<void> showDepartureReminderNotification(
+    String departureTime,
+    String route,
+  ) async {
     await _showLocalNotification(
       title: 'Departure Reminder',
       body: 'Your ferry from $route departs in 1 hour at $departureTime.',
@@ -222,8 +235,11 @@ class NotificationService {
       payload: '/ticket-detail',
     );
   }
-  
-  Future<void> showScheduleChangeNotification(String bookingNumber, String newTime) async {
+
+  Future<void> showScheduleChangeNotification(
+    String bookingNumber,
+    String newTime,
+  ) async {
     await _showLocalNotification(
       title: 'Schedule Change',
       body: 'Your booking $bookingNumber has been rescheduled to $newTime.',
@@ -231,24 +247,28 @@ class NotificationService {
       payload: '/booking-detail',
     );
   }
-  
-  Future<void> showPaymentReminderNotification(String bookingNumber, String expiryTime) async {
+
+  Future<void> showPaymentReminderNotification(
+    String bookingNumber,
+    String expiryTime,
+  ) async {
     await _showLocalNotification(
       title: 'Payment Reminder',
-      body: 'Your payment for booking $bookingNumber will expire in $expiryTime.',
+      body:
+          'Your payment for booking $bookingNumber will expire in $expiryTime.',
       channelId: _paymentChannel,
       payload: '/payment',
     );
   }
-  
+
   Future<void> cancelAllNotifications() async {
     await _localNotifications.cancelAll();
   }
-  
+
   Future<void> cancelNotification(int id) async {
     await _localNotifications.cancel(id);
   }
-  
+
   int _getNextNotificationId() {
     _notificationId++;
     return _notificationId;

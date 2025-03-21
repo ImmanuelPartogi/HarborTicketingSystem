@@ -63,6 +63,7 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'admin.auth' => \App\Http\Middleware\AdminAuth::class,
         'api.auth' => \App\Http\Middleware\ApiAuth::class, // Add this line
+        'verify.staff' => \App\Http\Middleware\VerifyStaffUser::class,
     ];
 
     // Di app/Http/Kernel.php, cari $routeMiddleware atau $middlewareAliases

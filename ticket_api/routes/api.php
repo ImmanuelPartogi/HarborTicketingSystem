@@ -76,7 +76,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(functi
 });
 
 // Staff/Operator Routes (requires special token)
-Route::prefix('v1/staff')->middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
-    Route::post('/tickets/validate', [TicketController::class, 'validate']);
+Route::prefix('v1/staff')->middleware(['auth:sanctum', 'verify.staff', 'throttle:60,1'])->group(function () {
+    Route::post('/tickets/validate', [TicketController::class, 'validateTicket']);
     Route::post('/tickets/mark-boarded', [TicketController::class, 'markAsBoarded']);
 });

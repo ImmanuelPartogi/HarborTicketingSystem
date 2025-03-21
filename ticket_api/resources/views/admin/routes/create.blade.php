@@ -1,13 +1,45 @@
 @extends('admin.layouts.app')
 
+@section('styles')
+<style>
+    .input-group {
+        transition: all 0.3s ease;
+    }
+    .input-group:focus-within {
+        transform: translateY(-2px);
+    }
+    .form-section {
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+    .form-section:hover {
+        border-color: #bfdbfe;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+    }
+    .header-gradient {
+        background: linear-gradient(to right, #1e40af, #3b82f6);
+    }
+    .required-badge {
+        position: relative;
+        top: -1px;
+    }
+</style>
+@endsection
+
 @section('content')
-    <div class="bg-white shadow rounded-lg overflow-hidden">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
+        <div class="header-gradient p-6 text-white">
             <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold flex items-center">
-                    <i class="fas fa-plus-circle mr-3"></i> Tambah Rute Baru
-                </h1>
+                <div>
+                    <h1 class="text-2xl font-bold flex items-center">
+                        <i class="fas fa-plus-circle mr-3"></i> Tambah Rute Baru
+                    </h1>
+                    <p class="text-blue-100 mt-1">Buat rute baru untuk pelayaran kapal</p>
+                </div>
+                <a href="{{ route('admin.routes.index') }}" class="bg-white text-blue-600 hover:bg-blue-50 transition duration-200 py-2 px-4 rounded-lg shadow-md flex items-center text-sm font-medium">
+                    <i class="fas fa-arrow-left mr-2"></i> Kembali
+                </a>
             </div>
         </div>
 
@@ -44,20 +76,34 @@
                 </div>
             @endif
 
+            <!-- Form Instructions -->
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-r">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-500 mt-1 text-lg"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-blue-700">Isi informasi rute dengan lengkap. Bidang yang bertanda <span class="text-red-500 font-semibold">*</span> wajib diisi.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Form -->
             <form action="{{ route('admin.routes.store') }}" method="POST" novalidate class="space-y-6">
                 @csrf
 
                 <!-- Basic Info Section -->
-                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div class="form-section bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
                         <i class="fas fa-info-circle mr-2 text-blue-500"></i> Informasi Dasar
                     </h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="origin" class="block text-sm font-medium text-gray-700 mb-1">Pelabuhan Asal <span
-                                    class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="origin" class="block text-sm font-medium text-gray-700 mb-1">
+                                Pelabuhan Asal
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-map-marker-alt text-gray-400"></i>
@@ -71,9 +117,11 @@
                             @enderror
                         </div>
 
-                        <div>
-                            <label for="destination" class="block text-sm font-medium text-gray-700 mb-1">Pelabuhan Tujuan
-                                <span class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="destination" class="block text-sm font-medium text-gray-700 mb-1">
+                                Pelabuhan Tujuan
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-map-marker-alt text-gray-400"></i>
@@ -88,8 +136,10 @@
                             @enderror
                         </div>
 
-                        <div>
-                            <label for="distance" class="block text-sm font-medium text-gray-700 mb-1">Jarak (KM)</label>
+                        <div class="input-group">
+                            <label for="distance" class="block text-sm font-medium text-gray-700 mb-1">
+                                Jarak (KM)
+                            </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-route text-gray-400"></i>
@@ -105,9 +155,11 @@
                             <p class="text-xs text-gray-500 mt-1">Jarak dalam kilometer</p>
                         </div>
 
-                        <div>
-                            <label for="duration" class="block text-sm font-medium text-gray-700 mb-1">Durasi (Menit) <span
-                                    class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="duration" class="block text-sm font-medium text-gray-700 mb-1">
+                                Durasi (Menit)
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-clock text-gray-400"></i>
@@ -123,9 +175,11 @@
                             <p class="text-xs text-gray-500 mt-1">Durasi perjalanan dalam menit</p>
                         </div>
 
-                        <div>
-                            <label for="base_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Dasar <span
-                                    class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="base_price" class="block text-sm font-medium text-gray-700 mb-1">
+                                Harga Dasar
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
                                 <input type="number" id="base_price" name="base_price" value="{{ old('base_price') }}"
@@ -139,9 +193,11 @@
                             <p class="text-xs text-gray-500 mt-1">Harga dasar untuk penumpang</p>
                         </div>
 
-                        <div>
-                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status <span
-                                    class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">
+                                Status
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-toggle-on text-gray-400"></i>
@@ -166,15 +222,17 @@
                 </div>
 
                 <!-- Vehicle Prices Section -->
-                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
+                <div class="form-section bg-gray-50 p-6 rounded-lg border border-gray-200 shadow-sm">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
                         <i class="fas fa-car mr-2 text-green-500"></i> Harga Tambahan untuk Kendaraan
                     </h2>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div>
-                            <label for="motorcycle_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Motor
-                                <span class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="motorcycle_price" class="block text-sm font-medium text-gray-700 mb-1">
+                                Harga Motor
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
                                 <input type="number" id="motorcycle_price" name="motorcycle_price"
@@ -187,9 +245,11 @@
                             @enderror
                         </div>
 
-                        <div>
-                            <label for="car_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Mobil <span
-                                    class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="car_price" class="block text-sm font-medium text-gray-700 mb-1">
+                                Harga Mobil
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
                                 <input type="number" id="car_price" name="car_price" value="{{ old('car_price') }}"
@@ -202,9 +262,11 @@
                             @enderror
                         </div>
 
-                        <div>
-                            <label for="bus_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Bus <span
-                                    class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="bus_price" class="block text-sm font-medium text-gray-700 mb-1">
+                                Harga Bus
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
                                 <input type="number" id="bus_price" name="bus_price" value="{{ old('bus_price') }}"
@@ -217,9 +279,11 @@
                             @enderror
                         </div>
 
-                        <div>
-                            <label for="truck_price" class="block text-sm font-medium text-gray-700 mb-1">Harga Truk <span
-                                    class="text-red-500">*</span></label>
+                        <div class="input-group">
+                            <label for="truck_price" class="block text-sm font-medium text-gray-700 mb-1">
+                                Harga Truk
+                                <span class="required-badge text-red-500 font-bold">*</span>
+                            </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">Rp</span>
                                 <input type="number" id="truck_price" name="truck_price"
@@ -323,6 +387,21 @@
                         this.value = '0';
                     }
                 });
+            });
+
+            // Status change event handler
+            const statusSelect = document.getElementById('status');
+            statusSelect.addEventListener('change', function() {
+                const selectedStatus = this.value;
+                let statusHelp = this.parentNode.parentNode.querySelector('p.text-xs');
+
+                if (selectedStatus === 'ACTIVE') {
+                    statusHelp.textContent = 'Status aktif akan membuat rute ini tersedia untuk pemesanan';
+                } else if (selectedStatus === 'WEATHER_ISSUE') {
+                    statusHelp.textContent = 'Status masalah cuaca akan menangguhkan rute ini sementara';
+                } else {
+                    statusHelp.textContent = 'Status tidak aktif akan menonaktifkan rute ini dan tidak tersedia untuk pemesanan';
+                }
             });
         });
     </script>

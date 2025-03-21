@@ -49,7 +49,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth:admi
     Route::put('schedules/{schedule}/dates/{date}', [ScheduleController::class, 'updateDate'])->name('schedules.dates.update');
     Route::put('schedules/dates/{date}', [ScheduleController::class, 'updateDate'])->name('schedules.dates.update');
     Route::delete('schedules/dates/{date}', [ScheduleController::class, 'deleteDate'])->name('schedules.dates.destroy');
-    Route::put('admin/schedules/{schedule}/dates/{dateId}',[ScheduleController::class, 'updateDate'])->name('schedules.dates.update');
+    Route::put('admin/schedules/{schedule}/dates/{dateId}', [ScheduleController::class, 'updateDate'])->name('schedules.dates.update');
     Route::put('schedules/{schedule}/reschedule', [ScheduleController::class, 'reschedule'])->name('schedules.reschedule');
     Route::delete('/schedules/dates/{dateId}', [ScheduleController::class, 'deleteDate'])->name('admin.schedules.dates.delete');
 
@@ -69,4 +69,19 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth:admi
     Route::get('reports/export/monthly', [ReportController::class, 'exportMonthly'])->name('reports.export.monthly');
     Route::get('reports/export/routes', [ReportController::class, 'exportRoutes'])->name('reports.export.routes');
     Route::get('reports/export/occupancy', [ReportController::class, 'exportOccupancy'])->name('reports.export.occupancy');
+
+    // Perbaikan route untuk Settings dan Help
+    // Tempatkan di dalam route group yang memiliki middleware 'auth:admin'
+
+    // Settings Routes
+    Route::get('/settings', [App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings');
+    Route::post('/settings/update-system', [App\Http\Controllers\Admin\SettingsController::class, 'updateSystem'])->name('settings.update-system');
+    Route::get('/settings/profile', [App\Http\Controllers\Admin\SettingsController::class, 'profile'])->name('settings.profile');
+    Route::post('/settings/update-profile', [App\Http\Controllers\Admin\SettingsController::class, 'updateProfile'])->name('settings.update-profile');
+
+    // Help Routes
+    Route::get('/help', [App\Http\Controllers\Admin\HelpController::class, 'index'])->name('help');
+    Route::get('/help/topic/{topic}', [App\Http\Controllers\Admin\HelpController::class, 'topic'])->name('help.topic');
+    Route::get('/help/contact', [App\Http\Controllers\Admin\HelpController::class, 'contactSupport'])->name('help.contact');
+    Route::post('/help/send-support', [App\Http\Controllers\Admin\HelpController::class, 'sendSupportRequest'])->name('help.send-support');
 });
