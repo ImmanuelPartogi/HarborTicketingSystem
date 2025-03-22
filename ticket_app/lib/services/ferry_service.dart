@@ -28,10 +28,56 @@ class FerryService {
         queryParams: queryParams.isNotEmpty ? queryParams : null,
       );
       
-      final List<dynamic> ferriesData = response['data'];
-      return ferriesData.map((json) => Ferry.fromJson(json)).toList();
+      print('API Response for getFerries:');
+      print('Response type: ${response.runtimeType}');
+      if (response['data'] != null) {
+        print('Data type: ${response['data'].runtimeType}');
+      } else {
+        print('Data is null in response');
+        return [];
+      }
+      
+      // Handle different response formats
+      final dynamic data = response['data'];
+      List<dynamic> ferriesData;
+      
+      if (data is Map<String, dynamic>) {
+        print('Data is Map in getFerries with keys: ${data.keys.toList()}');
+        // Jika data adalah Map, coba temukan array yang mungkin berisi data ferries
+        if (data.containsKey('ferries')) {
+          ferriesData = data['ferries'] as List<dynamic>;
+        } else if (data.containsKey('items')) {
+          ferriesData = data['items'] as List<dynamic>;
+        } else {
+          // Jika tidak ditemukan, buat list dengan satu item
+          print('Converting Map to single-item List in getFerries');
+          ferriesData = [data];
+        }
+      } else if (data is List<dynamic>) {
+        // Format yang diharapkan
+        print('Data is List in getFerries with length: ${data.length}');
+        ferriesData = data;
+      } else {
+        // Jika format tak terduga, kembalikan list kosong
+        print('Error: Unexpected data format in getFerries: ${data?.runtimeType}');
+        return [];
+      }
+      
+      try {
+        final result = ferriesData.map((json) => Ferry.fromJson(json)).toList();
+        print('Successfully parsed ${result.length} ferries');
+        return result;
+      } catch (e) {
+        print('Error converting JSON to Ferry objects: $e');
+        // Tampilkan data pertama untuk debug
+        if (ferriesData.isNotEmpty) {
+          print('First ferry data: ${ferriesData.first}');
+        }
+        return []; // Return empty list rather than throwing exception
+      }
     } catch (e) {
-      throw Exception('Failed to fetch ferries: ${e.toString()}');
+      print('Error in getFerries: ${e.toString()}');
+      return []; // Return empty list rather than throwing exception
     }
   }
 
@@ -55,14 +101,78 @@ class FerryService {
         queryParams['arrival_port'] = arrivalPort;
       }
       
+      print('Fetching routes with params: $queryParams');
       final response = await _apiService.getRoutes(
         queryParams: queryParams.isNotEmpty ? queryParams : null,
       );
       
-      final List<dynamic> routesData = response['data'];
-      return routesData.map((json) => RouteModel.fromJson(json)).toList();
+      print('API Response for getRoutes:');
+      print('Response type: ${response.runtimeType}');
+      print('Response keys: ${response.keys.toList()}');
+      
+      if (response['data'] != null) {
+        print('Data type: ${response['data'].runtimeType}');
+      } else {
+        print('Data is null in response');
+        return [];
+      }
+      
+      // Handle different response formats
+      final dynamic data = response['data'];
+      List<dynamic> routesData;
+      
+      if (data is Map<String, dynamic>) {
+        print('Data is Map in getRoutes with keys: ${data.keys.toList()}');
+        // Jika data adalah Map, coba temukan array yang mungkin berisi data routes
+        if (data.containsKey('routes')) {
+          routesData = data['routes'] as List<dynamic>;
+        } else if (data.containsKey('items')) {
+          routesData = data['items'] as List<dynamic>;
+        } else {
+          // Jika tidak ditemukan, buat list dengan satu item
+          print('Converting Map to single-item List in getRoutes');
+          routesData = [data];
+        }
+      } else if (data is List<dynamic>) {
+        // Format yang diharapkan
+        print('Data is List in getRoutes with length: ${data.length}');
+        routesData = data;
+      } else {
+        // Jika format tak terduga, kembalikan list kosong
+        print('Error: Unexpected data format in getRoutes: ${data?.runtimeType}');
+        return [];
+      }
+      
+      try {
+        if (routesData.isEmpty) {
+          print('No routes data available');
+          return [];
+        }
+        
+        // Print sample of first route data to debug
+        print('First route data sample: ${routesData.first}');
+        
+        final routes = <RouteModel>[];
+        for (var i = 0; i < routesData.length; i++) {
+          try {
+            final route = RouteModel.fromJson(routesData[i]);
+            routes.add(route);
+          } catch (e) {
+            print('Error parsing route at index $i: $e');
+            print('Problematic route data: ${routesData[i]}');
+            // Continue with next route instead of failing completely
+          }
+        }
+        
+        print('Successfully parsed ${routes.length} routes out of ${routesData.length}');
+        return routes;
+      } catch (e) {
+        print('Error converting JSON to RouteModel objects: $e');
+        return []; // Return empty list rather than throwing exception
+      }
     } catch (e) {
-      throw Exception('Failed to fetch routes: ${e.toString()}');
+      print('Error in getRoutes: ${e.toString()}');
+      return []; // Return empty list rather than throwing exception
     }
   }
 
@@ -90,19 +200,83 @@ class FerryService {
       
       final response = await _apiService.getSchedules(queryParams: queryParams);
       
-      final List<dynamic> schedulesData = response['data'];
-      return schedulesData.map((json) => Schedule.fromJson(json)).toList();
+      print('API Response for getSchedules:');
+      print('Response type: ${response.runtimeType}');
+      if (response['data'] != null) {
+        print('Data type: ${response['data'].runtimeType}');
+      } else {
+        print('Data is null in response');
+        return [];
+      }
+      
+      // Handle different response formats
+      final dynamic data = response['data'];
+      List<dynamic> schedulesData;
+      
+      if (data is Map<String, dynamic>) {
+        print('Data is Map in getSchedules with keys: ${data.keys.toList()}');
+        // Jika data adalah Map, coba temukan array yang mungkin berisi data schedules
+        if (data.containsKey('schedules')) {
+          schedulesData = data['schedules'] as List<dynamic>;
+        } else if (data.containsKey('items')) {
+          schedulesData = data['items'] as List<dynamic>;
+        } else {
+          // Jika tidak ditemukan, buat list dengan satu item
+          print('Converting Map to single-item List in getSchedules');
+          schedulesData = [data];
+        }
+      } else if (data is List<dynamic>) {
+        // Format yang diharapkan
+        print('Data is List in getSchedules with length: ${data.length}');
+        schedulesData = data;
+      } else {
+        // Jika format tak terduga, kembalikan list kosong
+        print('Error: Unexpected data format in getSchedules: ${data?.runtimeType}');
+        return [];
+      }
+      
+      try {
+        final schedules = <Schedule>[];
+        for (var i = 0; i < schedulesData.length; i++) {
+          try {
+            final schedule = Schedule.fromJson(schedulesData[i]);
+            schedules.add(schedule);
+          } catch (e) {
+            print('Error parsing schedule at index $i: $e');
+            // Continue with next schedule instead of failing completely
+          }
+        }
+        
+        print('Successfully parsed ${schedules.length} schedules out of ${schedulesData.length}');
+        return schedules;
+      } catch (e) {
+        print('Error converting JSON to Schedule objects: $e');
+        return []; // Return empty list rather than throwing exception
+      }
     } catch (e) {
-      throw Exception('Failed to fetch schedules: ${e.toString()}');
+      print('Error in getSchedules: ${e.toString()}');
+      return []; // Return empty list rather than throwing exception
     }
   }
 
-  Future<Schedule> getScheduleDetail(int id) async {
+  Future<Schedule?> getScheduleDetail(int id) async {
     try {
       final response = await _apiService.get('/api/schedules/$id');
-      return Schedule.fromJson(response['data']);
+      if (response['data'] == null) {
+        print('Schedule data is null for id: $id');
+        return null;
+      }
+      
+      try {
+        return Schedule.fromJson(response['data']);
+      } catch (e) {
+        print('Error converting JSON to Schedule object: $e');
+        print('Schedule data: ${response['data']}');
+        return null;
+      }
     } catch (e) {
-      throw Exception('Failed to fetch schedule details: ${e.toString()}');
+      print('Error in getScheduleDetail: ${e.toString()}');
+      return null; // Return null rather than throwing exception
     }
   }
 
@@ -110,7 +284,9 @@ class FerryService {
   List<String> getUniqueDeparturePorts(List<RouteModel> routes) {
     final Set<String> ports = {};
     for (var route in routes) {
-      ports.add(route.departurePort);
+      if (route.departurePort.isNotEmpty) {
+        ports.add(route.departurePort);
+      }
     }
     return ports.toList()..sort();
   }
@@ -118,7 +294,7 @@ class FerryService {
   List<String> getUniqueArrivalPorts(List<RouteModel> routes, String departurePort) {
     final Set<String> ports = {};
     for (var route in routes) {
-      if (route.departurePort == departurePort) {
+      if (route.departurePort == departurePort && route.arrivalPort.isNotEmpty) {
         ports.add(route.arrivalPort);
       }
     }
@@ -158,6 +334,10 @@ class FerryService {
 
   // Sort schedules by different criteria
   List<Schedule> sortSchedules(List<Schedule> schedules, String sortBy) {
+    if (schedules.isEmpty) {
+      return schedules;
+    }
+    
     switch (sortBy) {
       case 'departure_time_asc':
         schedules.sort((a, b) => a.departureTime.compareTo(b.departureTime));

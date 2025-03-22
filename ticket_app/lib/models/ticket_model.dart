@@ -29,19 +29,85 @@ class Ticket {
   });
 
   factory Ticket.fromJson(Map<String, dynamic> json) {
+    // Debug log untuk melihat data yang diterima
+    print('Parsing Ticket data: ${json.keys.toList()}');
+    
+    // Helper functions untuk parsing data dengan aman
+    int parseInt(dynamic value, {int defaultValue = 0}) {
+      if (value == null) return defaultValue;
+      if (value is int) return value;
+      try {
+        return int.parse(value.toString());
+      } catch (e) {
+        print('Error parsing int: $value');
+        return defaultValue;
+      }
+    }
+    
+    String parseString(dynamic value, {String defaultValue = ''}) {
+      if (value == null) return defaultValue;
+      return value.toString();
+    }
+    
+    DateTime parseDateTime(dynamic value, {DateTime? defaultValue}) {
+      if (value == null) {
+        return defaultValue ?? DateTime.now();
+      }
+      try {
+        return DateTime.parse(value.toString());
+      } catch (e) {
+        print('Error parsing datetime: $value');
+        return defaultValue ?? DateTime.now();
+      }
+    }
+    
+    DateTime? parseNullableDateTime(dynamic value) {
+      if (value == null) return null;
+      try {
+        return DateTime.parse(value.toString());
+      } catch (e) {
+        print('Error parsing nullable datetime: $value');
+        return null;
+      }
+    }
+    
     return Ticket(
-      id: json['id'],
-      bookingId: json['booking_id'],
-      scheduleId: json['schedule_id'],
-      passengerId: json['passenger_id'],
-      ticketNumber: json['ticket_number'],
-      status: json['status'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
-      usedAt: json['used_at'] != null ? DateTime.parse(json['used_at']) : null,
-      schedule: json['schedule'] != null ? Schedule.fromJson(json['schedule']) : null,
-      passenger: json['passenger'] != null ? Passenger.fromJson(json['passenger']) : null,
+      id: parseInt(json['id']),
+      bookingId: parseInt(json['booking_id']),
+      scheduleId: parseInt(json['schedule_id']),
+      passengerId: parseInt(json['passenger_id']),
+      ticketNumber: parseString(json['ticket_number']),
+      status: parseString(json['status'], defaultValue: 'unknown'),
+      createdAt: parseDateTime(json['created_at']),
+      updatedAt: parseDateTime(json['updated_at']),
+      usedAt: parseNullableDateTime(json['used_at']),
+      schedule: json['schedule'] != null ? 
+        _parseSchedule(json['schedule']) : null,
+      passenger: json['passenger'] != null ? 
+        _parsePassenger(json['passenger']) : null,
     );
+  }
+  
+  // Helper method untuk parsing schedule dengan penanganan error
+  static Schedule? _parseSchedule(dynamic scheduleData) {
+    if (scheduleData == null) return null;
+    try {
+      return Schedule.fromJson(scheduleData);
+    } catch (e) {
+      print('Error parsing schedule: $e');
+      return null;
+    }
+  }
+  
+  // Helper method untuk parsing passenger dengan penanganan error
+  static Passenger? _parsePassenger(dynamic passengerData) {
+    if (passengerData == null) return null;
+    try {
+      return Passenger.fromJson(passengerData);
+    } catch (e) {
+      print('Error parsing passenger: $e');
+      return null;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -137,19 +203,67 @@ class Passenger {
   });
 
   factory Passenger.fromJson(Map<String, dynamic> json) {
+    // Debug log untuk melihat data yang diterima
+    print('Parsing Passenger data: ${json.keys.toList()}');
+    
+    // Helper functions untuk parsing data dengan aman
+    int parseInt(dynamic value, {int defaultValue = 0}) {
+      if (value == null) return defaultValue;
+      if (value is int) return value;
+      try {
+        return int.parse(value.toString());
+      } catch (e) {
+        print('Error parsing int: $value');
+        return defaultValue;
+      }
+    }
+    
+    int? parseNullableInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      try {
+        return int.parse(value.toString());
+      } catch (e) {
+        print('Error parsing nullable int: $value');
+        return null;
+      }
+    }
+    
+    String parseString(dynamic value, {String defaultValue = ''}) {
+      if (value == null) return defaultValue;
+      return value.toString();
+    }
+    
+    String? parseNullableString(dynamic value) {
+      if (value == null) return null;
+      return value.toString();
+    }
+    
+    DateTime parseDateTime(dynamic value, {DateTime? defaultValue}) {
+      if (value == null) {
+        return defaultValue ?? DateTime.now();
+      }
+      try {
+        return DateTime.parse(value.toString());
+      } catch (e) {
+        print('Error parsing datetime: $value');
+        return defaultValue ?? DateTime.now();
+      }
+    }
+    
     return Passenger(
-      id: json['id'],
-      userId: json['user_id'],
-      name: json['name'],
-      identityNumber: json['identity_number'],
-      identityType: json['identity_type'],
-      dateOfBirth: json['date_of_birth'],
-      gender: json['gender'],
-      phone: json['phone'],
-      email: json['email'],
-      address: json['address'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      id: parseInt(json['id']),
+      userId: parseNullableInt(json['user_id']),
+      name: parseString(json['name']),
+      identityNumber: parseString(json['identity_number']),
+      identityType: parseString(json['identity_type'], defaultValue: 'unknown'),
+      dateOfBirth: parseNullableString(json['date_of_birth']),
+      gender: parseNullableString(json['gender']),
+      phone: parseNullableString(json['phone']),
+      email: parseNullableString(json['email']),
+      address: parseNullableString(json['address']),
+      createdAt: parseDateTime(json['created_at']),
+      updatedAt: parseDateTime(json['updated_at']),
     );
   }
 

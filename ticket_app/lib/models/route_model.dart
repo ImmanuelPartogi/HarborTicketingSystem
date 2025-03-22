@@ -30,20 +30,70 @@ class RouteModel {
   });
 
   factory RouteModel.fromJson(Map<String, dynamic> json) {
+    // Debug log untuk melihat data yang diterima
+    print('RouteModel.fromJson: ${json.toString()}');
+    
+    // Parse dates with null safety
+    DateTime parseDateTime(dynamic value) {
+      if (value == null) {
+        return DateTime.now(); // Default value jika null
+      }
+      try {
+        return DateTime.parse(value.toString());
+      } catch (e) {
+        print('Error parsing datetime: $value');
+        return DateTime.now(); // Fallback ke waktu saat ini jika error
+      }
+    }
+    
+    // Parse numeric values with null safety
+    double parseDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is int) return value.toDouble();
+      if (value is double) return value;
+      try {
+        return double.parse(value.toString());
+      } catch (e) {
+        return 0.0;
+      }
+    }
+    
+    int parseInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      try {
+        return int.parse(value.toString());
+      } catch (e) {
+        return 0;
+      }
+    }
+    
+    bool parseBool(dynamic value) {
+      if (value == null) return false;
+      if (value is bool) return value;
+      return value.toString().toLowerCase() == 'true' || value.toString() == '1';
+    }
+    
+    // Parse string values with null safety
+    String parseString(dynamic value) {
+      if (value == null) return '';
+      return value.toString();
+    }
+    
     return RouteModel(
-      id: json['id'],
-      departurePort: json['departure_port'],
-      arrivalPort: json['arrival_port'],
-      distance: json['distance'].toDouble(),
-      estimatedDuration: json['estimated_duration'],
-      basePrice: json['base_price'].toDouble(),
-      motorcyclePrice: json['motorcycle_price'].toDouble(),
-      carPrice: json['car_price'].toDouble(),
-      busPrice: json['bus_price'].toDouble(),
-      truckPrice: json['truck_price'].toDouble(),
-      isActive: json['is_active'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      id: parseInt(json['id']),
+      departurePort: parseString(json['departure_port']),
+      arrivalPort: parseString(json['arrival_port']),
+      distance: parseDouble(json['distance']),
+      estimatedDuration: parseInt(json['estimated_duration']),
+      basePrice: parseDouble(json['base_price']),
+      motorcyclePrice: parseDouble(json['motorcycle_price']),
+      carPrice: parseDouble(json['car_price']),
+      busPrice: parseDouble(json['bus_price']),
+      truckPrice: parseDouble(json['truck_price']),
+      isActive: parseBool(json['is_active']),
+      createdAt: parseDateTime(json['created_at']),
+      updatedAt: parseDateTime(json['updated_at']),
     );
   }
 

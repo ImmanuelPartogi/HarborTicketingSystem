@@ -30,20 +30,28 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    print('USER JSON: $json'); // Debug
+
     return User(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      phone: json['phone'],
-      identityNumber: json['identity_number'],
-      identityType: json['identity_type'],
-      dateOfBirth: json['date_of_birth'],
-      placeOfBirth: json['place_of_birth'],
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      identityNumber: json['id_number'],
+      identityType: json['id_type'],
+      dateOfBirth: json['dob'],
+      placeOfBirth: null, // Tidak ada di Laravel
       gender: json['gender'],
       address: json['address'],
-      photoUrl: json['photo_url'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      photoUrl: null, // Tidak ada di Laravel
+      createdAt:
+          json['created_at'] != null
+              ? DateTime.parse(json['created_at'])
+              : DateTime.now(),
+      updatedAt:
+          json['updated_at'] != null
+              ? DateTime.parse(json['updated_at'])
+              : DateTime.now(),
     );
   }
 
@@ -114,12 +122,21 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    // Debug untuk memahami struktur
+    print('AUTH RESPONSE JSON: $json');
+
+    // Cek apakah data berada dalam nested data object
+    final data = json.containsKey('data') ? json['data'] : json;
+
+    // Cek struktur token
+    final String token = data['token'] is String ? data['token'] : '';
+
     return AuthResponse(
-      accessToken: json['access_token'],
-      refreshToken: json['refresh_token'],
-      tokenType: json['token_type'],
-      expiresIn: json['expires_in'],
-      user: User.fromJson(json['user']),
+      accessToken: token,
+      refreshToken: '', // Laravel tidak mengembalikan refresh token
+      tokenType: 'Bearer', // Hardcoded karena Laravel hanya mengembalikan token
+      expiresIn: 3600, // Default value karena Laravel tidak spesifik
+      user: User.fromJson(data['user']),
     );
   }
 

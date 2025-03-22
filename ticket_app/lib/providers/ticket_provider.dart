@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../models/ticket_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -32,16 +30,10 @@ class TicketProvider extends ChangeNotifier {
   
   String? get ticketError => _ticketError;
   
-  // Constructor
-  TicketProvider() {
-    _initServices();
-  }
-  
-  // Initialize services
-  Future<void> _initServices() async {
-    final prefs = await SharedPreferences.getInstance();
-    _storageService = StorageService(prefs);
-    _apiService = ApiService(_storageService);
+  // Constructor yang menerima StorageService
+  TicketProvider(StorageService storageService) {
+    _storageService = storageService;
+    _apiService = ApiService(storageService);
     _ticketService = TicketService(_apiService);
   }
   
@@ -52,8 +44,10 @@ class TicketProvider extends ChangeNotifier {
     _ticketService = TicketService(_apiService);
   }
   
-  // Fetch active tickets
+  // Fetch active tickets - Modifikasi untuk menghindari notifyListeners() di awal
   Future<void> fetchActiveTickets() async {
+    if (_isLoadingActiveTickets) return; // Hindari multiple calls
+    
     _isLoadingActiveTickets = true;
     _ticketError = null;
     notifyListeners();
@@ -69,8 +63,10 @@ class TicketProvider extends ChangeNotifier {
     }
   }
   
-  // Fetch ticket history
+  // Fetch ticket history - Modifikasi untuk menghindari notifyListeners() di awal
   Future<void> fetchTicketHistory() async {
+    if (_isLoadingTicketHistory) return; // Hindari multiple calls
+    
     _isLoadingTicketHistory = true;
     _ticketError = null;
     notifyListeners();
@@ -86,8 +82,10 @@ class TicketProvider extends ChangeNotifier {
     }
   }
   
-  // Fetch ticket detail
+  // Fetch ticket detail - Modifikasi untuk menghindari notifyListeners() di awal
   Future<void> fetchTicketDetail(int id) async {
+    if (_isLoadingTicketDetail) return; // Hindari multiple calls
+    
     _isLoadingTicketDetail = true;
     _ticketError = null;
     notifyListeners();
@@ -106,21 +104,36 @@ class TicketProvider extends ChangeNotifier {
   // Set selected ticket
   void setSelectedTicket(int id) {
     // Try to find in active tickets first
-    _selectedTicket = _activeTickets.firstWhere(
-      (ticket) => ticket.id == id,
-      orElse: () => _ticketHistory.firstWhere(
-        (ticket) => ticket.id == id,
-        orElse: () => null as Ticket,
-      ),
-    );
+    Ticket? foundTicket;
     
-    if (_selectedTicket == null) {
+    for (var ticket in _activeTickets) {
+      if (ticket.id == id) {
+        foundTicket = ticket;
+        break;
+      }
+    }
+    
+    // If not found in active tickets, check history
+    if (foundTicket == null) {
+      for (var ticket in _ticketHistory) {
+        if (ticket.id == id) {
+          foundTicket = ticket;
+          break;
+        }
+      }
+    }
+    
+    if (foundTicket != null) {
+      _selectedTicket = foundTicket;
+      notifyListeners();
+    } else {
       // If not found in local lists, fetch from API
       fetchTicketDetail(id);
-    } else {
-      notifyListeners();
     }
   }
+  
+  // Metode-metode lainnya tetap sama
+  // ...
   
   // Clear selected ticket
   void clearSelectedTicket() {

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -20,10 +19,62 @@ class TicketService {
         queryParams: {'status': 'active', 'upcoming_only': '1'},
       );
       
-      final List<dynamic> ticketsData = response['data'];
-      return ticketsData.map((json) => Ticket.fromJson(json)).toList();
+      print('API Response for getActiveTickets:');
+      print('Response type: ${response.runtimeType}');
+      if (response['data'] != null) {
+        print('Data type: ${response['data'].runtimeType}');
+      } else {
+        print('Data is null in response');
+        return [];
+      }
+      
+      // Handle different response formats
+      final dynamic data = response['data'];
+      List<dynamic> ticketsData;
+      
+      if (data is Map<String, dynamic>) {
+        print('Data is Map in getActiveTickets with keys: ${data.keys.toList()}');
+        // Jika data adalah Map, coba temukan array yang mungkin berisi data tickets
+        if (data.containsKey('tickets')) {
+          ticketsData = data['tickets'] as List<dynamic>;
+        } else if (data.containsKey('items')) {
+          ticketsData = data['items'] as List<dynamic>;
+        } else {
+          // Jika tidak ditemukan, buat list dengan satu item
+          print('Converting Map to single-item List in getActiveTickets');
+          ticketsData = [data];
+        }
+      } else if (data is List<dynamic>) {
+        // Format yang diharapkan
+        print('Data is List in getActiveTickets with length: ${data.length}');
+        ticketsData = data;
+      } else {
+        // Jika format tak terduga, kembalikan list kosong
+        print('Error: Unexpected data format in getActiveTickets: ${data?.runtimeType}');
+        return [];
+      }
+      
+      try {
+        final tickets = <Ticket>[];
+        for (var i = 0; i < ticketsData.length; i++) {
+          try {
+            final ticket = Ticket.fromJson(ticketsData[i]);
+            tickets.add(ticket);
+          } catch (e) {
+            print('Error parsing ticket at index $i: $e');
+            // Continue with next ticket instead of failing completely
+          }
+        }
+        
+        print('Successfully parsed ${tickets.length} active tickets out of ${ticketsData.length}');
+        return tickets;
+      } catch (e) {
+        print('Error converting JSON to Ticket objects: $e');
+        return []; // Return empty list rather than throwing exception
+      }
     } catch (e) {
-      throw Exception('Failed to fetch active tickets: ${e.toString()}');
+      print('Error in getActiveTickets: ${e.toString()}');
+      return []; // Return empty list rather than throwing exception
     }
   }
 
@@ -33,19 +84,86 @@ class TicketService {
         queryParams: {'upcoming_only': '0'},
       );
       
-      final List<dynamic> ticketsData = response['data'];
-      return ticketsData.map((json) => Ticket.fromJson(json)).toList();
+      print('API Response for getTicketHistory:');
+      print('Response type: ${response.runtimeType}');
+      if (response['data'] != null) {
+        print('Data type: ${response['data'].runtimeType}');
+      } else {
+        print('Data is null in response');
+        return [];
+      }
+      
+      // Handle different response formats
+      final dynamic data = response['data'];
+      List<dynamic> ticketsData;
+      
+      if (data is Map<String, dynamic>) {
+        print('Data is Map in getTicketHistory with keys: ${data.keys.toList()}');
+        // Jika data adalah Map, coba temukan array yang mungkin berisi data tickets
+        if (data.containsKey('tickets')) {
+          ticketsData = data['tickets'] as List<dynamic>;
+        } else if (data.containsKey('items')) {
+          ticketsData = data['items'] as List<dynamic>;
+        } else {
+          // Jika tidak ditemukan, buat list dengan satu item
+          print('Converting Map to single-item List in getTicketHistory');
+          ticketsData = [data];
+        }
+      } else if (data is List<dynamic>) {
+        // Format yang diharapkan
+        print('Data is List in getTicketHistory with length: ${data.length}');
+        ticketsData = data;
+      } else {
+        // Jika format tak terduga, kembalikan list kosong
+        print('Error: Unexpected data format in getTicketHistory: ${data?.runtimeType}');
+        return [];
+      }
+      
+      try {
+        final tickets = <Ticket>[];
+        for (var i = 0; i < ticketsData.length; i++) {
+          try {
+            final ticket = Ticket.fromJson(ticketsData[i]);
+            tickets.add(ticket);
+          } catch (e) {
+            print('Error parsing ticket at index $i: $e');
+            // Continue with next ticket instead of failing completely
+          }
+        }
+        
+        print('Successfully parsed ${tickets.length} history tickets out of ${ticketsData.length}');
+        return tickets;
+      } catch (e) {
+        print('Error converting JSON to Ticket objects: $e');
+        return []; // Return empty list rather than throwing exception
+      }
     } catch (e) {
-      throw Exception('Failed to fetch ticket history: ${e.toString()}');
+      print('Error in getTicketHistory: ${e.toString()}');
+      return []; // Return empty list rather than throwing exception
     }
   }
 
-  Future<Ticket> getTicketDetail(int id) async {
+  Future<Ticket?> getTicketDetail(int id) async {
     try {
       final response = await _apiService.getTicketDetail(id);
-      return Ticket.fromJson(response['data']);
+      print('API Response for getTicketDetail:');
+      print('Response type: ${response.runtimeType}');
+      
+      if (response['data'] == null) {
+        print('Ticket data is null for id: $id');
+        return null;
+      }
+      
+      try {
+        return Ticket.fromJson(response['data']);
+      } catch (e) {
+        print('Error converting JSON to Ticket object: $e');
+        print('Ticket data: ${response['data']}');
+        return null;
+      }
     } catch (e) {
-      throw Exception('Failed to fetch ticket details: ${e.toString()}');
+      print('Error in getTicketDetail: ${e.toString()}');
+      return null; // Return null rather than throwing exception
     }
   }
 
@@ -188,11 +306,13 @@ class TicketService {
     final Map<int, List<Ticket>> grouped = {};
     
     for (var ticket in tickets) {
+      if (ticket.scheduleId == null) continue;
+      
       if (!grouped.containsKey(ticket.scheduleId)) {
-        grouped[ticket.scheduleId] = [];
+        grouped[ticket.scheduleId!] = [];
       }
       
-      grouped[ticket.scheduleId]!.add(ticket);
+      grouped[ticket.scheduleId!]!.add(ticket);
     }
     
     return grouped;

@@ -6,33 +6,33 @@ class ApiConfig {
   static const int receiveTimeout = AppConfig.apiReceiveTimeout;
   
   // API endpoints
-  static const String login = '/api/auth/login';
-  static const String register = '/api/auth/register';
-  static const String verifyOtp = '/api/auth/verify-otp';
-  static const String refreshToken = '/api/auth/refresh-token';
-  static const String logout = '/api/auth/logout';
+  static const String login = '/api/v1/login';
+  static const String register = '/api/v1/register';
+  static const String verifyOtp = '/api/v1/verify-otp';
+  static const String refreshToken = '/api/v1/refresh-token';
+  static const String logout = '/api/v1/logout';
   
-  static const String profile = '/api/profile';
-  static const String updateProfile = '/api/profile/update';
-  static const String changePassword = '/api/profile/change-password';
+  static const String profile = '/api/v1/profile';
+  static const String updateProfile = '/api/v1/profile/update';
+  static const String changePassword = '/api/v1/profile/change-password';
   
-  static const String ferries = '/api/ferries';
-  static const String routes = '/api/routes';
-  static const String schedules = '/api/schedules';
+  static const String ferries = '/api/v1/ferries';
+  static const String routes = '/api/v1/routes';
+  static const String schedules = '/api/v1/schedules';
   
-  static const String bookings = '/api/bookings';
-  static const String bookingDetail = '/api/bookings/{id}';
-  static const String cancelBooking = '/api/bookings/{id}/cancel';
-  static const String rescheduleBooking = '/api/bookings/{id}/reschedule';
+  static const String bookings = '/api/v1/bookings';
+  static const String bookingDetail = '/api/v1/bookings/{id}';
+  static const String cancelBooking = '/api/v1/bookings/{id}/cancel';
+  static const String rescheduleBooking = '/api/v1/bookings/{id}/reschedule';
   
-  static const String payments = '/api/payments';
-  static const String paymentStatus = '/api/payments/{id}/status';
+  static const String payments = '/api/v1/payments';
+  static const String paymentStatus = '/api/v1/payments/{id}/status';
   
-  static const String tickets = '/api/tickets';
-  static const String ticketDetail = '/api/tickets/{id}';
-  static const String validateTicket = '/api/tickets/{id}/validate';
+  static const String tickets = '/api/v1/tickets';
+  static const String ticketDetail = '/api/v1/tickets/{id}';
+  static const String validateTicket = '/api/v1/tickets/{id}/validate';
   
-  static const String notifications = '/api/notifications';
+  static const String notifications = '/api/v1/notifications';
   
   // HTTP Status Codes
   static const int statusOk = 200;

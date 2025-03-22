@@ -1,12 +1,50 @@
-import 'dart:io';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:async';
+import 'dart:convert';
+// Import io conditionally to support web
+import 'package:flutter/foundation.dart' show kIsWeb;
+// Only import dart:io if not on web
+import 'dart:io' if (dart.library.js) 'dart:html' as platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
+
+class NotificationModel {
+  final int id;
+  final String title;
+  final String message;
+  final String type;
+  final bool isRead;
+  final DateTime createdAt;
+
+  NotificationModel({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.type,
+    required this.isRead,
+    required this.createdAt,
+  });
+
+  factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    return NotificationModel(
+      id: json['id'],
+      title: json['title'],
+      message: json['message'],
+      type: json['type'],
+      isRead: json['is_read'] == 1 || json['is_read'] == true,
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+}
 
 class NotificationService {
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
+  // API Configuration
+  final String _baseUrl;
+  String? _authToken;
+
+  // Local notifications
+  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   // Notification channels
   static const String _bookingChannel = 'booking_notifications';
@@ -17,17 +55,28 @@ class NotificationService {
   // Notification IDs for local notifications
   static int _notificationId = 0;
 
+  // Stream controller for broadcasting notification events
+  final StreamController<List<NotificationModel>> _notificationStreamController = 
+      StreamController<List<NotificationModel>>.broadcast();
+  
+  // Public stream for notification events
+  Stream<List<NotificationModel>> get notificationStream => _notificationStreamController.stream;
+
   // Callback for handling notification taps
   Function(String? payload)? onNotificationTap;
 
+  // List of current notifications
+  List<NotificationModel> _currentNotifications = [];
+
+  NotificationService({
+    required String baseUrl,
+  }) : _baseUrl = baseUrl;
+
   Future<void> initialize() async {
-    // Request permission for iOS
-    if (Platform.isIOS) {
-      await _firebaseMessaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+    // Skip notification setup on web as it's not fully supported
+    if (kIsWeb) {
+      debugPrint('Web platform detected. Local notifications are limited on web.');
+      return;
     }
 
     // Configure local notifications
@@ -56,23 +105,27 @@ class NotificationService {
     );
 
     // Create notification channels for Android
-    if (Platform.isAndroid) {
-      await _createNotificationChannels();
-    }
-
-    // Handle FCM messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _handleRemoteMessage(message);
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (onNotificationTap != null) {
-        onNotificationTap!(message.data['route']);
+    // Safely check if we're on Android without using Platform directly
+    try {
+      // Only try to create Android channels on actual Android devices
+      if (!kIsWeb) {
+        final androidPlugin = _localNotifications
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+                
+        if (androidPlugin != null) {
+          await _createNotificationChannels(androidPlugin);
+        }
       }
-    });
+    } catch (e) {
+      debugPrint('Error creating notification channels: $e');
+    }
+    
+    debugPrint('HTTP Notification Service initialized successfully');
   }
 
-  Future<void> _createNotificationChannels() async {
+  Future<void> _createNotificationChannels(
+      AndroidFlutterLocalNotificationsPlugin androidPlugin) async {
     final List<AndroidNotificationChannel> channels = [
       AndroidNotificationChannel(
         _bookingChannel,
@@ -101,111 +154,89 @@ class NotificationService {
     ];
 
     for (final channel in channels) {
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.createNotificationChannel(channel);
+      await androidPlugin.createNotificationChannel(channel);
     }
   }
 
-  void _handleRemoteMessage(RemoteMessage message) {
-    final notification = message.notification;
-    final data = message.data;
-
-    if (notification != null) {
-      String channelId = _generalChannel;
-
-      // Determine the channel based on notification type
-      if (data.containsKey('type')) {
-        switch (data['type']) {
-          case 'booking':
-          case 'booking_confirmed':
-          case 'booking_cancelled':
-            channelId = _bookingChannel;
-            break;
-          case 'payment':
-          case 'payment_confirmed':
-          case 'payment_reminder':
-            channelId = _paymentChannel;
-            break;
-          case 'departure':
-          case 'departure_reminder':
-          case 'schedule_changed':
-            channelId = _departureChannel;
-            break;
-          default:
-            channelId = _generalChannel;
-        }
-      }
-
-      // Show local notification
-      _showLocalNotification(
-        title: notification.title ?? 'New Notification',
-        body: notification.body ?? '',
-        payload: data['route'],
-        channelId: channelId,
-      );
-    }
+  // Set authentication token
+  Future<void> setAuthToken(String token) async {
+    _authToken = token;
+    debugPrint('Auth token set successfully');
+  }
+  
+  // Start polling for notifications
+  void startPolling() {
+    debugPrint('Notification polling started');
+    // We'll implement this later - just a placeholder for compatibility
+  }
+  
+  // Stop polling for notifications
+  void stopPolling() {
+    debugPrint('Notification polling stopped');
+    // We'll implement this later - just a placeholder for compatibility
   }
 
+  // Fetch notifications from the API - placeholder implementation
+  Future<void> fetchNotifications() async {
+    debugPrint('Fetching notifications (placeholder)');
+    // We'll implement API fetching later
+    // For now, just emit an empty list to prevent errors
+    _notificationStreamController.add([]);
+  }
+
+  // Show a local notification
   Future<void> _showLocalNotification({
     required String title,
     required String body,
     String? payload,
     String channelId = 'general_notifications',
   }) async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          _generalChannel,
-          'General Notifications',
-          channelDescription: 'General app notifications',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: true,
-        );
+    // Skip on web
+    if (kIsWeb) {
+      debugPrint('Notification would show: $title - $body');
+      return;
+    }
+    
+    try {
+      AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        channelId,
+        channelId == _bookingChannel 
+            ? 'Booking Notifications'
+            : channelId == _paymentChannel
+                ? 'Payment Notifications'
+                : channelId == _departureChannel
+                    ? 'Departure Notifications'
+                    : 'General Notifications',
+        channelDescription: 'App notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+      );
 
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
 
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+      NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
 
-    await _localNotifications.show(
-      _getNextNotificationId(),
-      title,
-      body,
-      details,
-      payload: payload,
-    );
+      await _localNotifications.show(
+        _getNextNotificationId(),
+        title,
+        body,
+        details,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Error showing notification: $e');
+    }
   }
 
-  void _onDidReceiveLocalNotification(
-    int id,
-    String? title,
-    String? body,
-    String? payload,
-  ) {
-    debugPrint('Local notification received: $id, $title, $body, $payload');
-  }
-
-  Future<String?> getToken() async {
-    return await _firebaseMessaging.getToken();
-  }
-
-  Future<void> subscribeToTopic(String topic) async {
-    await _firebaseMessaging.subscribeToTopic(topic);
-  }
-
-  Future<void> unsubscribeFromTopic(String topic) async {
-    await _firebaseMessaging.unsubscribeFromTopic(topic);
-  }
-
+  // Utility methods for showing specific notifications
   Future<void> showBookingConfirmationNotification(String bookingNumber) async {
     await _showLocalNotification(
       title: 'Booking Confirmed',
@@ -236,41 +267,33 @@ class NotificationService {
     );
   }
 
-  Future<void> showScheduleChangeNotification(
-    String bookingNumber,
-    String newTime,
-  ) async {
-    await _showLocalNotification(
-      title: 'Schedule Change',
-      body: 'Your booking $bookingNumber has been rescheduled to $newTime.',
-      channelId: _departureChannel,
-      payload: '/booking-detail',
-    );
-  }
-
-  Future<void> showPaymentReminderNotification(
-    String bookingNumber,
-    String expiryTime,
-  ) async {
-    await _showLocalNotification(
-      title: 'Payment Reminder',
-      body:
-          'Your payment for booking $bookingNumber will expire in $expiryTime.',
-      channelId: _paymentChannel,
-      payload: '/payment',
-    );
-  }
-
+  // Helper utilities
   Future<void> cancelAllNotifications() async {
-    await _localNotifications.cancelAll();
+    if (!kIsWeb) {
+      await _localNotifications.cancelAll();
+    }
   }
 
   Future<void> cancelNotification(int id) async {
-    await _localNotifications.cancel(id);
+    if (!kIsWeb) {
+      await _localNotifications.cancel(id);
+    }
   }
 
   int _getNextNotificationId() {
     _notificationId++;
     return _notificationId;
   }
+
+  // Get token placeholder method for API compatibility
+  Future<String?> getToken() async {
+    return null; // Placeholder - we don't use Firebase tokens anymore
+  }
+
+  // Basic placeholders for compatibility
+  Future<void> clearAuthToken() async {}
+  Future<bool> markAsRead(int notificationId) async => true;
+  Future<bool> markAllAsRead() async => true;
+  int getUnreadCount() => 0;
+  List<NotificationModel> getAllNotifications() => [];
 }
