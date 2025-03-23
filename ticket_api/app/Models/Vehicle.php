@@ -1,18 +1,28 @@
 <?php
-
+// Vehicle.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Vehicle extends Model
 {
     use HasFactory;
 
     /**
+     * Vehicle type constants
+     */
+    const TYPE_MOTORCYCLE = 'MOTORCYCLE';
+    const TYPE_CAR = 'CAR';
+    const TYPE_BUS = 'BUS';
+    const TYPE_TRUCK = 'TRUCK';
+
+    /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var array<string, mixed>
      */
     protected $fillable = [
         'booking_id',
@@ -32,30 +42,36 @@ class Vehicle extends Model
 
     /**
      * Get the booking that owns the vehicle.
+     *
+     * @return BelongsTo
      */
-    public function booking()
+    public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
     /**
      * Get the ticket associated with the vehicle.
+     *
+     * @return HasOne
      */
-    public function ticket()
+    public function ticket(): HasOne
     {
         return $this->hasOne(Ticket::class);
     }
 
     /**
      * Get the type of the vehicle as a display name.
+     *
+     * @return string
      */
-    public function getTypeNameAttribute()
+    public function getTypeNameAttribute(): string
     {
         $types = [
-            'MOTORCYCLE' => 'Motor',
-            'CAR' => 'Mobil',
-            'BUS' => 'Bus',
-            'TRUCK' => 'Truk',
+            self::TYPE_MOTORCYCLE => 'Motor',
+            self::TYPE_CAR => 'Mobil',
+            self::TYPE_BUS => 'Bus',
+            self::TYPE_TRUCK => 'Truk',
         ];
 
         return $types[$this->type] ?? $this->type;
@@ -63,33 +79,71 @@ class Vehicle extends Model
 
     /**
      * Check if the vehicle is a motorcycle.
+     *
+     * @return bool
      */
-    public function isMotorcycle()
+    public function isMotorcycle(): bool
     {
-        return $this->type === 'MOTORCYCLE';
+        return $this->type === self::TYPE_MOTORCYCLE;
     }
 
     /**
      * Check if the vehicle is a car.
+     *
+     * @return bool
      */
-    public function isCar()
+    public function isCar(): bool
     {
-        return $this->type === 'CAR';
+        return $this->type === self::TYPE_CAR;
     }
 
     /**
      * Check if the vehicle is a bus.
+     *
+     * @return bool
      */
-    public function isBus()
+    public function isBus(): bool
     {
-        return $this->type === 'BUS';
+        return $this->type === self::TYPE_BUS;
     }
 
     /**
      * Check if the vehicle is a truck.
+     *
+     * @return bool
      */
-    public function isTruck()
+    public function isTruck(): bool
     {
-        return $this->type === 'TRUCK';
+        return $this->type === self::TYPE_TRUCK;
+    }
+
+    /**
+     * Get the price for this vehicle based on the booking's route
+     *
+     * @return float|null
+     */
+    public function getPrice(): ?float
+    {
+        if (!$this->booking || !$this->booking->schedule || !$this->booking->schedule->route) {
+            return null;
+        }
+
+        return $this->booking->schedule->route->getPriceForVehicle($this->type);
+    }
+
+    /**
+     * Get formatted price
+     *
+     * @return string|null
+     */
+    public function getFormattedPriceAttribute(): ?string
+    {
+        $price = $this->getPrice();
+
+        if ($price === null) {
+            return null;
+        }
+
+        return 'Rp ' . number_format($price, 0, ',', '.');
     }
 }

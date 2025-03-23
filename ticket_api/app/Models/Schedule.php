@@ -1,9 +1,11 @@
 <?php
-
+// Schedule.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
 
 class Schedule extends Model
@@ -11,9 +13,18 @@ class Schedule extends Model
     use HasFactory;
 
     /**
+     * Status constants to ensure consistency
+     */
+    const STATUS_ACTIVE = 'ACTIVE';
+    const STATUS_CANCELLED = 'CANCELLED';
+    const STATUS_DELAYED = 'DELAYED';
+    const STATUS_FULL = 'FULL';
+    const STATUS_DEPARTED = 'DEPARTED';
+
+    /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var array<string, mixed>
      */
     protected $fillable = [
         'route_id',
@@ -23,70 +34,88 @@ class Schedule extends Model
         'days',
         'status',
         'status_reason',
-        'last_adjustment_id'
+        'status_updated_at',
+        'status_expiry_date',
+        'last_adjustment_id',
     ];
 
     /**
      * The attributes that should be cast.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'departure_time' => 'datetime',
         'arrival_time' => 'datetime',
+        'status_updated_at' => 'datetime',
+        'status_expiry_date' => 'datetime',
     ];
 
     /**
      * Get the route that owns the schedule.
+     *
+     * @return BelongsTo
      */
-    public function route()
+    public function route(): BelongsTo
     {
         return $this->belongsTo(Route::class);
     }
 
     /**
      * Get the ferry that owns the schedule.
+     *
+     * @return BelongsTo
      */
-    public function ferry()
+    public function ferry(): BelongsTo
     {
         return $this->belongsTo(Ferry::class);
     }
 
     /**
      * Get the schedule dates for the schedule.
+     *
+     * @return HasMany
      */
-    public function scheduleDates()
+    public function scheduleDates(): HasMany
     {
         return $this->hasMany(ScheduleDate::class);
     }
 
     /**
      * Get the bookings for the schedule.
+     *
+     * @return HasMany
      */
-    public function bookings()
+    public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
     /**
      * Check if the schedule runs on a specific day.
+     *
+     * @param int $dayNumber
+     * @return bool
      */
-    public function runsOnDay($dayNumber)
+    public function runsOnDay(int $dayNumber): bool
     {
-        return in_array($dayNumber, explode(',', $this->days));
+        return in_array((string)$dayNumber, $this->getDaysArrayAttribute());
     }
 
     /**
      * Get upcoming schedule dates.
+     *
+     * @param int $limit
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getUpcomingDates($limit = 7)
+    public function getUpcomingDates(int $limit = 7)
     {
         $startDate = Carbon::today();
         $endDate = Carbon::today()->addDays(30);
 
         return $this->scheduleDates()
             ->whereBetween('date', [$startDate, $endDate])
-            ->whereIn('status', ['AVAILABLE', 'WEATHER_ISSUE'])
+            ->whereIn('status', [ScheduleDate::STATUS_AVAILABLE, ScheduleDate::STATUS_WEATHER_ISSUE])
             ->orderBy('date')
             ->limit($limit)
             ->get();
@@ -94,16 +123,20 @@ class Schedule extends Model
 
     /**
      * Get the days of the week as array.
+     *
+     * @return array
      */
-    public function getDaysArrayAttribute()
+    public function getDaysArrayAttribute(): array
     {
         return explode(',', $this->days);
     }
 
     /**
      * Get the days of the week as formatted string.
+     *
+     * @return string
      */
-    public function getFormattedDaysAttribute()
+    public function getFormattedDaysAttribute(): string
     {
         $dayNames = [
             '1' => 'Senin',
@@ -117,25 +150,29 @@ class Schedule extends Model
 
         $days = array_map(function ($day) use ($dayNames) {
             return $dayNames[$day] ?? '';
-        }, explode(',', $this->days));
+        }, $this->getDaysArrayAttribute());
 
         return implode(', ', $days);
     }
 
     /**
      * Check if the schedule is active.
+     *
+     * @return bool
      */
-    public function isActive()
+    public function isActive(): bool
     {
-        return $this->status === 'ACTIVE';
+        return $this->status === self::STATUS_ACTIVE;
     }
 
     /**
      * Check if the schedule is delayed.
+     *
+     * @return bool
      */
-    public function isDelayed()
+    public function isDelayed(): bool
     {
-        return $this->status === 'DELAYED';
+        return $this->status === self::STATUS_DELAYED;
     }
 
     /**
@@ -143,20 +180,17 @@ class Schedule extends Model
      *
      * @return string
      */
-    public function getStatusLabelAttribute()
+    public function getStatusLabelAttribute(): string
     {
-        switch ($this->status) {
-            case 'ACTIVE':
-                return 'Aktif';
-            case 'CANCELLED':
-                return 'Dibatalkan';
-            case 'DELAYED':
-                return 'Tertunda';
-            case 'FULL':
-                return 'Penuh';
-            default:
-                return $this->status;
-        }
+        $labels = [
+            self::STATUS_ACTIVE => 'Aktif',
+            self::STATUS_CANCELLED => 'Dibatalkan',
+            self::STATUS_DELAYED => 'Tertunda',
+            self::STATUS_FULL => 'Penuh',
+            self::STATUS_DEPARTED => 'Berangkat',
+        ];
+
+        return $labels[$this->status] ?? $this->status;
     }
 
     /**
@@ -164,30 +198,30 @@ class Schedule extends Model
      *
      * @return string
      */
-    public function getStatusColorAttribute()
+    public function getStatusColorAttribute(): string
     {
-        switch ($this->status) {
-            case 'ACTIVE':
-                return 'success';
-            case 'CANCELLED':
-                return 'danger';
-            case 'DELAYED':
-                return 'warning';
-            case 'FULL':
-                return 'info';
-            default:
-                return 'secondary';
-        }
+        $colors = [
+            self::STATUS_ACTIVE => 'success',
+            self::STATUS_CANCELLED => 'danger',
+            self::STATUS_DELAYED => 'warning',
+            self::STATUS_FULL => 'info',
+            self::STATUS_DEPARTED => 'primary',
+        ];
+
+        return $colors[$this->status] ?? 'secondary';
     }
 
     /**
      * Get the next available scheduled dates
+     *
+     * @param int $limit
+     * @return \Illuminate\Database\Eloquent\Collection
      */
-    public function getNextAvailableDates($limit = 5)
+    public function getNextAvailableDates(int $limit = 5)
     {
         return $this->scheduleDates()
             ->where('date', '>=', Carbon::today())
-            ->where('status', 'AVAILABLE')
+            ->where('status', ScheduleDate::STATUS_AVAILABLE)
             ->orderBy('date')
             ->limit($limit)
             ->get();
@@ -195,12 +229,14 @@ class Schedule extends Model
 
     /**
      * Get the weather affected dates
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getWeatherAffectedDates()
     {
         return $this->scheduleDates()
             ->where('date', '>=', Carbon::today())
-            ->where('status', 'WEATHER_ISSUE')
+            ->where('status', ScheduleDate::STATUS_WEATHER_ISSUE)
             ->orderBy('date')
             ->get();
     }
@@ -208,8 +244,10 @@ class Schedule extends Model
     /**
      * Create default schedule dates for the next 30 days
      * based on the schedule's operating days
+     *
+     * @return int Number of created dates
      */
-    public function createDefaultDatesForUpcomingMonth()
+    public function createDefaultDatesForUpcomingMonth(): int
     {
         $startDate = Carbon::today();
         $endDate = Carbon::today()->addDays(30);
@@ -228,7 +266,7 @@ class Schedule extends Model
                 ScheduleDate::updateOrCreate(
                     ['schedule_id' => $this->id, 'date' => $currentDate->format('Y-m-d')],
                     [
-                        'status' => 'AVAILABLE',
+                        'status' => ScheduleDate::STATUS_AVAILABLE,
                         'passenger_count' => 0,
                         'motorcycle_count' => 0,
                         'car_count' => 0,
@@ -238,10 +276,45 @@ class Schedule extends Model
                 );
                 $created++;
             }
+
             $currentDate->addDay();
         }
 
         return $created;
+    }
+
+    /**
+     * Update schedule status and propagate to dates
+     *
+     * @param string $status
+     * @param string|null $reason
+     * @param \DateTime|null $expiryDate
+     * @return bool
+     */
+    public function updateStatus(string $status, ?string $reason = null, ?\DateTime $expiryDate = null): bool
+    {
+        // Don't update if the status is the same
+        if ($this->status === $status) {
+            return false;
+        }
+
+        $oldStatus = $this->status;
+        $this->status = $status;
+        $this->status_reason = $reason;
+        $this->status_updated_at = now();
+        $this->status_expiry_date = $expiryDate;
+
+        $saved = $this->save();
+
+        if ($saved) {
+            // Update associated schedule dates
+            $this->updateDatesBasedOnStatus();
+
+            // Notify affected users
+            $this->notifyAffectedUsers($oldStatus, $status, $reason);
+        }
+
+        return $saved;
     }
 
     /**
@@ -251,9 +324,9 @@ class Schedule extends Model
      * @param string $status
      * @return bool
      */
-    public static function isStatusFinal($status)
+    public static function isStatusFinal(string $status): bool
     {
-        return in_array($status, ['FULL', 'DEPARTED']);
+        return in_array($status, [self::STATUS_FULL, self::STATUS_DEPARTED]);
     }
 
     /**
@@ -261,7 +334,7 @@ class Schedule extends Model
      *
      * @return bool
      */
-    public function hasStatusFinal()
+    public function hasStatusFinal(): bool
     {
         return self::isStatusFinal($this->status);
     }
@@ -272,28 +345,123 @@ class Schedule extends Model
      *
      * @return int Number of affected dates
      */
-    public function updateDatesBasedOnStatus()
+    public function updateDatesBasedOnStatus(): int
     {
         // Only process for non-active statuses
-        if ($this->status === 'ACTIVE') {
+        if ($this->status === self::STATUS_ACTIVE) {
             return 0;
         }
 
-        $affectedCount = 0;
-        $mappedStatus = $this->status === 'CANCELLED' ? 'UNAVAILABLE' : 'WEATHER_ISSUE';
+        $mappedStatus = $this->status === self::STATUS_CANCELLED
+            ? ScheduleDate::STATUS_UNAVAILABLE
+            : ScheduleDate::STATUS_WEATHER_ISSUE;
 
         // Get future dates that are not in final status
-        $futureDates = $this->scheduleDates()
+        $affectedCount = $this->scheduleDates()
             ->where('date', '>=', now()->format('Y-m-d'))
-            ->whereNotIn('status', ['FULL', 'DEPARTED']) // Don't modify final statuses
+            ->whereNotIn('status', [ScheduleDate::STATUS_FULL, ScheduleDate::STATUS_DEPARTED])
             ->update([
                 'status' => $mappedStatus,
-                'status_reason' => $this->status === 'CANCELLED'
+                'status_reason' => $this->status_reason ?? ($this->status === self::STATUS_CANCELLED
                     ? 'Jadwal tidak aktif'
-                    : 'Jadwal tertunda karena masalah cuaca',
+                    : 'Jadwal tertunda karena masalah cuaca'),
+                'status_expiry_date' => $this->status_expiry_date,
                 'modified_by_schedule' => true
             ]);
 
-        return $futureDates;
+        return $affectedCount;
+    }
+
+    /**
+     * Notify users affected by schedule status change
+     *
+     * @param string $oldStatus
+     * @param string $newStatus
+     * @param string|null $reason
+     * @return void
+     */
+    protected function notifyAffectedUsers(string $oldStatus, string $newStatus, ?string $reason = null): void
+    {
+        // Only send notifications for certain status changes
+        if ($oldStatus === self::STATUS_ACTIVE &&
+            ($newStatus === self::STATUS_CANCELLED || $newStatus === self::STATUS_DELAYED)) {
+
+            // Find affected bookings for future dates
+            $affectedBookings = $this->bookings()
+                ->where('booking_date', '>=', now()->format('Y-m-d'))
+                ->whereIn('status', [Booking::STATUS_CONFIRMED, Booking::STATUS_PENDING])
+                ->with('user')
+                ->get();
+
+            foreach ($affectedBookings as $booking) {
+                if ($booking->user) {
+                    Notification::createScheduleChangeNotification(
+                        $booking->user,
+                        $newStatus === self::STATUS_CANCELLED ? 'Jadwal Dibatalkan' : 'Jadwal Tertunda',
+                        'Jadwal untuk booking ' . $booking->booking_code . ' pada tanggal ' .
+                        $booking->booking_date->format('d M Y') . ' telah ' .
+                        ($newStatus === self::STATUS_CANCELLED ? 'dibatalkan' : 'tertunda') .
+                        ($reason ? '. Alasan: ' . $reason : '.'),
+                        [
+                            'booking_id' => $booking->id,
+                            'schedule_id' => $this->id,
+                            'status' => $newStatus,
+                        ]
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Get the formatted departure time
+     *
+     * @return string
+     */
+    public function getFormattedDepartureTimeAttribute(): string
+    {
+        return $this->departure_time->format('H:i');
+    }
+
+    /**
+     * Get the formatted arrival time
+     *
+     * @return string
+     */
+    public function getFormattedArrivalTimeAttribute(): string
+    {
+        return $this->arrival_time->format('H:i');
+    }
+
+    /**
+     * Get trip duration in minutes
+     *
+     * @return int
+     */
+    public function getTripDurationAttribute(): int
+    {
+        return $this->departure_time->diffInMinutes($this->arrival_time);
+    }
+
+    /**
+     * Get formatted trip duration
+     *
+     * @return string
+     */
+    public function getFormattedTripDurationAttribute(): string
+    {
+        $minutes = $this->getTripDurationAttribute();
+        $hours = floor($minutes / 60);
+        $remainingMinutes = $minutes % 60;
+
+        $formatted = '';
+        if ($hours > 0) {
+            $formatted .= $hours . ' jam ';
+        }
+        if ($remainingMinutes > 0) {
+            $formatted .= $remainingMinutes . ' menit';
+        }
+
+        return trim($formatted);
     }
 }
