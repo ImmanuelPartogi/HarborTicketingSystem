@@ -1,18 +1,28 @@
 <?php
-
+// Notification.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
     use HasFactory;
 
     /**
+     * Notification type constants
+     */
+    const TYPE_BOOKING = 'BOOKING';
+    const TYPE_PAYMENT = 'PAYMENT';
+    const TYPE_SCHEDULE_CHANGE = 'SCHEDULE_CHANGE';
+    const TYPE_BOARDING = 'BOARDING';
+    const TYPE_SYSTEM = 'SYSTEM';
+
+    /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var array<string, mixed>
      */
     protected $fillable = [
         'user_id',
@@ -34,8 +44,10 @@ class Notification extends Model
 
     /**
      * Get the user that owns the notification.
+     *
+     * @return BelongsTo
      */
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
@@ -45,7 +57,7 @@ class Notification extends Model
      *
      * @return array|null
      */
-    public function getDataArrayAttribute()
+    public function getDataArrayAttribute(): ?array
     {
         if (!$this->data) {
             return null;
@@ -59,7 +71,7 @@ class Notification extends Model
      *
      * @return $this
      */
-    public function markAsRead()
+    public function markAsRead(): self
     {
         $this->is_read = true;
         $this->save();
@@ -76,13 +88,13 @@ class Notification extends Model
      * @param array|null $data
      * @return static
      */
-    public static function createBookingNotification(User $user, string $title, string $message, ?array $data = null)
+    public static function createBookingNotification(User $user, string $title, string $message, ?array $data = null): self
     {
         return static::create([
             'user_id' => $user->id,
             'title' => $title,
             'message' => $message,
-            'type' => 'BOOKING',
+            'type' => self::TYPE_BOOKING,
             'is_read' => false,
             'data' => $data ? json_encode($data) : null,
         ]);
@@ -97,13 +109,13 @@ class Notification extends Model
      * @param array|null $data
      * @return static
      */
-    public static function createPaymentNotification(User $user, string $title, string $message, ?array $data = null)
+    public static function createPaymentNotification(User $user, string $title, string $message, ?array $data = null): self
     {
         return static::create([
             'user_id' => $user->id,
             'title' => $title,
             'message' => $message,
-            'type' => 'PAYMENT',
+            'type' => self::TYPE_PAYMENT,
             'is_read' => false,
             'data' => $data ? json_encode($data) : null,
         ]);
@@ -118,13 +130,13 @@ class Notification extends Model
      * @param array|null $data
      * @return static
      */
-    public static function createScheduleChangeNotification(User $user, string $title, string $message, ?array $data = null)
+    public static function createScheduleChangeNotification(User $user, string $title, string $message, ?array $data = null): self
     {
         return static::create([
             'user_id' => $user->id,
             'title' => $title,
             'message' => $message,
-            'type' => 'SCHEDULE_CHANGE',
+            'type' => self::TYPE_SCHEDULE_CHANGE,
             'is_read' => false,
             'data' => $data ? json_encode($data) : null,
         ]);
@@ -139,13 +151,34 @@ class Notification extends Model
      * @param array|null $data
      * @return static
      */
-    public static function createBoardingNotification(User $user, string $title, string $message, ?array $data = null)
+    public static function createBoardingNotification(User $user, string $title, string $message, ?array $data = null): self
     {
         return static::create([
             'user_id' => $user->id,
             'title' => $title,
             'message' => $message,
-            'type' => 'BOARDING',
+            'type' => self::TYPE_BOARDING,
+            'is_read' => false,
+            'data' => $data ? json_encode($data) : null,
+        ]);
+    }
+
+    /**
+     * Create a new system notification.
+     *
+     * @param User $user
+     * @param string $title
+     * @param string $message
+     * @param array|null $data
+     * @return static
+     */
+    public static function createSystemNotification(User $user, string $title, string $message, ?array $data = null): self
+    {
+        return static::create([
+            'user_id' => $user->id,
+            'title' => $title,
+            'message' => $message,
+            'type' => self::TYPE_SYSTEM,
             'is_read' => false,
             'data' => $data ? json_encode($data) : null,
         ]);

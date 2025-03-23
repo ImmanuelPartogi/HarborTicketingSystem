@@ -1,13 +1,21 @@
 <?php
-
+// BookingLog.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BookingLog extends Model
 {
     use HasFactory;
+
+    /**
+     * Changed by type constants
+     */
+    const CHANGED_BY_USER = 'USER';
+    const CHANGED_BY_ADMIN = 'ADMIN';
+    const CHANGED_BY_SYSTEM = 'SYSTEM';
 
     /**
      * Indicates if the model should be timestamped.
@@ -19,7 +27,7 @@ class BookingLog extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<int, string>
+     * @var array<string, mixed>
      */
     protected $fillable = [
         'booking_id',
@@ -42,18 +50,22 @@ class BookingLog extends Model
 
     /**
      * Get the booking that owns the log.
+     *
+     * @return BelongsTo
      */
-    public function booking()
+    public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
     /**
      * Get the user that changed the booking, if any.
+     *
+     * @return User|null
      */
-    public function user()
+    public function user(): ?User
     {
-        if ($this->changed_by_type === 'USER') {
+        if ($this->changed_by_type === self::CHANGED_BY_USER) {
             return User::find($this->changed_by_id);
         }
 
@@ -62,10 +74,12 @@ class BookingLog extends Model
 
     /**
      * Get the admin that changed the booking, if any.
+     *
+     * @return Admin|null
      */
-    public function admin()
+    public function admin(): ?Admin
     {
-        if ($this->changed_by_type === 'ADMIN') {
+        if ($this->changed_by_type === self::CHANGED_BY_ADMIN) {
             return Admin::find($this->changed_by_id);
         }
 
@@ -77,12 +91,12 @@ class BookingLog extends Model
      *
      * @return string
      */
-    public function getChangedByNameAttribute()
+    public function getChangedByNameAttribute(): string
     {
-        if ($this->changed_by_type === 'USER') {
+        if ($this->changed_by_type === self::CHANGED_BY_USER) {
             $user = $this->user();
             return $user ? $user->name : 'Unknown User';
-        } elseif ($this->changed_by_type === 'ADMIN') {
+        } elseif ($this->changed_by_type === self::CHANGED_BY_ADMIN) {
             $admin = $this->admin();
             return $admin ? $admin->name : 'Unknown Admin';
         } else {
@@ -105,10 +119,10 @@ class BookingLog extends Model
         Booking $booking,
         string $previousStatus,
         string $newStatus,
-        string $changedByType = 'SYSTEM',
+        string $changedByType = self::CHANGED_BY_SYSTEM,
         ?int $changedById = null,
         ?string $notes = null
-    ) {
+    ): self {
         return static::create([
             'booking_id' => $booking->id,
             'previous_status' => $previousStatus,

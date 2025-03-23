@@ -31,17 +31,24 @@ class ApiService {
     return headers;
   }
 
-  Future<dynamic> get(String endpoint, {bool requireAuth = true, Map<String, dynamic>? queryParams}) async {
+  Future<dynamic> get(
+    String endpoint, {
+    bool requireAuth = true,
+    Map<String, dynamic>? queryParams,
+  }) async {
     try {
       final headers = await _getHeaders(requireAuth: requireAuth);
-      
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint')
-          .replace(queryParameters: queryParams);
-      
-      final response = await _client.get(uri, headers: headers)
+
+      final uri = Uri.parse(
+        '${ApiConfig.baseUrl}$endpoint',
+      ).replace(queryParameters: queryParams);
+
+      debugPrint('GET Request: ${uri.toString()}');
+      final response = await _client
+          .get(uri, headers: headers)
           .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
 
-      return _handleResponse(response);
+      return _handleResponse(response, endpoint: endpoint);
     } on SocketException {
       throw Exception('No Internet connection');
     } on http.ClientException {
@@ -53,19 +60,26 @@ class ApiService {
     }
   }
 
-  Future<dynamic> post(String endpoint, {dynamic body, bool requireAuth = true}) async {
+  Future<dynamic> post(
+    String endpoint, {
+    dynamic body,
+    bool requireAuth = true,
+  }) async {
     try {
       final headers = await _getHeaders(requireAuth: requireAuth);
-      
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await _client.post(
-        uri,
-        headers: headers,
-        body: json.encode(body),
-      ).timeout(Duration(milliseconds: ApiConfig.connectTimeout));
 
-      return _handleResponse(response);
+      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+
+      debugPrint('POST Request: ${uri.toString()}');
+      if (body != null) {
+        debugPrint('POST Body: ${json.encode(body)}');
+      }
+
+      final response = await _client
+          .post(uri, headers: headers, body: json.encode(body))
+          .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
+
+      return _handleResponse(response, endpoint: endpoint);
     } on SocketException {
       throw Exception('No Internet connection');
     } on http.ClientException {
@@ -77,19 +91,26 @@ class ApiService {
     }
   }
 
-  Future<dynamic> put(String endpoint, {dynamic body, bool requireAuth = true}) async {
+  Future<dynamic> put(
+    String endpoint, {
+    dynamic body,
+    bool requireAuth = true,
+  }) async {
     try {
       final headers = await _getHeaders(requireAuth: requireAuth);
-      
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await _client.put(
-        uri,
-        headers: headers,
-        body: json.encode(body),
-      ).timeout(Duration(milliseconds: ApiConfig.connectTimeout));
 
-      return _handleResponse(response);
+      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+
+      debugPrint('PUT Request: ${uri.toString()}');
+      if (body != null) {
+        debugPrint('PUT Body: ${json.encode(body)}');
+      }
+
+      final response = await _client
+          .put(uri, headers: headers, body: json.encode(body))
+          .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
+
+      return _handleResponse(response, endpoint: endpoint);
     } on SocketException {
       throw Exception('No Internet connection');
     } on http.ClientException {
@@ -101,19 +122,21 @@ class ApiService {
     }
   }
 
-  Future<dynamic> patch(String endpoint, {dynamic body, bool requireAuth = true}) async {
+  Future<dynamic> patch(
+    String endpoint, {
+    dynamic body,
+    bool requireAuth = true,
+  }) async {
     try {
       final headers = await _getHeaders(requireAuth: requireAuth);
-      
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await _client.patch(
-        uri,
-        headers: headers,
-        body: json.encode(body),
-      ).timeout(Duration(milliseconds: ApiConfig.connectTimeout));
 
-      return _handleResponse(response);
+      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+
+      final response = await _client
+          .patch(uri, headers: headers, body: json.encode(body))
+          .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
+
+      return _handleResponse(response, endpoint: endpoint);
     } on SocketException {
       throw Exception('No Internet connection');
     } on http.ClientException {
@@ -128,15 +151,14 @@ class ApiService {
   Future<dynamic> delete(String endpoint, {bool requireAuth = true}) async {
     try {
       final headers = await _getHeaders(requireAuth: requireAuth);
-      
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-      
-      final response = await _client.delete(
-        uri,
-        headers: headers,
-      ).timeout(Duration(milliseconds: ApiConfig.connectTimeout));
 
-      return _handleResponse(response);
+      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+
+      final response = await _client
+          .delete(uri, headers: headers)
+          .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
+
+      return _handleResponse(response, endpoint: endpoint);
     } on SocketException {
       throw Exception('No Internet connection');
     } on http.ClientException {
@@ -148,32 +170,72 @@ class ApiService {
     }
   }
 
-  dynamic _handleResponse(http.Response response) {
-    switch (response.statusCode) {
-      case ApiConfig.statusOk:
-      case ApiConfig.statusCreated:
-        final responseBody = utf8.decode(response.bodyBytes);
-        if (responseBody.isEmpty) {
+  dynamic _handleResponse(http.Response response, {String endpoint = ''}) {
+    try {
+      debugPrint('API Response [${response.statusCode}] from $endpoint');
+
+      // Log response body for debugging (truncate if too long)
+      final responsePreview =
+          response.body.length > 300
+              ? '${response.body.substring(0, 300)}...'
+              : response.body;
+      debugPrint('Response preview: $responsePreview');
+
+      switch (response.statusCode) {
+        case ApiConfig.statusOk:
+        case ApiConfig.statusCreated:
+          final responseBody = utf8.decode(response.bodyBytes);
+          if (responseBody.isEmpty) {
+            return {'success': true};
+          }
+          return json.decode(responseBody);
+        case ApiConfig.statusNoContent:
           return {'success': true};
-        }
-        return json.decode(responseBody);
-      case ApiConfig.statusNoContent:
-        return {'success': true};
-      case ApiConfig.statusBadRequest:
-        final responseBody = utf8.decode(response.bodyBytes);
-        final errorData = json.decode(responseBody);
-        throw Exception(errorData['message'] ?? 'Bad request');
-      case ApiConfig.statusUnauthorized:
-        // Handle token refresh or logout
-        throw Exception('Unauthorized');
-      case ApiConfig.statusForbidden:
-        throw Exception('Access denied');
-      case ApiConfig.statusNotFound:
-        throw Exception('Resource not found');
-      case ApiConfig.statusInternalServerError:
-        throw Exception('Server error');
-      default:
-        throw Exception('Request failed with status: ${response.statusCode}');
+        case ApiConfig.statusBadRequest:
+          final responseBody = utf8.decode(response.bodyBytes);
+          final errorData = json.decode(responseBody);
+          throw Exception(errorData['message'] ?? 'Bad request');
+        case ApiConfig.statusUnauthorized:
+          // Handle token refresh or logout
+          throw Exception('Unauthorized');
+        case ApiConfig.statusForbidden:
+          throw Exception('Access denied');
+        case ApiConfig.statusNotFound:
+          throw Exception('Resource not found');
+        case 422: // Unprocessable Entity - validation errors
+          final responseBody = utf8.decode(response.bodyBytes);
+          final errorData = json.decode(responseBody);
+
+          // Log the complete error response for debugging
+          debugPrint('Validation Error Details: $errorData');
+
+          // Laravel validation errors typically come in 'errors' field
+          if (errorData.containsKey('errors')) {
+            final errors = errorData['errors'];
+            if (errors is Map && errors.isNotEmpty) {
+              // Get first error message for simplicity
+              final firstErrorField = errors.keys.first;
+              final firstErrorMessages = errors[firstErrorField];
+
+              if (firstErrorMessages is List && firstErrorMessages.isNotEmpty) {
+                return throw Exception(
+                  'Validation error: ${firstErrorMessages.first}',
+                );
+              }
+            }
+          }
+
+          // If we can't extract specific error message, use the message field or default
+          throw Exception(errorData['message'] ?? 'Validation failed');
+
+        case ApiConfig.statusInternalServerError:
+          throw Exception('Server error');
+        default:
+          throw Exception('Request failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error handling response: $e');
+      rethrow;
     }
   }
 
@@ -186,9 +248,23 @@ class ApiService {
     return result;
   }
 
-  // Specific API methods using the generic HTTP methods
+  // // OTP methods
+  // Future<dynamic> sendOtp(String phone) {
+  //   debugPrint('Sending OTP to: $phone');
+  //   return post(ApiConfig.sendOtp, body: {'phone': phone}, requireAuth: false);
+  // }
 
-  // Auth endpoints
+  // Future<dynamic> resendOtp(String phone) {
+  //   debugPrint('Resending OTP to: $phone');
+  //   return post(
+  //     ApiConfig.resendOtp,
+  //     body: {'phone': phone},
+  //     requireAuth: false,
+  //   );
+  // }
+
+  // Existing API methods...
+
   Future<dynamic> login(String phone, String password) {
     return post(
       ApiConfig.login,
@@ -198,11 +274,7 @@ class ApiService {
   }
 
   Future<dynamic> register(Map<String, dynamic> userData) {
-    return post(
-      ApiConfig.register,
-      body: userData,
-      requireAuth: false,
-    );
+    return post(ApiConfig.register, body: userData, requireAuth: false);
   }
 
   Future<dynamic> verifyOtp(String phone, String otp) {
@@ -288,7 +360,11 @@ class ApiService {
   }
 
   // Payment endpoints
-  Future<dynamic> createPayment(int bookingId, String paymentMethod, String paymentType) {
+  Future<dynamic> createPayment(
+    int bookingId,
+    String paymentMethod,
+    String paymentType,
+  ) {
     return post(
       ApiConfig.payments,
       body: {

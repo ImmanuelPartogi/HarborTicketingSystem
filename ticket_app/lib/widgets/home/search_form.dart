@@ -16,38 +16,61 @@ class SearchForm extends StatefulWidget {
 
 class _SearchFormState extends State<SearchForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   String? _selectedDeparturePort;
   String? _selectedArrivalPort;
   DateTime _selectedDate = DateTime.now();
   int _passengerCount = 1;
   bool _isLoadingPorts = false;
-  
+  bool _isDisposed = false;
+
   @override
   void initState() {
     super.initState();
-    _loadRoutes();
+    // Gunakan Future.microtask untuk menunggu build pertama selesai
+    Future.microtask(() {
+      if (!mounted) return;
+      _loadRoutes();
+    });
   }
-  
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
   Future<void> _loadRoutes() async {
+    if (!mounted) return;
+
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
-    
-    setState(() {
-      _isLoadingPorts = true;
-    });
-    
-    await ferryProvider.fetchRoutes();
-    
-    setState(() {
-      _isLoadingPorts = false;
-    });
+
+    // Update state hanya jika widget masih terpasang
+    if (mounted) {
+      setState(() {
+        _isLoadingPorts = true;
+      });
+    }
+
+    try {
+      await ferryProvider.fetchRoutes();
+    } catch (e) {
+      print('Error loading routes: $e');
+    }
+
+    // Cek lagi apakah widget masih terpasang sebelum update state
+    if (mounted) {
+      setState(() {
+        _isLoadingPorts = false;
+      });
+    }
   }
-  
+
   List<String> _getDeparturePorts() {
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
     return ferryProvider.getUniqueDeparturePorts();
   }
-  
+
   List<String> _getArrivalPorts() {
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
     if (_selectedDeparturePort == null) {
@@ -55,7 +78,7 @@ class _SearchFormState extends State<SearchForm> {
     }
     return ferryProvider.getUniqueArrivalPorts(_selectedDeparturePort!);
   }
-  
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime now = DateTime.now();
     final DateTime? picked = await showDatePicker(
@@ -77,22 +100,22 @@ class _SearchFormState extends State<SearchForm> {
         );
       },
     );
-    
-    if (picked != null && picked != _selectedDate) {
+
+    if (picked != null && picked != _selectedDate && mounted) {
       setState(() {
         _selectedDate = picked;
       });
     }
   }
-  
+
   void _updatePassengerCount(int count) {
-    if (count >= 1 && count <= 50) {
+    if (count >= 1 && count <= 50 && mounted) {
       setState(() {
         _passengerCount = count;
       });
     }
   }
-  
+
   void _search() {
     if (_formKey.currentState!.validate()) {
       Navigator.pushNamed(
@@ -113,7 +136,7 @@ class _SearchFormState extends State<SearchForm> {
     final theme = Theme.of(context);
     final departurePorts = _getDeparturePorts();
     final arrivalPorts = _getArrivalPorts();
-    
+
     return Container(
       margin: const EdgeInsets.all(AppTheme.paddingMedium),
       padding: const EdgeInsets.all(AppTheme.paddingMedium),
@@ -142,24 +165,28 @@ class _SearchFormState extends State<SearchForm> {
               ),
             ),
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Departure Port Dropdown
             _buildDropdownField(
               label: 'Departure Port',
               hint: 'Select departure port',
               icon: Icons.location_on,
               value: _selectedDeparturePort,
-              items: departurePorts.map((port) {
-                return DropdownMenuItem<String>(
-                  value: port,
-                  child: Text(port),
-                );
-              }).toList(),
+              items:
+                  departurePorts.map((port) {
+                    return DropdownMenuItem<String>(
+                      value: port,
+                      child: Text(port),
+                    );
+                  }).toList(),
               onChanged: (value) {
-                setState(() {
-                  _selectedDeparturePort = value as String?;
-                  _selectedArrivalPort = null; // Reset arrival port when departure changes
-                });
+                if (mounted) {
+                  setState(() {
+                    _selectedDeparturePort = value as String?;
+                    _selectedArrivalPort =
+                        null; // Reset arrival port when departure changes
+                  });
+                }
               },
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -169,30 +196,35 @@ class _SearchFormState extends State<SearchForm> {
               },
               isLoading: _isLoadingPorts,
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Arrival Port Dropdown
             _buildDropdownField(
               label: 'Arrival Port',
-              hint: _selectedDeparturePort == null
-                  ? 'Select departure port first'
-                  : 'Select arrival port',
+              hint:
+                  _selectedDeparturePort == null
+                      ? 'Select departure port first'
+                      : 'Select arrival port',
               icon: Icons.location_on,
               value: _selectedArrivalPort,
-              items: arrivalPorts.map((port) {
-                return DropdownMenuItem<String>(
-                  value: port,
-                  child: Text(port),
-                );
-              }).toList(),
-              onChanged: _selectedDeparturePort == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        _selectedArrivalPort = value as String?;
-                      });
-                    },
+              items:
+                  arrivalPorts.map((port) {
+                    return DropdownMenuItem<String>(
+                      value: port,
+                      child: Text(port),
+                    );
+                  }).toList(),
+              onChanged:
+                  _selectedDeparturePort == null
+                      ? null
+                      : (value) {
+                        if (mounted) {
+                          setState(() {
+                            _selectedArrivalPort = value as String?;
+                          });
+                        }
+                      },
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please select arrival port';
@@ -201,9 +233,9 @@ class _SearchFormState extends State<SearchForm> {
               },
               isLoading: _isLoadingPorts,
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Date Picker
             _buildDateField(
               label: 'Departure Date',
@@ -211,9 +243,9 @@ class _SearchFormState extends State<SearchForm> {
               icon: Icons.calendar_today,
               onTap: () => _selectDate(context),
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Passenger Count
             _buildPassengerCountField(
               label: 'Passengers',
@@ -221,9 +253,9 @@ class _SearchFormState extends State<SearchForm> {
               onDecrease: () => _updatePassengerCount(_passengerCount - 1),
               onIncrease: () => _updatePassengerCount(_passengerCount + 1),
             ),
-            
+
             const SizedBox(height: AppTheme.paddingLarge),
-            
+
             // Search Button
             CustomButton(
               text: 'Search Tickets',
@@ -237,7 +269,8 @@ class _SearchFormState extends State<SearchForm> {
       ),
     );
   }
-  
+
+  // Metode-metode pembangun UI lainnya tetap sama
   Widget _buildDropdownField({
     required String label,
     required String hint,
@@ -249,7 +282,7 @@ class _SearchFormState extends State<SearchForm> {
     bool isLoading = false,
   }) {
     final theme = Theme.of(context);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -278,22 +311,25 @@ class _SearchFormState extends State<SearchForm> {
           onChanged: isLoading ? null : onChanged,
           validator: validator,
           isExpanded: true,
-          icon: isLoading
-              ? SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
-                  ),
-                )
-              : const Icon(Icons.arrow_drop_down),
+          icon:
+              isLoading
+                  ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppTheme.primaryColor,
+                      ),
+                    ),
+                  )
+                  : const Icon(Icons.arrow_drop_down),
           dropdownColor: theme.cardColor,
         ),
       ],
     );
   }
-  
+
   Widget _buildDateField({
     required String label,
     required String value,
@@ -301,7 +337,7 @@ class _SearchFormState extends State<SearchForm> {
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -346,7 +382,7 @@ class _SearchFormState extends State<SearchForm> {
       ],
     );
   }
-  
+
   Widget _buildPassengerCountField({
     required String label,
     required int value,
@@ -354,7 +390,7 @@ class _SearchFormState extends State<SearchForm> {
     required VoidCallback onIncrease,
   }) {
     final theme = Theme.of(context);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -393,13 +429,20 @@ class _SearchFormState extends State<SearchForm> {
                 children: [
                   InkWell(
                     onTap: value > 1 ? onDecrease : null,
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusSmall,
+                    ),
                     child: Container(
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: value > 1 ? AppTheme.primaryColor : theme.disabledColor,
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                        color:
+                            value > 1
+                                ? AppTheme.primaryColor
+                                : theme.disabledColor,
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusSmall,
+                        ),
                       ),
                       child: const Icon(
                         Icons.remove,
@@ -421,13 +464,20 @@ class _SearchFormState extends State<SearchForm> {
                   ),
                   InkWell(
                     onTap: value < 50 ? onIncrease : null,
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusSmall,
+                    ),
                     child: Container(
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: value < 50 ? AppTheme.primaryColor : theme.disabledColor,
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                        color:
+                            value < 50
+                                ? AppTheme.primaryColor
+                                : theme.disabledColor,
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusSmall,
+                        ),
                       ),
                       child: const Icon(
                         Icons.add,
