@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Ferry;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\File;
 
 /**
  * @method \Illuminate\Routing\Controller middleware($middleware, array $options = [])
@@ -81,8 +81,14 @@ class FerryController extends Controller
 
             // Handle image upload
             if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('ferries', 'public');
-                $ferryData['image'] = $imagePath;
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+
+                // Move the file to the public/ferries directory
+                $image->move(public_path('ferries'), $imageName);
+
+                // Store the relative path in the database
+                $ferryData['image'] = 'ferries/' . $imageName;
             }
 
             Ferry::create($ferryData);
@@ -150,12 +156,18 @@ class FerryController extends Controller
             // Handle image upload
             if ($request->hasFile('image')) {
                 // Delete old image if exists
-                if ($ferry->image) {
-                    Storage::disk('public')->delete($ferry->image);
+                if ($ferry->image && File::exists(public_path($ferry->image))) {
+                    File::delete(public_path($ferry->image));
                 }
 
-                $imagePath = $request->file('image')->store('ferries', 'public');
-                $ferryData['image'] = $imagePath;
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+
+                // Move the file to the public/ferries directory
+                $image->move(public_path('ferries'), $imageName);
+
+                // Store the relative path in the database
+                $ferryData['image'] = 'ferries/' . $imageName;
             }
 
             $ferry->update($ferryData);
@@ -197,8 +209,8 @@ class FerryController extends Controller
             }
 
             // Delete image if exists
-            if ($ferry->image) {
-                Storage::disk('public')->delete($ferry->image);
+            if ($ferry->image && File::exists(public_path($ferry->image))) {
+                File::delete(public_path($ferry->image));
             }
 
             $ferry->delete();

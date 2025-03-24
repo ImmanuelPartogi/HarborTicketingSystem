@@ -45,8 +45,9 @@ class Schedule extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'departure_time' => 'datetime',
-        'arrival_time' => 'datetime',
+        // Changed from datetime to string to match the database schema
+        'departure_time' => 'string',
+        'arrival_time' => 'string',
         'status_updated_at' => 'datetime',
         'status_expiry_date' => 'datetime',
     ];
@@ -383,8 +384,10 @@ class Schedule extends Model
     protected function notifyAffectedUsers(string $oldStatus, string $newStatus, ?string $reason = null): void
     {
         // Only send notifications for certain status changes
-        if ($oldStatus === self::STATUS_ACTIVE &&
-            ($newStatus === self::STATUS_CANCELLED || $newStatus === self::STATUS_DELAYED)) {
+        if (
+            $oldStatus === self::STATUS_ACTIVE &&
+            ($newStatus === self::STATUS_CANCELLED || $newStatus === self::STATUS_DELAYED)
+        ) {
 
             // Find affected bookings for future dates
             $affectedBookings = $this->bookings()
@@ -399,9 +402,9 @@ class Schedule extends Model
                         $booking->user,
                         $newStatus === self::STATUS_CANCELLED ? 'Jadwal Dibatalkan' : 'Jadwal Tertunda',
                         'Jadwal untuk booking ' . $booking->booking_code . ' pada tanggal ' .
-                        $booking->booking_date->format('d M Y') . ' telah ' .
-                        ($newStatus === self::STATUS_CANCELLED ? 'dibatalkan' : 'tertunda') .
-                        ($reason ? '. Alasan: ' . $reason : '.'),
+                            $booking->booking_date->format('d M Y') . ' telah ' .
+                            ($newStatus === self::STATUS_CANCELLED ? 'dibatalkan' : 'tertunda') .
+                            ($reason ? '. Alasan: ' . $reason : '.'),
                         [
                             'booking_id' => $booking->id,
                             'schedule_id' => $this->id,
@@ -420,6 +423,11 @@ class Schedule extends Model
      */
     public function getFormattedDepartureTimeAttribute(): string
     {
+        // Check if it's already a string and convert properly
+        if (is_string($this->departure_time)) {
+            return $this->departure_time;
+        }
+
         return $this->departure_time->format('H:i');
     }
 
@@ -430,8 +438,14 @@ class Schedule extends Model
      */
     public function getFormattedArrivalTimeAttribute(): string
     {
+        // Check if it's already a string and convert properly
+        if (is_string($this->arrival_time)) {
+            return $this->arrival_time;
+        }
+
         return $this->arrival_time->format('H:i');
     }
+
 
     /**
      * Get trip duration in minutes
@@ -440,7 +454,11 @@ class Schedule extends Model
      */
     public function getTripDurationAttribute(): int
     {
-        return $this->departure_time->diffInMinutes($this->arrival_time);
+        // Convert string times to Carbon instances for calculation
+        $departureTime = Carbon::createFromFormat('H:i', $this->departure_time);
+        $arrivalTime = Carbon::createFromFormat('H:i', $this->arrival_time);
+
+        return $departureTime->diffInMinutes($arrivalTime);
     }
 
     /**

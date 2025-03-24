@@ -102,45 +102,88 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Store a newly created schedule.
+     * Store a newly created schedule with enhanced error handling.
      *
      * @param Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'route_id' => 'required|exists:routes,id',
-            'ferry_id' => 'required|exists:ferries,id',
-            'departure_time' => 'required|date_format:H:i',
-            'arrival_time' => 'required|date_format:H:i',
-            'days' => 'required|array|min:1',
-            'days.*' => 'required|in:1,2,3,4,5,6,7',
-            'status' => 'required|in:ACTIVE,CANCELLED,DELAYED,FULL',
-        ]);
-
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
-
         try {
+            // Log all data received for debugging
+            Log::info('Schedule store attempt with data:', $request->all());
+
+            $validator = Validator::make($request->all(), [
+                'route_id' => 'required|exists:routes,id',
+                'ferry_id' => 'required|exists:ferries,id',
+                'departure_time' => 'required|date_format:H:i',
+                'arrival_time' => 'required|date_format:H:i',
+                'days' => 'required|array|min:1',
+                'days.*' => 'required|in:1,2,3,4,5,6,7',
+                'status' => 'required|in:ACTIVE,CANCELLED,DELAYED,FULL',
+            ]);
+
+            if ($validator->fails()) {
+                Log::error('Validation failed:', $validator->errors()->toArray());
+                return back()->withErrors($validator)->withInput();
+            }
+
             // Format days as comma-separated string
             $days = implode(',', $request->days);
 
-            Schedule::create([
-                'route_id' => $request->route_id,
-                'ferry_id' => $request->ferry_id,
-                'departure_time' => $request->departure_time,
-                'arrival_time' => $request->arrival_time,
-                'days' => $days,
-                'status' => $request->status,
+            // Log processing step
+            Log::info('Creating schedule with days: ' . $days);
+
+            DB::beginTransaction();
+
+            try {
+                // Create schedule using a more explicit approach
+                $schedule = new Schedule();
+                $schedule->route_id = $request->route_id;
+                $schedule->ferry_id = $request->ferry_id;
+                $schedule->departure_time = $request->departure_time;
+                $schedule->arrival_time = $request->arrival_time;
+                $schedule->days = $days;
+                $schedule->status = $request->status;
+
+                if ($request->filled('status_reason')) {
+                    $schedule->status_reason = $request->status_reason;
+                }
+
+                // Log before save
+                Log::info('About to save schedule:', $schedule->toArray());
+
+                $saved = $schedule->save();
+
+                // Log success
+                Log::info('Schedule saved result: ' . ($saved ? 'success' : 'failure') . ' with ID: ' . $schedule->id);
+
+                DB::commit();
+
+                return redirect()->route('admin.schedules.index')
+                    ->with('success', 'Jadwal berhasil dibuat');
+            } catch (\Exception $e) {
+                // Roll back transaction on error
+                DB::rollBack();
+
+                Log::error('Database error during schedule creation: ' . $e->getMessage(), [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+
+                throw $e; // Rethrow to be caught by outer try-catch
+            }
+        } catch (\Exception $e) {
+            // Log full exception details
+            Log::error('Uncaught exception during schedule creation: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ]);
 
-            return redirect()->route('admin.schedules.index')
-                ->with('success', 'Schedule created successfully');
-        } catch (\Exception $e) {
             return back()->withInput()
-                ->with('error', 'Failed to create schedule: ' . $e->getMessage());
+                ->with('error', 'Gagal membuat jadwal: ' . $e->getMessage());
         }
     }
 

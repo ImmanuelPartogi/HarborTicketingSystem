@@ -73,7 +73,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(0,0,0,0.2) 100%);
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.2) 100%);
             pointer-events: none;
         }
 
@@ -125,12 +125,13 @@
         <!-- Ferry Summary -->
         <div class="p-6 ferry-summary m-6 flex items-center">
             <div class="flex-shrink-0 mr-4">
-                @if($ferry->image)
+                @if ($ferry->image)
                     <div class="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-300">
-                        <img src="{{ asset('storage/' . $ferry->image) }}" alt="{{ $ferry->name }}" class="w-full h-full object-cover">
+                        <img src="{{ asset($ferry->image) }}" alt="{{ $ferry->name }}" class="w-full h-full object-cover">
                     </div>
                 @else
-                    <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center border-2 border-amber-300">
+                    <div
+                        class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center border-2 border-amber-300">
                         <i class="fas fa-ship text-amber-600 text-2xl"></i>
                     </div>
                 @endif
@@ -147,15 +148,18 @@
                         <span>{{ number_format($ferry->capacity_vehicle_car) }} Mobil</span>
                     </div>
                     @if ($ferry->status == 'ACTIVE')
-                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 flex items-center">
+                        <span
+                            class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 flex items-center">
                             <i class="fas fa-check-circle mr-1"></i> Aktif
                         </span>
                     @elseif($ferry->status == 'MAINTENANCE')
-                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 flex items-center">
+                        <span
+                            class="px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 flex items-center">
                             <i class="fas fa-tools mr-1"></i> Pemeliharaan
                         </span>
                     @else
-                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 flex items-center">
+                        <span
+                            class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 flex items-center">
                             <i class="fas fa-times-circle mr-1"></i> Tidak Aktif
                         </span>
                     @endif
@@ -164,7 +168,8 @@
         </div>
 
         @if ($errors->any())
-            <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-5 mx-6 mb-6 rounded-r-lg shadow-sm" role="alert">
+            <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-5 mx-6 mb-6 rounded-r-lg shadow-sm"
+                role="alert">
                 <div class="flex items-center mb-1">
                     <i class="fas fa-exclamation-circle text-red-500 mr-2 text-lg"></i>
                     <h3 class="text-lg font-medium text-red-800">Terdapat kesalahan pada formulir</h3>
@@ -217,7 +222,8 @@
                                     {{ old('status', $ferry->status) == 'MAINTENANCE' ? 'selected' : '' }}>Pemeliharaan
                                 </option>
                                 <option value="INACTIVE"
-                                    {{ old('status', $ferry->status) == 'INACTIVE' ? 'selected' : '' }}>Tidak Aktif</option>
+                                    {{ old('status', $ferry->status) == 'INACTIVE' ? 'selected' : '' }}>Tidak Aktif
+                                </option>
                             </select>
                         </div>
                     </div>
@@ -361,7 +367,7 @@
                         <div class="input-group flex flex-col items-center justify-center">
                             <label class="block text-sm font-medium text-gray-700 mb-3 self-start">Gambar Saat Ini</label>
                             <div class="thumbnail-preview overflow-hidden rounded-lg shadow-md w-full max-w-xs">
-                                <img src="{{ asset('storage/' . $ferry->image) }}" alt="{{ $ferry->name }}"
+                                <img src="{{ asset($ferry->image) }}" alt="{{ $ferry->name }}"
                                     class="w-full h-auto object-cover">
                             </div>
                             <p class="mt-2 text-xs text-gray-500 self-start">Gambar yang ditampilkan saat ini</p>
