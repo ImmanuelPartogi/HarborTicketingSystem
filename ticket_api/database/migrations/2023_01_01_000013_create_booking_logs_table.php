@@ -1,5 +1,5 @@
 <?php
-
+// 2023_01_01_000302_create_booking_logs_table.php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,6 +20,10 @@ return new class extends Migration
             $table->unsignedBigInteger('changed_by_id')->nullable();
             $table->text('notes')->nullable();
             $table->timestamp('created_at')->useCurrent();
+
+            $table->index('booking_id');
+            $table->index('created_at');
+            $table->index(['changed_by_type', 'changed_by_id']);
         });
     }
 

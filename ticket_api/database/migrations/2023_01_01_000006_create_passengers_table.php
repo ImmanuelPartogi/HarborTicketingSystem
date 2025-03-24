@@ -1,5 +1,5 @@
 <?php
-
+// 2023_01_01_000201_create_passengers_table.php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -21,6 +21,9 @@ return new class extends Migration
             $table->enum('gender', ['MALE', 'FEMALE']);
             $table->boolean('is_primary')->default(false)->comment('Penumpang Utama');
             $table->timestamps();
+
+            $table->index(['booking_id', 'is_primary']);
+            $table->index('id_number');
         });
     }
 

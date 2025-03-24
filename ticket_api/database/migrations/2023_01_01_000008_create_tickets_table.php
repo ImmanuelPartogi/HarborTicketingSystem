@@ -1,5 +1,5 @@
 <?php
-
+// 2023_01_01_000203_create_tickets_table.php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('ticket_code', 20)->unique();
             $table->foreignId('booking_id')->constrained()->onDelete('cascade');
-            $table->foreignId('passenger_id')->constrained()->onDelete('cascade');
+            $table->foreignId('passenger_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('vehicle_id')->nullable()->constrained()->onDelete('set null');
             $table->string('qr_code');
             $table->string('seat_number', 10)->nullable();
@@ -26,7 +26,11 @@ return new class extends Migration
             $table->text('watermark_data')->nullable()->comment('Data untuk watermark dinamis');
             $table->timestamps();
 
+            $table->index('ticket_code');
+            $table->index('qr_code');
             $table->index('status');
+            $table->index(['booking_id', 'status']);
+            $table->index('boarding_status');
         });
     }
 
