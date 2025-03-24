@@ -103,7 +103,7 @@
                 @csrf
 
                 <!-- Basic Info Section -->
-                <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
+                <div class="basic-info-section bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800 flex items-center border-b pb-3">
                         <i class="fas fa-info-circle mr-2 text-blue-500"></i> Informasi Dasar Jadwal
                     </h2>
@@ -150,7 +150,7 @@
                                     @foreach ($ferries as $ferry)
                                         <option value="{{ $ferry->id }}"
                                             {{ old('ferry_id') == $ferry->id ? 'selected' : '' }}>
-                                            {{ $ferry->name }} (Kapasitas: {{ $ferry->passenger_capacity }} penumpang)
+                                            {{ $ferry->name }} (Kapasitas: {{ $ferry->capacity_passenger }} penumpang)
                                         </option>
                                     @endforeach
                                 </select>
@@ -213,7 +213,6 @@
                                     </option>
                                     <option value="CANCELLED" {{ old('status') == 'CANCELLED' ? 'selected' : '' }}>
                                         Dibatalkan</option>
-                                    <option value="FULL" {{ old('status') == 'FULL' ? 'selected' : '' }}>Penuh</option>
                                 </select>
                             </div>
                             @error('status')
@@ -244,7 +243,7 @@
                 </div>
 
                 <!-- Operating Days Section -->
-                <div class="bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm" id="operatingDaysSection">
+                <div id="operatingDaysSection" class="operating-days-section bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm" style="display:none;">
                     <h2 class="text-lg font-semibold mb-4 text-gray-800 flex items-center border-b pb-3">
                         <i class="fas fa-calendar-alt mr-2 text-blue-500"></i> Hari Operasional
                     </h2>
@@ -252,7 +251,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="md:col-span-2">
                             <p class="mb-3 text-sm text-gray-700">Pilih hari-hari di mana jadwal ini beroperasi:</p>
-                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 days-selection">
                                 <div
                                     class="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-blue-50 transition-colors">
                                     <input type="checkbox" id="day_1" name="days[]" value="1"
@@ -387,205 +386,80 @@
 
 @section('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Day name mapping
-            const dayNames = {
-                1: 'Senin',
-                2: 'Selasa',
-                3: 'Rabu',
-                4: 'Kamis',
-                5: 'Jumat',
-                6: 'Sabtu',
-                7: 'Minggu'
-            };
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing schedule form JS');
 
-            // Format time function
-            function formatTime(timeStr) {
-                if (!timeStr) return '';
-                const [hours, minutes] = timeStr.split(':');
-                return `${hours}:${minutes}`;
-            }
+    // 1. Definisikan elemen-elemen menggunakan class yang lebih spesifik
+    // Gunakan querySelector yang lebih spesifik
+    const basicInfoSection = document.querySelector('.basic-info-section');
+    const operatingDaysSection = document.querySelector('.operating-days-section');
+    const nextBtn = document.getElementById('nextBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const progressBar = document.querySelector('.bg-blue-500');
 
-            // Multi-step form handling
-            const basicInfoSection = document.querySelector('.bg-gray-50');
-            const operatingDaysSection = document.getElementById('operatingDaysSection');
-            const nextBtn = document.getElementById('nextBtn');
-            const prevBtn = document.getElementById('prevBtn');
-            const submitBtn = document.getElementById('submitBtn');
-            const progressBar = document.querySelector('.bg-blue-500');
-            const progressSteps = document.querySelectorAll('.rounded-full');
-            const progressTexts = document.querySelectorAll('.font-medium');
+    // Log untuk debugging
+    console.log('Form elements found:', {
+        basicInfoSection: !!basicInfoSection,
+        operatingDaysSection: !!operatingDaysSection,
+        nextBtn: !!nextBtn,
+        prevBtn: !!prevBtn,
+        submitBtn: !!submitBtn
+    });
 
-            let currentStep = 1;
+    // Day name mapping
+    const dayNames = {
+        1: 'Senin',
+        2: 'Selasa',
+        3: 'Rabu',
+        4: 'Kamis',
+        5: 'Jumat',
+        6: 'Sabtu',
+        7: 'Minggu'
+    };
 
-            nextBtn.addEventListener('click', function() {
-                // Validate current step
-                if (currentStep === 1) {
-                    const requiredInputs = basicInfoSection.querySelectorAll(
-                        'input[required], select[required]');
-                    let isValid = true;
+    // Validasi - jika elemen-elemen kritis tidak ditemukan, tampilkan pesan error dan keluar
+    if (!basicInfoSection || !nextBtn) {
+        console.error('Elemen form utama tidak ditemukan. Pastikan template Blade sudah benar.');
+        if (document.querySelector('form')) {
+            // Tampilkan pesan error ke user
+            const errorAlert = document.createElement('div');
+            errorAlert.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg shadow-sm';
+            errorAlert.innerHTML = `
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-500 mt-1"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p>Terjadi kesalahan saat memuat form. Mohon refresh halaman atau hubungi administrator.</p>
+                    </div>
+                </div>
+            `;
+            document.querySelector('form').prepend(errorAlert);
+        }
+        return;
+    }
 
-                    requiredInputs.forEach(input => {
-                        if (!input.value.trim()) {
-                            const name = input.getAttribute('name');
-                            let errorElement = document.getElementById(`${name}-error`);
+    // Format time function
+    function formatTime(timeStr) {
+        if (!timeStr) return '';
+        const [hours, minutes] = timeStr.split(':');
+        return `${hours}:${minutes}`;
+    }
 
-                            if (!errorElement) {
-                                errorElement = document.createElement('p');
-                                errorElement.id = `${name}-error`;
-                                errorElement.className = 'mt-1 text-sm text-red-600';
-                                input.parentNode.appendChild(errorElement);
-                            }
+    // Multi-step form handling
+    let currentStep = 1;
 
-                            errorElement.textContent = 'Bidang ini harus diisi';
-                            input.classList.add('border-red-300');
-                            input.classList.remove('border-gray-300');
-                            isValid = false;
-                        }
-                    });
+    // Next button handler
+    nextBtn.addEventListener('click', function() {
+        try {
+            console.log('Next button clicked, validating form...');
 
-                    if (!isValid) {
-                        // Scroll to the first error
-                        const firstError = document.querySelector('.text-red-600');
-                        if (firstError) {
-                            firstError.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'center'
-                            });
-                        }
-                        return;
-                    }
-
-                    // Move to next step
-                    progressBar.style.width = '100%';
-                    progressSteps[1].classList.remove('bg-gray-300', 'text-gray-700');
-                    progressSteps[1].classList.add('bg-blue-500', 'text-white');
-                    progressTexts[1].classList.remove('text-gray-700');
-                    progressTexts[1].classList.add('text-gray-900');
-
-                    // Hide basic info, show operating days
-                    basicInfoSection.style.display = 'none';
-                    operatingDaysSection.style.display = 'block';
-
-                    // Show prev button, hide next button, show submit button
-                    prevBtn.style.display = 'flex';
-                    nextBtn.style.display = 'none';
-                    submitBtn.style.display = 'flex';
-
-                    currentStep = 2;
-
-                    // Update summary
-                    updateSummary();
-
-                    // Scroll to top of form
-                    window.scrollTo({
-                        top: document.querySelector('form').offsetTop,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-
-            prevBtn.addEventListener('click', function() {
-                if (currentStep === 2) {
-                    // Move back to first step
-                    progressBar.style.width = '50%';
-                    progressSteps[1].classList.remove('bg-blue-500', 'text-white');
-                    progressSteps[1].classList.add('bg-gray-300', 'text-gray-700');
-                    progressTexts[1].classList.remove('text-gray-900');
-                    progressTexts[1].classList.add('text-gray-700');
-
-                    // Show basic info, hide operating days
-                    basicInfoSection.style.display = 'block';
-                    operatingDaysSection.style.display = 'block';
-
-                    // Hide prev button, show next button, hide submit button
-                    prevBtn.style.display = 'none';
-                    nextBtn.style.display = 'flex';
-                    submitBtn.style.display = 'none';
-
-                    currentStep = 1;
-
-                    // Scroll to top of form
-                    window.scrollTo({
-                        top: document.querySelector('form').offsetTop,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-
-            // Update summary
-            function updateSummary() {
-                // Get selected route
-                const routeSelect = document.getElementById('route_id');
-                const routeText = routeSelect.options[routeSelect.selectedIndex]?.text || '-';
-                document.getElementById('summary_route_text').textContent = routeText;
-
-                // Get selected ferry
-                const ferrySelect = document.getElementById('ferry_id');
-                const ferryText = ferrySelect.options[ferrySelect.selectedIndex]?.text || '-';
-                document.getElementById('summary_ferry_text').textContent = ferryText;
-
-                // Get time
-                const departureTime = document.getElementById('departure_time').value;
-                const arrivalTime = document.getElementById('arrival_time').value;
-                let timeText = '-';
-                if (departureTime && arrivalTime) {
-                    timeText = `${formatTime(departureTime)} - ${formatTime(arrivalTime)}`;
-                }
-                document.getElementById('summary_time_text').textContent = timeText;
-
-                // Get days
-                const selectedDays = [];
-                document.querySelectorAll('input[name="days[]"]:checked').forEach(checkbox => {
-                    selectedDays.push(dayNames[checkbox.value]);
-                });
-                document.getElementById('summary_days_text').textContent = selectedDays.length > 0 ? selectedDays
-                    .join(', ') : '-';
-            }
-
-            // Listen for changes to update summary
-            document.getElementById('route_id').addEventListener('change', updateSummary);
-            document.getElementById('ferry_id').addEventListener('change', updateSummary);
-            document.getElementById('departure_time').addEventListener('change', updateSummary);
-            document.getElementById('arrival_time').addEventListener('change', updateSummary);
-            document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
-                checkbox.addEventListener('change', updateSummary);
-            });
-
-            // Auto-calculate arrival time based on departure time and route duration
-            const departureTimeInput = document.getElementById('departure_time');
-            const arrivalTimeInput = document.getElementById('arrival_time');
-            const routeSelect = document.getElementById('route_id');
-
-            departureTimeInput.addEventListener('change', function() {
-                const selectedOption = routeSelect.options[routeSelect.selectedIndex];
-                const duration = selectedOption?.getAttribute('data-duration');
-
-                if (departureTimeInput.value && duration) {
-                    // Parse departure time
-                    const [hours, minutes] = departureTimeInput.value.split(':').map(Number);
-
-                    // Calculate arrival time
-                    let totalMinutes = hours * 60 + minutes + parseInt(duration);
-                    const arrivalHours = Math.floor(totalMinutes / 60) % 24;
-                    const arrivalMinutes = totalMinutes % 60;
-
-                    // Format arrival time
-                    const formattedHours = arrivalHours.toString().padStart(2, '0');
-                    const formattedMinutes = arrivalMinutes.toString().padStart(2, '0');
-                    arrivalTimeInput.value = `${formattedHours}:${formattedMinutes}`;
-
-                    // Update summary
-                    updateSummary();
-                }
-            });
-
-            // Form validation
-            const form = document.querySelector('form');
-            const requiredInputs = form.querySelectorAll('input[required], select[required]');
-
-            form.addEventListener('submit', function(event) {
-                let hasError = false;
+            // Validate current step
+            if (currentStep === 1) {
+                const requiredInputs = basicInfoSection.querySelectorAll(
+                    'input[required], select[required]');
+                let isValid = true;
 
                 requiredInputs.forEach(input => {
                     if (!input.value.trim()) {
@@ -602,6 +476,280 @@
                         errorElement.textContent = 'Bidang ini harus diisi';
                         input.classList.add('border-red-300');
                         input.classList.remove('border-gray-300');
+                        isValid = false;
+                    }
+                });
+
+                if (!isValid) {
+                    console.log('Form validation failed');
+                    // Scroll to the first error
+                    const firstError = document.querySelector('.text-red-600');
+                    if (firstError) {
+                        firstError.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                    return;
+                }
+
+                console.log('Form validation passed, moving to step 2');
+
+                // Move to next step
+                if (progressBar) progressBar.style.width = '100%';
+
+                // Update progress steps visual
+                const progressSteps = document.querySelectorAll('.rounded-full');
+                if (progressSteps && progressSteps.length > 1) {
+                    progressSteps[1].classList.remove('bg-gray-300', 'text-gray-700');
+                    progressSteps[1].classList.add('bg-blue-500', 'text-white');
+
+                    const progressTexts = document.querySelectorAll('.font-medium');
+                    if (progressTexts && progressTexts.length > 1) {
+                        progressTexts[1].classList.remove('text-gray-700');
+                        progressTexts[1].classList.add('text-gray-900');
+                    }
+                }
+
+                // Hide basic info, show operating days
+                basicInfoSection.style.display = 'none';
+                if (operatingDaysSection) {
+                    operatingDaysSection.style.display = 'block';
+                }
+
+                // Show prev button, hide next button, show submit button
+                if (prevBtn) prevBtn.style.display = 'flex';
+                nextBtn.style.display = 'none';
+                if (submitBtn) submitBtn.style.display = 'flex';
+
+                currentStep = 2;
+
+                // Update summary
+                updateSummary();
+
+                // Scroll to top of form
+                const form = document.querySelector('form');
+                if (form) {
+                    window.scrollTo({
+                        top: form.offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
+
+                console.log('Step 2 shown successfully');
+            }
+        } catch (error) {
+            console.error('Error in nextBtn handler:', error);
+            alert('Terjadi kesalahan saat memproses form. Silakan refresh halaman dan coba lagi.');
+        }
+    });
+
+    // Prev button handler
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            try {
+                console.log('Previous button clicked');
+                if (currentStep === 2) {
+                    // Move back to first step
+                    if (progressBar) progressBar.style.width = '50%';
+
+                    const progressSteps = document.querySelectorAll('.rounded-full');
+                    if (progressSteps && progressSteps.length > 1) {
+                        progressSteps[1].classList.remove('bg-blue-500', 'text-white');
+                        progressSteps[1].classList.add('bg-gray-300', 'text-gray-700');
+
+                        const progressTexts = document.querySelectorAll('.font-medium');
+                        if (progressTexts && progressTexts.length > 1) {
+                            progressTexts[1].classList.remove('text-gray-900');
+                            progressTexts[1].classList.add('text-gray-700');
+                        }
+                    }
+
+                    // Show basic info, hide operating days
+                    basicInfoSection.style.display = 'block';
+                    if (operatingDaysSection) {
+                        operatingDaysSection.style.display = 'none';
+                    }
+
+                    // Hide prev button, show next button, hide submit button
+                    prevBtn.style.display = 'none';
+                    nextBtn.style.display = 'flex';
+                    if (submitBtn) submitBtn.style.display = 'none';
+
+                    currentStep = 1;
+
+                    // Scroll to top of form
+                    const form = document.querySelector('form');
+                    if (form) {
+                        window.scrollTo({
+                            top: form.offsetTop,
+                            behavior: 'smooth'
+                        });
+                    }
+
+                    console.log('Returned to step 1');
+                }
+            } catch (error) {
+                console.error('Error in prevBtn handler:', error);
+            }
+        });
+    }
+
+    // Update summary
+    function updateSummary() {
+        try {
+            console.log('Updating summary information');
+            // Get selected route
+            const routeSelect = document.getElementById('route_id');
+            const summaryRouteText = document.getElementById('summary_route_text');
+
+            if (routeSelect && summaryRouteText) {
+                const selectedIndex = routeSelect.selectedIndex;
+                if (selectedIndex >= 0) {
+                    const routeText = routeSelect.options[selectedIndex].text || '-';
+                    summaryRouteText.textContent = routeText;
+                }
+            }
+
+            // Get selected ferry
+            const ferrySelect = document.getElementById('ferry_id');
+            const summaryFerryText = document.getElementById('summary_ferry_text');
+
+            if (ferrySelect && summaryFerryText) {
+                const selectedIndex = ferrySelect.selectedIndex;
+                if (selectedIndex >= 0) {
+                    const ferryText = ferrySelect.options[selectedIndex].text || '-';
+                    summaryFerryText.textContent = ferryText;
+                }
+            }
+
+            // Get time
+            const departureTime = document.getElementById('departure_time')?.value;
+            const arrivalTime = document.getElementById('arrival_time')?.value;
+            const summaryTimeText = document.getElementById('summary_time_text');
+
+            if (summaryTimeText) {
+                let timeText = '-';
+                if (departureTime && arrivalTime) {
+                    timeText = `${formatTime(departureTime)} - ${formatTime(arrivalTime)}`;
+                }
+                summaryTimeText.textContent = timeText;
+            }
+
+            // Get days
+            const selectedDays = [];
+            const checkboxes = document.querySelectorAll('input[name="days[]"]:checked');
+
+            checkboxes.forEach(checkbox => {
+                const value = checkbox.value;
+                if (dayNames[value]) {
+                    selectedDays.push(dayNames[value]);
+                }
+            });
+
+            const summaryDaysText = document.getElementById('summary_days_text');
+            if (summaryDaysText) {
+                summaryDaysText.textContent = selectedDays.length > 0 ? selectedDays.join(', ') : '-';
+            }
+
+            console.log('Summary updated successfully');
+        } catch (error) {
+            console.error('Error updating summary:', error);
+        }
+    }
+
+    // Listen for changes to update summary
+    const routeId = document.getElementById('route_id');
+    const ferryId = document.getElementById('ferry_id');
+    const departureTime = document.getElementById('departure_time');
+    const arrivalTime = document.getElementById('arrival_time');
+
+    if (routeId) routeId.addEventListener('change', updateSummary);
+    if (ferryId) ferryId.addEventListener('change', updateSummary);
+    if (departureTime) {
+        departureTime.addEventListener('change', function() {
+            calculateArrivalTime();
+            updateSummary();
+        });
+    }
+    if (arrivalTime) arrivalTime.addEventListener('change', updateSummary);
+
+    document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
+        checkbox.addEventListener('change', updateSummary);
+    });
+
+    // Auto-calculate arrival time based on departure time and route duration
+    function calculateArrivalTime() {
+        try {
+            console.log('Calculating arrival time');
+            const departureTimeInput = document.getElementById('departure_time');
+            const arrivalTimeInput = document.getElementById('arrival_time');
+            const routeSelect = document.getElementById('route_id');
+
+            if (!departureTimeInput || !arrivalTimeInput || !routeSelect) {
+                console.warn('Missing elements for arrival time calculation');
+                return;
+            }
+
+            const selectedIndex = routeSelect.selectedIndex;
+            if (selectedIndex < 0) {
+                console.warn('No route selected for duration calculation');
+                return;
+            }
+
+            const selectedOption = routeSelect.options[selectedIndex];
+            const duration = selectedOption.getAttribute('data-duration');
+
+            if (departureTimeInput.value && duration) {
+                console.log(`Calculating arrival time using departure: ${departureTimeInput.value}, duration: ${duration} mins`);
+
+                // Parse departure time
+                const [hours, minutes] = departureTimeInput.value.split(':').map(Number);
+
+                // Calculate arrival time
+                let totalMinutes = hours * 60 + minutes + parseInt(duration);
+                const arrivalHours = Math.floor(totalMinutes / 60) % 24;
+                const arrivalMinutes = totalMinutes % 60;
+
+                // Format arrival time
+                const formattedHours = arrivalHours.toString().padStart(2, '0');
+                const formattedMinutes = arrivalMinutes.toString().padStart(2, '0');
+                arrivalTimeInput.value = `${formattedHours}:${formattedMinutes}`;
+
+                console.log(`Arrival time calculated: ${formattedHours}:${formattedMinutes}`);
+            }
+        } catch (error) {
+            console.error('Error calculating arrival time:', error);
+        }
+    }
+
+    // Form validation
+    const form = document.querySelector('form#scheduleForm');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            try {
+                console.log('Form submission attempted, validating...');
+                let hasError = false;
+
+                // Validate required inputs
+                const requiredInputs = form.querySelectorAll('input[required], select[required]');
+                requiredInputs.forEach(input => {
+                    if (!input.value.trim()) {
+                        const name = input.getAttribute('name') || 'field';
+                        let errorElement = document.getElementById(`${name}-error`);
+
+                        if (!errorElement) {
+                            errorElement = document.createElement('p');
+                            errorElement.id = `${name}-error`;
+                            errorElement.className = 'mt-1 text-sm text-red-600';
+                            if (input.parentNode) {
+                                input.parentNode.appendChild(errorElement);
+                            }
+                        }
+
+                        errorElement.textContent = 'Bidang ini harus diisi';
+                        input.classList.add('border-red-300');
+                        input.classList.remove('border-gray-300');
                         hasError = true;
                     }
                 });
@@ -609,27 +757,30 @@
                 // Check if at least one day is selected
                 const daysCheckboxes = document.querySelectorAll('input[name="days[]"]:checked');
                 if (daysCheckboxes.length === 0) {
-                    const errorElement = document.getElementById('days-error') || document.createElement(
-                        'p');
-                    errorElement.id = 'days-error';
-                    errorElement.className = 'mt-1 text-sm text-red-600';
-                    errorElement.textContent = 'Pilih minimal satu hari operasional';
-                    document.querySelector('.grid.grid-cols-2.md\\:grid-cols-4').parentNode.appendChild(
-                        errorElement);
-                    hasError = true;
+                    const daysContainer = document.querySelector('.days-selection');
+                    if (daysContainer && daysContainer.parentNode) {
+                        const errorElement = document.getElementById('days-error') || document.createElement('p');
+                        errorElement.id = 'days-error';
+                        errorElement.className = 'mt-1 text-sm text-red-600';
+                        errorElement.textContent = 'Pilih minimal satu hari operasional';
+                        daysContainer.parentNode.appendChild(errorElement);
+                        hasError = true;
+                    }
                 }
 
                 if (hasError) {
+                    console.log('Form validation failed, preventing submission');
                     event.preventDefault();
+
                     // Show the first step if there are errors in it
                     if (currentStep === 2) {
-                        // Check if there are errors in the first step
-                        const firstStepErrors = Array.from(basicInfoSection.querySelectorAll(
-                                '.text-red-600'))
+                        // Check if there are errors in the basic info section
+                        const basicInfoErrors = Array.from(basicInfoSection.querySelectorAll('.text-red-600'))
                             .filter(el => el.textContent.trim() !== '');
 
-                        if (firstStepErrors.length > 0) {
-                            prevBtn.click();
+                        if (basicInfoErrors.length > 0) {
+                            console.log('Errors found in step 1, returning to basic info');
+                            if (prevBtn) prevBtn.click();
                         }
                     }
 
@@ -641,37 +792,56 @@
                             block: 'center'
                         });
                     }
+                } else {
+                    console.log('Form validation passed, submitting');
                 }
-            });
+            } catch (error) {
+                console.error('Error in form submit handler:', error);
+                event.preventDefault();
+                alert('Terjadi kesalahan saat memproses form. Silakan coba lagi.');
+            }
+        });
 
-            // Clear validation errors on input
-            requiredInputs.forEach(input => {
-                input.addEventListener('input', function() {
+        // Clear validation errors on input
+        const requiredInputs = form.querySelectorAll('input[required], select[required]');
+        requiredInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                try {
                     if (this.value.trim()) {
                         this.classList.remove('border-red-300');
                         this.classList.add('border-gray-300');
 
                         const name = this.getAttribute('name');
-                        const errorElement = document.getElementById(`${name}-error`);
-
-                        if (errorElement) {
-                            errorElement.textContent = '';
+                        if (name) {
+                            const errorElement = document.getElementById(`${name}-error`);
+                            if (errorElement) {
+                                errorElement.textContent = '';
+                            }
                         }
                     }
-                });
+                } catch (error) {
+                    console.error('Error in input handler:', error);
+                }
             });
+        });
 
-            // Clear days error when a day is checked
-            document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
+        // Clear days error when a day is checked
+        document.querySelectorAll('input[name="days[]"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                try {
                     if (document.querySelectorAll('input[name="days[]"]:checked').length > 0) {
                         const errorElement = document.getElementById('days-error');
                         if (errorElement) {
                             errorElement.textContent = '';
                         }
                     }
-                });
+                } catch (error) {
+                    console.error('Error in checkbox handler:', error);
+                }
             });
         });
-    </script>
+    }
+
+    console.log('Form JS initialization complete');
+});    </script>
 @endsection
