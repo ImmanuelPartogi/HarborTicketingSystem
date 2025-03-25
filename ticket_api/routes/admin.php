@@ -83,4 +83,26 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth:admi
     Route::get('/help/topic/{topic}', [HelpController::class, 'topic'])->name('help.topic');
     Route::get('/help/contact', [HelpController::class, 'contactSupport'])->name('help.contact');
     Route::post('/help/send-support', [HelpController::class, 'sendSupportRequest'])->name('help.send-support');
+
+    // General Settings
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+    Route::post('/settings/update-system', [SettingsController::class, 'updateSystem'])->name('settings.update-system');
+
+    // Landing Page Settings
+    Route::get('/settings/hero', [SettingsController::class, 'heroSection'])->name('settings.hero');
+    Route::post('/settings/update-hero', [SettingsController::class, 'updateHeroSection'])->name('settings.update-hero');
+    Route::get('/settings/features', [SettingsController::class, 'featuresSection'])->name('settings.features');
+    Route::post('/settings/update-features', [SettingsController::class, 'updateFeaturesSection'])->name('settings.update-features');
+    Route::get('/settings/howto', [SettingsController::class, 'howToBookSection'])->name('settings.howto');
+    Route::post('/settings/update-howto', [SettingsController::class, 'updateHowToBookSection'])->name('settings.update-howto');
+    Route::get('/settings/about', [SettingsController::class, 'aboutSection'])->name('settings.about');
+    Route::post('/settings/update-about', [SettingsController::class, 'updateAboutSection'])->name('settings.update-about');
+    Route::get('/settings/footer', [SettingsController::class, 'footerSection'])->name('settings.footer');
+    Route::post('/settings/update-footer', [SettingsController::class, 'updateFooterSection'])->name('settings.update-footer');
+    Route::get('/settings/seo', [SettingsController::class, 'seoSettings'])->name('settings.seo');
+    Route::post('/settings/update-seo', [SettingsController::class, 'updateSeoSettings'])->name('settings.update-seo');
+
+    // Profile Settings
+    Route::get('/settings/profile', [SettingsController::class, 'profile'])->name('settings.profile');
+    Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.update-profile');
 });

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -67,10 +68,14 @@
             .wave-animation {
                 animation: wave 8s ease-in-out infinite;
             }
+
             @keyframes wave {
-                0%, 100% {
+
+                0%,
+                100% {
                     transform: translateY(0);
                 }
+
                 50% {
                     transform: translateY(-15px);
                 }
@@ -80,12 +85,69 @@
             .boat-animation {
                 animation: boat 6s ease-in-out infinite;
             }
+
             @keyframes boat {
-                0%, 100% {
+
+                0%,
+                100% {
                     transform: translateY(0) rotate(-2deg);
                 }
+
                 50% {
                     transform: translateY(-10px) rotate(2deg);
+                }
+            }
+
+            /* Blob Animation */
+            .blob-animation {
+                animation: blob 10s ease-in-out infinite alternate;
+            }
+
+            @keyframes blob {
+                0% {
+                    transform: translateY(0) scale(1);
+                }
+
+                50% {
+                    transform: translateY(-5px) scale(1.05);
+                }
+
+                100% {
+                    transform: translateY(5px) scale(0.95);
+                }
+            }
+
+            /* Bounce Animation for QR */
+            .bounce-animation {
+                animation: bounce 2s ease-in-out infinite;
+            }
+
+            @keyframes bounce {
+
+                0%,
+                100% {
+                    transform: translateY(0);
+                }
+
+                50% {
+                    transform: translateY(-10px);
+                }
+            }
+
+            /* Fade-in Animation for Modal */
+            .modal-fade-in {
+                animation: fadeIn 0.3s ease-out forwards;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
                 }
             }
 
@@ -93,19 +155,23 @@
             ::-webkit-scrollbar {
                 width: 10px;
             }
+
             ::-webkit-scrollbar-track {
                 background: #f1f5f9;
             }
+
             ::-webkit-scrollbar-thumb {
                 background: #0ea5e9;
                 border-radius: 5px;
             }
+
             ::-webkit-scrollbar-thumb:hover {
                 background: #0284c7;
             }
         </style>
     @endif
 </head>
+
 <body class="antialiased bg-gray-50">
     <!-- Navigation -->
     <nav class="bg-white shadow-md fixed w-full z-50 transition-all duration-300" id="navbar">
@@ -117,19 +183,24 @@
                         <span class="ml-2 text-xl font-bold text-primary-600">FerryTicket</span>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                        <a href="#home" class="border-primary-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        <a href="#home"
+                            class="border-primary-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             Home
                         </a>
-                        <a href="#routes" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        <a href="#routes"
+                            class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             Routes
                         </a>
-                        <a href="#howto" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        <a href="#howto"
+                            class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             How to Book
                         </a>
-                        <a href="#about" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        <a href="#about"
+                            class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             About Us
                         </a>
-                        <a href="#contact" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        <a href="#contact"
+                            class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                             Contact
                         </a>
                     </div>
@@ -138,13 +209,15 @@
                     @if (Route::has('login'))
                         <div class="space-x-4">
                             @auth
-                                <a href="{{ url('/dashboard') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                <a href="{{ url('/dashboard') }}"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                     Dashboard
                                 </a>
                             @else
-                                <a href="{{ route('login') }}" class="inline-flex items-center px-4 py-2 border border-primary-600 text-sm font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                {{-- <a href="#download-app"
+                                    class="show-app-modal inline-flex items-center px-4 py-2 border border-primary-600 text-sm font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                     Log in
-                                </a>
+                                </a> --}}
 
                                 {{-- @if (Route::has('register'))
                                     <a href="{{ route('register') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
@@ -156,10 +229,14 @@
                     @endif
                 </div>
                 <div class="-mr-2 flex items-center sm:hidden">
-                    <button type="button" class="mobile-menu-button inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500" aria-controls="mobile-menu" aria-expanded="false">
+                    <button type="button"
+                        class="mobile-menu-button inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                        aria-controls="mobile-menu" aria-expanded="false">
                         <span class="sr-only">Open main menu</span>
-                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
                 </div>
@@ -169,19 +246,24 @@
         <!-- Mobile menu, show/hide based on menu state. -->
         <div class="sm:hidden hidden" id="mobile-menu">
             <div class="pt-2 pb-3 space-y-1">
-                <a href="#home" class="bg-primary-50 border-primary-500 text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                <a href="#home"
+                    class="bg-primary-50 border-primary-500 text-primary-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                     Home
                 </a>
-                <a href="#routes" class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                <a href="#routes"
+                    class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                     Routes
                 </a>
-                <a href="#howto" class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                <a href="#howto"
+                    class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                     How to Book
                 </a>
-                <a href="#about" class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                <a href="#about"
+                    class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                     About Us
                 </a>
-                <a href="#contact" class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
+                <a href="#contact"
+                    class="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium">
                     Contact
                 </a>
             </div>
@@ -189,18 +271,21 @@
                 @if (Route::has('login'))
                     <div class="mt-3 space-y-1 px-4">
                         @auth
-                            <a href="{{ url('/dashboard') }}" class="block px-4 py-2 text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-gray-100">
+                            <a href="{{ url('/dashboard') }}"
+                                class="block px-4 py-2 text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-gray-100">
                                 Dashboard
                             </a>
                         @else
-                            <a href="{{ route('login') }}" class="block px-4 py-2 text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-gray-100">
+                            <a href="#download-app"
+                                class="show-app-modal block px-4 py-2 text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-gray-100">
                                 Log in
                             </a>
-                            {{-- @if (Route::has('register'))
-                                <a href="{{ route('register') }}" class="block px-4 py-2 text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-gray-100">
+                            @if (Route::has('register'))
+                                <a href="#download-app"
+                                    class="show-app-modal block px-4 py-2 text-base font-medium text-primary-600 hover:text-primary-800 hover:bg-gray-100">
                                     Register
                                 </a>
-                            @endif --}}
+                            @endif
                         @endauth
                     </div>
                 @endif
@@ -209,8 +294,10 @@
     </nav>
 
     <!-- Hero Section -->
-    <section id="home" class="relative pt-16 pb-32 flex content-center items-center justify-center" style="min-height: 100vh;">
-        <div class="absolute top-0 w-full h-full bg-center bg-cover" style="background-image: url('https://images.unsplash.com/photo-1523292562811-8fa7962a78c8?q=80&w=2070');">
+    <section id="home" class="relative pt-16 pb-32 flex content-center items-center justify-center"
+        style="min-height: 100vh;">
+        <div class="absolute top-0 w-full h-full bg-center bg-cover"
+            style="background-image: url('{{ $settings['hero_image'] ?? 'https://images.unsplash.com/photo-1523292562811-8fa7962a78c8?q=80&w=2070' }}');">
             <span id="blackOverlay" class="w-full h-full absolute opacity-50 bg-black"></span>
         </div>
 
@@ -219,17 +306,18 @@
                 <div class="w-full lg:w-6/12 px-4 ml-auto mr-auto text-center">
                     <div class="mt-12">
                         <h1 class="text-white font-semibold text-5xl mb-6 leading-tight">
-                            Explore the Sea with Our Ferry Service
+                            {{ $settings['hero_title'] ?? 'Explore the Sea with Our Ferry Service' }}
                         </h1>
                         <p class="mt-4 text-lg text-gray-300 mb-8">
-                            Book your ferry tickets online for a seamless travel experience.
-                            Safe, convenient, and affordable sea transportation to your destination.
+                            {{ $settings['hero_subtitle'] ?? 'Book your ferry tickets online for a seamless travel experience. Safe, convenient, and affordable sea transportation to your destination.' }}
                         </p>
-                        <a href="#routes" class="bg-primary-600 text-white font-bold px-6 py-3 rounded-lg inline-block transition-all duration-300 hover:bg-primary-700 hover:shadow-lg mr-4">
-                            Check Available Routes
+                        <a href="#routes"
+                            class="bg-primary-600 text-white font-bold px-6 py-3 rounded-lg inline-block transition-all duration-300 hover:bg-primary-700 hover:shadow-lg mr-4">
+                            {{ $settings['primary_button_text'] ?? 'Check Available Routes' }}
                         </a>
-                        <a href="#howto" class="bg-transparent border-2 border-white text-white font-bold px-6 py-3 rounded-lg inline-block transition-all duration-300 hover:bg-white hover:text-primary-600">
-                            Learn How to Book
+                        <a href="#howto"
+                            class="bg-transparent border-2 border-white text-white font-bold px-6 py-3 rounded-lg inline-block transition-all duration-300 hover:bg-white hover:text-primary-600">
+                            {{ $settings['secondary_button_text'] ?? 'Learn How to Book' }}
                         </a>
                     </div>
                 </div>
@@ -237,9 +325,11 @@
         </div>
 
         <div class="absolute bottom-0 left-0 right-0">
-            <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+            <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
                 <defs>
-                    <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                    <path id="gentle-wave"
+                        d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
                 </defs>
                 <g class="parallax">
                     <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7)" />
@@ -254,12 +344,14 @@
     <!-- Quick Search Box -->
     <section class="py-16 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-xl p-8 -mt-32 relative z-10 border border-gray-100">
+            <div
+                class="max-w-3xl mx-auto bg-white rounded-xl shadow-xl p-8 -mt-32 relative z-10 border border-gray-100">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Find Your Ferry Route</h2>
                 <form class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label for="origin" class="block text-sm font-medium text-gray-700 mb-1">From</label>
-                        <select id="origin" name="origin" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        <select id="origin" name="origin"
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             <option value="" selected disabled>Select origin</option>
                             <option value="merak">Merak</option>
                             <option value="bakauheni">Bakauheni</option>
@@ -269,7 +361,8 @@
                     </div>
                     <div>
                         <label for="destination" class="block text-sm font-medium text-gray-700 mb-1">To</label>
-                        <select id="destination" name="destination" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        <select id="destination" name="destination"
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             <option value="" selected disabled>Select destination</option>
                             <option value="merak">Merak</option>
                             <option value="bakauheni">Bakauheni</option>
@@ -279,10 +372,12 @@
                     </div>
                     <div>
                         <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                        <input type="date" id="date" name="date" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                        <input type="date" id="date" name="date"
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                     </div>
                     <div class="flex items-end">
-                        <button type="submit" class="w-full bg-primary-600 py-3 px-4 rounded-md text-white font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        <button type="button"
+                            class="show-app-modal w-full bg-primary-600 py-3 px-4 rounded-md text-white font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                             Search
                         </button>
                     </div>
@@ -291,103 +386,79 @@
         </div>
     </section>
 
-    <!-- Popular Routes -->
+    <!-- Available Routes -->
     <section id="routes" class="py-12 bg-primary-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
-                <h2 class="text-3xl font-bold text-gray-900">Popular Routes</h2>
-                <p class="mt-4 text-lg text-gray-600">Explore our most frequently traveled sea routes</p>
+                <h2 class="text-3xl font-bold text-gray-900">{{ $settings['routes_title'] ?? 'Available Routes' }}
+                </h2>
+                <p class="mt-4 text-lg text-gray-600">
+                    {{ $settings['routes_subtitle'] ?? 'Explore all our ferry routes connecting the islands' }}</p>
             </div>
 
             <div class="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                <!-- Route Card 1 -->
-                <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl">
-                    <img class="h-48 w-full object-cover" src="https://images.unsplash.com/photo-1597466599360-3b9775841aec?q=80&w=1978" alt="Merak - Bakauheni">
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-bold text-gray-900">Merak - Bakauheni</h3>
-                            <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Popular</span>
-                        </div>
-                        <div class="flex items-center mb-2">
-                            <i class="fas fa-clock text-gray-500 mr-2"></i>
-                            <span class="text-gray-600">Duration: ~2 hours</span>
-                        </div>
-                        <div class="flex items-center mb-4">
-                            <i class="fas fa-ship text-gray-500 mr-2"></i>
-                            <span class="text-gray-600">Multiple ferries daily</span>
-                        </div>
-                        <div class="flex justify-between items-center mt-4">
-                            <div>
-                                <span class="text-gray-500 text-sm">Starting from</span>
-                                <p class="text-lg font-bold text-primary-600">Rp 60.000</p>
+                @forelse($allRoutes as $route)
+                    <!-- Route Card -->
+                    <div
+                        class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl">
+                        <img class="h-48 w-full object-cover"
+                            src="{{ $route->image_url ?? 'https://images.unsplash.com/photo-1597466599360-3b9775841aec?q=80&w=1978' }}"
+                            alt="{{ $route->origin }} - {{ $route->destination }}">
+                        <div class="p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold text-gray-900">{{ $route->origin }} -
+                                    {{ $route->destination }}</h3>
+                                @if (isset($route->is_popular) && $route->is_popular)
+                                    <span
+                                        class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Popular</span>
+                                @endif
                             </div>
-                            <a href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                                Book Now
-                            </a>
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-clock text-gray-500 mr-2"></i>
+                                <span class="text-gray-600">Duration: ~{{ $route->duration ?? '2' }} hours</span>
+                            </div>
+                            <div class="flex items-center mb-4">
+                                <i class="fas fa-ship text-gray-500 mr-2"></i>
+                                <span class="text-gray-600">
+                                    @if (isset($route->schedule_description) && $route->schedule_description)
+                                        {{ $route->schedule_description }}
+                                    @else
+                                        Multiple ferries daily
+                                    @endif
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-center mt-4">
+                                <div>
+                                    <span class="text-gray-500 text-sm">Starting from</span>
+                                    <p class="text-lg font-bold text-primary-600">
+                                        Rp {{ number_format($route->base_price ?? 60000, 0, ',', '.') }}
+                                    </p>
+                                </div>
+                                <!-- Modified "Book Now" button to trigger app modal -->
+                                <a href="#download-app"
+                                    class="show-app-modal inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                    Book Now
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Route Card 2 -->
-                <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl">
-                    <img class="h-48 w-full object-cover" src="https://images.unsplash.com/photo-1558459654-c3183f992b97?q=80&w=1974" alt="Ketapang - Gilimanuk">
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-bold text-gray-900">Ketapang - Gilimanuk</h3>
-                            <span class="bg-primary-100 text-primary-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Fast</span>
-                        </div>
-                        <div class="flex items-center mb-2">
-                            <i class="fas fa-clock text-gray-500 mr-2"></i>
-                            <span class="text-gray-600">Duration: ~45 minutes</span>
-                        </div>
-                        <div class="flex items-center mb-4">
-                            <i class="fas fa-ship text-gray-500 mr-2"></i>
-                            <span class="text-gray-600">Hourly departures</span>
-                        </div>
-                        <div class="flex justify-between items-center mt-4">
-                            <div>
-                                <span class="text-gray-500 text-sm">Starting from</span>
-                                <p class="text-lg font-bold text-primary-600">Rp 45.000</p>
-                            </div>
-                            <a href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                                Book Now
-                            </a>
+                @empty
+                    <!-- Fallback when no routes are found -->
+                    <div class="col-span-3 py-8 text-center">
+                        <div class="mx-auto max-w-md">
+                            <i class="fas fa-ship text-4xl text-gray-400 mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No routes available at the moment</h3>
+                            <p class="text-gray-500">Please check back later for available ferry routes.</p>
                         </div>
                     </div>
-                </div>
-
-                <!-- Route Card 3 -->
-                <div class="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl">
-                    <img class="h-48 w-full object-cover" src="https://images.unsplash.com/photo-1519010470956-6d877008eaa4?q=80&w=2070" alt="Padang Bai - Lembar">
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-bold text-gray-900">Padang Bai - Lembar</h3>
-                            <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Scenic</span>
-                        </div>
-                        <div class="flex items-center mb-2">
-                            <i class="fas fa-clock text-gray-500 mr-2"></i>
-                            <span class="text-gray-600">Duration: ~4 hours</span>
-                        </div>
-                        <div class="flex items-center mb-4">
-                            <i class="fas fa-ship text-gray-500 mr-2"></i>
-                            <span class="text-gray-600">3 departures daily</span>
-                        </div>
-                        <div class="flex justify-between items-center mt-4">
-                            <div>
-                                <span class="text-gray-500 text-sm">Starting from</span>
-                                <p class="text-lg font-bold text-primary-600">Rp 75.000</p>
-                            </div>
-                            <a href="#" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                                Book Now
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                @endforelse
             </div>
 
             <div class="mt-12 text-center">
-                <a href="#" class="inline-flex items-center px-6 py-3 border border-primary-600 text-base font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                    View All Routes
+                <!-- Modified "View All Details" button to trigger app modal -->
+                <a href="#download-app"
+                    class="show-app-modal inline-flex items-center px-6 py-3 border border-primary-600 text-base font-medium rounded-md text-primary-600 bg-white hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                    View All Details
                     <i class="fas fa-arrow-right ml-2"></i>
                 </a>
             </div>
@@ -398,126 +469,163 @@
     <section class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
-                <h2 class="text-3xl font-bold text-gray-900">Why Choose Our Ferry Service</h2>
-                <p class="mt-4 text-lg text-gray-600">Experience the best sea travel with these benefits</p>
+                <h2 class="text-3xl font-bold text-gray-900">
+                    {{ $settings['features_title'] ?? 'Why Choose Our Ferry Service' }}</h2>
+                <p class="mt-4 text-lg text-gray-600">
+                    {{ $settings['features_subtitle'] ?? 'Experience the best sea travel with these benefits' }}</p>
             </div>
 
             <div class="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
                 <!-- Feature 1 -->
                 <div class="text-center">
-                    <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
-                        <i class="fas fa-anchor text-2xl"></i>
+                    <div
+                        class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                        <i class="{{ $settings['feature1_icon'] ?? 'fas fa-anchor' }} text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Reliable Service</h3>
-                    <p class="text-gray-600">Punctual departures and arrivals with a focus on passenger satisfaction</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">
+                        {{ $settings['feature1_title'] ?? 'Reliable Service' }}</h3>
+                    <p class="text-gray-600">
+                        {{ $settings['feature1_description'] ?? 'Punctual departures and arrivals with a focus on passenger satisfaction' }}
+                    </p>
                 </div>
 
                 <!-- Feature 2 -->
                 <div class="text-center">
-                    <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
-                        <i class="fas fa-shield-alt text-2xl"></i>
+                    <div
+                        class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                        <i class="{{ $settings['feature2_icon'] ?? 'fas fa-shield-alt' }} text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Safety First</h3>
-                    <p class="text-gray-600">We prioritize safety with well-maintained vessels and trained staff</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">
+                        {{ $settings['feature2_title'] ?? 'Safety First' }}</h3>
+                    <p class="text-gray-600">
+                        {{ $settings['feature2_description'] ?? 'We prioritize safety with well-maintained vessels and trained staff' }}
+                    </p>
                 </div>
 
                 <!-- Feature 3 -->
                 <div class="text-center">
-                    <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
-                        <i class="fas fa-ticket-alt text-2xl"></i>
+                    <div
+                        class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                        <i class="{{ $settings['feature3_icon'] ?? 'fas fa-ticket-alt' }} text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Easy Booking</h3>
-                    <p class="text-gray-600">Simple online booking system for tickets with instant confirmation</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">
+                        {{ $settings['feature3_title'] ?? 'Easy Booking' }}</h3>
+                    <p class="text-gray-600">
+                        {{ $settings['feature3_description'] ?? 'Simple online booking system for tickets with instant confirmation' }}
+                    </p>
                 </div>
 
                 <!-- Feature 4 -->
                 <div class="text-center">
-                    <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
-                        <i class="fas fa-wallet text-2xl"></i>
+                    <div
+                        class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                        <i class="{{ $settings['feature4_icon'] ?? 'fas fa-wallet' }} text-2xl"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-2">Affordable Rates</h3>
-                    <p class="text-gray-600">Competitive pricing with special discounts for regular travelers</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">
+                        {{ $settings['feature4_title'] ?? 'Affordable Rates' }}</h3>
+                    <p class="text-gray-600">
+                        {{ $settings['feature4_description'] ?? 'Competitive pricing with special discounts for regular travelers' }}
+                    </p>
                 </div>
             </div>
         </div>
     </section>
 
+
     <!-- How to Book -->
     <section id="howto" class="py-20 bg-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
-                <h2 class="text-3xl font-bold text-gray-900">How to Book Your Ferry Ticket</h2>
-                <p class="mt-4 text-lg text-gray-600">Follow these simple steps to book your journey</p>
+                <h2 class="text-3xl font-bold text-gray-900">
+                    {{ $settings['howto_title'] ?? 'How to Book Your Ferry Ticket' }}</h2>
+                <p class="mt-4 text-lg text-gray-600">
+                    {{ $settings['howto_subtitle'] ?? 'Follow these simple steps to book your journey' }}</p>
             </div>
 
             <div class="mt-16 relative">
                 <!-- Line Connector -->
-                <div class="hidden lg:block absolute top-1/2 transform -translate-y-1/2 left-0 right-0 h-0.5 bg-gray-200"></div>
+                <div
+                    class="hidden lg:block absolute top-1/2 transform -translate-y-1/2 left-0 right-0 h-0.5 bg-gray-200">
+                </div>
 
                 <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
                     <!-- Step 1 -->
                     <div class="relative bg-white p-6 rounded-lg shadow-md z-10">
-                        <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-600 text-white font-bold">
+                        <div
+                            class="absolute -top-5 left-1/2 transform -translate-x-1/2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-600 text-white font-bold">
                             1
                         </div>
                         <div class="text-center pt-6">
-                            <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
-                                <i class="fas fa-search text-2xl"></i>
+                            <div
+                                class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                                <i class="{{ $settings['step1_icon'] ?? 'fas fa-search' }} text-2xl"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-2">Search Routes</h3>
-                            <p class="text-gray-600">Enter your origin, destination, and travel date to find available ferries.</p>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">
+                                {{ $settings['step1_title'] ?? 'Search Routes' }}</h3>
+                            <p class="text-gray-600">
+                                {{ $settings['step1_description'] ?? 'Enter your origin, destination, and travel date to find available ferries.' }}
+                            </p>
                         </div>
                     </div>
 
                     <!-- Step 2 -->
                     <div class="relative bg-white p-6 rounded-lg shadow-md z-10">
-                        <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-600 text-white font-bold">
+                        <div
+                            class="absolute -top-5 left-1/2 transform -translate-x-1/2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-600 text-white font-bold">
                             2
                         </div>
                         <div class="text-center pt-6">
-                            <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
-                                <i class="fas fa-calendar-alt text-2xl"></i>
+                            <div
+                                class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                                <i class="{{ $settings['step2_icon'] ?? 'fas fa-calendar-alt' }} text-2xl"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-2">Select Schedule</h3>
-                            <p class="text-gray-600">Choose from available schedules and ferry types that suit your needs.</p>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">
+                                {{ $settings['step2_title'] ?? 'Select Schedule' }}</h3>
+                            <p class="text-gray-600">
+                                {{ $settings['step2_description'] ?? 'Choose from available schedules and ferry types that suit your needs.' }}
+                            </p>
                         </div>
                     </div>
 
                     <!-- Step 3 -->
                     <div class="relative bg-white p-6 rounded-lg shadow-md z-10">
-                        <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-600 text-white font-bold">
+                        <div
+                            class="absolute -top-5 left-1/2 transform -translate-x-1/2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-600 text-white font-bold">
                             3
                         </div>
                         <div class="text-center pt-6">
-                            <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
-                                <i class="fas fa-credit-card text-2xl"></i>
+                            <div
+                                class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                                <i class="{{ $settings['step3_icon'] ?? 'fas fa-credit-card' }} text-2xl"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-2">Make Payment</h3>
-                            <p class="text-gray-600">Secure payment via multiple options including credit card and mobile banking.</p>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">
+                                {{ $settings['step3_title'] ?? 'Make Payment' }}</h3>
+                            <p class="text-gray-600">
+                                {{ $settings['step3_description'] ?? 'Secure payment via multiple options including credit card and mobile banking.' }}
+                            </p>
                         </div>
                     </div>
 
                     <!-- Step 4 -->
                     <div class="relative bg-white p-6 rounded-lg shadow-md z-10">
-                        <div class="absolute -top-5 left-1/2 transform -translate-x-1/2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-600 text-white font-bold">
+                        <div
+                            class="absolute -top-5 left-1/2 transform -translate-x-1/2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary-600 text-white font-bold">
                             4
                         </div>
                         <div class="text-center pt-6">
-                            <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
-                                <i class="fas fa-qrcode text-2xl"></i>
+                            <div
+                                class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                                <i class="{{ $settings['step4_icon'] ?? 'fas fa-qrcode' }} text-2xl"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-2">Get E-Ticket</h3>
-                            <p class="text-gray-600">Receive your e-ticket instantly via email or download from your account.</p>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">
+                                {{ $settings['step4_title'] ?? 'Get E-Ticket' }}</h3>
+                            <p class="text-gray-600">
+                                {{ $settings['step4_description'] ?? 'Receive your e-ticket instantly via email or download from your account.' }}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
-
-            {{-- <div class="mt-16 text-center">
-                <a href="{{ route('register') }}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                    Create an Account to Start Booking
-                </a>
-            </div> --}}
         </div>
     </section>
 
@@ -542,9 +650,12 @@
                         </div>
                         <span class="ml-2 text-gray-600">5.0</span>
                     </div>
-                    <p class="text-gray-700 mb-6">"The online booking process was incredibly easy. I received my e-ticket instantly and the ferry was clean and comfortable. Will definitely use this service again!"</p>
+                    <p class="text-gray-700 mb-6">"The online booking process was incredibly easy. I received my
+                        e-ticket instantly and the ferry was clean and comfortable. Will definitely use this service
+                        again!"</p>
                     <div class="flex items-center">
-                        <img class="h-10 w-10 rounded-full object-cover" src="https://randomuser.me/api/portraits/women/17.jpg" alt="Customer">
+                        <img class="h-10 w-10 rounded-full object-cover"
+                            src="https://randomuser.me/api/portraits/women/17.jpg" alt="Customer">
                         <div class="ml-3">
                             <h4 class="text-sm font-medium text-gray-900">Sarah Johnson</h4>
                             <p class="text-sm text-gray-500">Traveled from Merak to Bakauheni</p>
@@ -564,9 +675,12 @@
                         </div>
                         <span class="ml-2 text-gray-600">4.5</span>
                     </div>
-                    <p class="text-gray-700 mb-6">"Great service and punctual departures. The staff was very helpful with my questions about vehicle transport. Highly recommend for family trips across the islands."</p>
+                    <p class="text-gray-700 mb-6">"Great service and punctual departures. The staff was very helpful
+                        with my questions about vehicle transport. Highly recommend for family trips across the
+                        islands."</p>
                     <div class="flex items-center">
-                        <img class="h-10 w-10 rounded-full object-cover" src="https://randomuser.me/api/portraits/men/32.jpg" alt="Customer">
+                        <img class="h-10 w-10 rounded-full object-cover"
+                            src="https://randomuser.me/api/portraits/men/32.jpg" alt="Customer">
                         <div class="ml-3">
                             <h4 class="text-sm font-medium text-gray-900">Budi Santoso</h4>
                             <p class="text-sm text-gray-500">Traveled from Ketapang to Gilimanuk</p>
@@ -586,9 +700,12 @@
                         </div>
                         <span class="ml-2 text-gray-600">5.0</span>
                     </div>
-                    <p class="text-gray-700 mb-6">"I was impressed by the safety standards on board. The crew was professional and the journey was smooth. The online system made it easy to book even last minute."</p>
+                    <p class="text-gray-700 mb-6">"I was impressed by the safety standards on board. The crew was
+                        professional and the journey was smooth. The online system made it easy to book even last
+                        minute."</p>
                     <div class="flex items-center">
-                        <img class="h-10 w-10 rounded-full object-cover" src="https://randomuser.me/api/portraits/women/62.jpg" alt="Customer">
+                        <img class="h-10 w-10 rounded-full object-cover"
+                            src="https://randomuser.me/api/portraits/women/62.jpg" alt="Customer">
                         <div class="ml-3">
                             <h4 class="text-sm font-medium text-gray-900">Dewi Putri</h4>
                             <p class="text-sm text-gray-500">Traveled from Padang Bai to Lembar</p>
@@ -604,35 +721,37 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="lg:grid lg:grid-cols-2 lg:gap-16 items-center">
                 <div>
-                    <h2 class="text-3xl font-bold mb-6">About Our Ferry Service</h2>
+                    <h2 class="text-3xl font-bold mb-6">{{ $settings['about_title'] ?? 'About Our Ferry Service' }}
+                    </h2>
                     <p class="text-primary-100 mb-6 text-lg">
-                        Founded in 2010, our ferry ticket platform has been connecting islands and facilitating easy sea travel throughout Indonesia. We are dedicated to providing safe, reliable, and affordable transportation for passengers and vehicles.
+                        {{ $settings['about_content'] ?? 'Founded in 2010, our ferry ticket platform has been connecting islands and facilitating easy sea travel throughout Indonesia. We are dedicated to providing safe, reliable, and affordable transportation for passengers and vehicles.' }}
                     </p>
                     <p class="text-primary-100 mb-6 text-lg">
-                        Our mission is to simplify sea travel through technology while maintaining the highest standards of safety and customer service. With a wide network of routes connecting major ports across the archipelago, we're proud to help connect the islands of Indonesia.
+                        {{ $settings['about_mission'] ?? 'Our mission is to simplify sea travel through technology while maintaining the highest standards of safety and customer service. With a wide network of routes connecting major ports across the archipelago, we\'re proud to help connect the islands of Indonesia.' }}
                     </p>
                     <div class="grid grid-cols-2 gap-6 mt-10">
                         <div>
-                            <p class="text-4xl font-bold">150+</p>
+                            <p class="text-4xl font-bold">{{ $settings['stats_daily_trips'] ?? '150+' }}</p>
                             <p class="text-primary-100">Daily Trips</p>
                         </div>
                         <div>
-                            <p class="text-4xl font-bold">50+</p>
+                            <p class="text-4xl font-bold">{{ $settings['stats_ferries'] ?? '50+' }}</p>
                             <p class="text-primary-100">Ferries</p>
                         </div>
                         <div>
-                            <p class="text-4xl font-bold">25+</p>
+                            <p class="text-4xl font-bold">{{ $settings['stats_routes'] ?? '25+' }}</p>
                             <p class="text-primary-100">Routes</p>
                         </div>
                         <div>
-                            <p class="text-4xl font-bold">1M+</p>
+                            <p class="text-4xl font-bold">{{ $settings['stats_passengers'] ?? '1M+' }}</p>
                             <p class="text-primary-100">Happy Passengers</p>
                         </div>
                     </div>
                 </div>
                 <div class="mt-10 lg:mt-0 relative">
                     <div class="boat-animation">
-                        <img src="https://images.unsplash.com/photo-1580887742560-b8526e2bbae5?q=80&w=1974" alt="Ferry Boat" class="rounded-lg shadow-2xl">
+                        <img src="{{ $settings['about_image'] ?? 'https://images.unsplash.com/photo-1580887742560-b8526e2bbae5?q=80&w=1974' }}"
+                            alt="Ferry Boat" class="rounded-lg shadow-2xl">
                     </div>
                     <div class="absolute -bottom-10 -right-10 bg-primary-500 rounded-lg p-8 shadow-xl">
                         <div class="flex items-center">
@@ -650,22 +769,23 @@
         </div>
     </section>
 
+
     <!-- CTA Section -->
     <section class="py-20 bg-primary-700 text-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl font-bold mb-8">Ready to Start Your Journey?</h2>
+            <h2 class="text-3xl font-bold mb-8">{{ $settings['cta_title'] ?? 'Ready to Start Your Journey?' }}</h2>
             <p class="text-xl text-primary-100 mb-12 max-w-3xl mx-auto">
-                Book your ferry tickets online for a seamless travel experience. Safe, convenient, and affordable sea transportation to your destination.
+                {{ $settings['cta_subtitle'] ?? 'Book your ferry tickets online for a seamless travel experience. Safe, convenient, and affordable sea transportation to your destination.' }}
             </p>
             <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-                <a href="#routes" class="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-medium rounded-md text-primary-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
+                <a href="#routes"
+                    class="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-medium rounded-md text-primary-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
                     <i class="fas fa-ship mr-2"></i> Explore Routes
                 </a>
-                {{-- @if (Route::has('register'))
-                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-8 py-4 border border-white text-base font-medium rounded-md text-white hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
-                        <i class="fas fa-user-plus mr-2"></i> Sign Up Now
-                    </a>
-                @endif --}}
+                <a href="#download-app"
+                    class="show-app-modal inline-flex items-center justify-center px-8 py-4 border border-white text-base font-medium rounded-md text-white hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+                </a>
             </div>
         </div>
     </section>
@@ -678,22 +798,23 @@
                 <div>
                     <div class="flex items-center mb-6">
                         <img class="h-10 w-auto" src="{{ asset('images/logo.png') }}" alt="Ferry Ticket Logo">
-                        <span class="ml-2 text-xl font-bold text-white">FerryTicket</span>
+                        <span
+                            class="ml-2 text-xl font-bold text-white">{{ $settings['site_name'] ?? 'FerryTicket' }}</span>
                     </div>
                     <p class="text-gray-400 mb-4">
-                        Your trusted partner for sea travel in Indonesia. Book your ferry tickets online for a seamless experience.
+                        {{ $settings['footer_description'] ?? 'Your trusted partner for sea travel in Indonesia. Book your ferry tickets online for a seamless experience.' }}
                     </p>
                     <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-white">
+                        <a href="{{ $settings['social_facebook'] ?? '#' }}" class="text-gray-400 hover:text-white">
                             <i class="fab fa-facebook-f"></i>
                         </a>
-                        <a href="#" class="text-gray-400 hover:text-white">
+                        <a href="{{ $settings['social_twitter'] ?? '#' }}" class="text-gray-400 hover:text-white">
                             <i class="fab fa-twitter"></i>
                         </a>
-                        <a href="#" class="text-gray-400 hover:text-white">
+                        <a href="{{ $settings['social_instagram'] ?? '#' }}" class="text-gray-400 hover:text-white">
                             <i class="fab fa-instagram"></i>
                         </a>
-                        <a href="#" class="text-gray-400 hover:text-white">
+                        <a href="{{ $settings['social_youtube'] ?? '#' }}" class="text-gray-400 hover:text-white">
                             <i class="fab fa-youtube"></i>
                         </a>
                     </div>
@@ -718,15 +839,17 @@
                     <ul class="space-y-3">
                         <li class="flex items-start">
                             <i class="fas fa-map-marker-alt text-primary-500 mt-1 mr-3"></i>
-                            <span class="text-gray-400">Jl. Pelabuhan Raya No. 123, Jakarta Utara, Indonesia</span>
+                            <span
+                                class="text-gray-400">{{ $settings['footer_address'] ?? 'Jl. Pelabuhan Raya No. 123, Jakarta Utara, Indonesia' }}</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-phone-alt text-primary-500 mt-1 mr-3"></i>
-                            <span class="text-gray-400">+62 21 1234 5678</span>
+                            <span class="text-gray-400">{{ $settings['footer_phone'] ?? '+62 21 1234 5678' }}</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-envelope text-primary-500 mt-1 mr-3"></i>
-                            <span class="text-gray-400">info@ferryticket.com</span>
+                            <span
+                                class="text-gray-400">{{ $settings['footer_email'] ?? 'info@ferryticket.com' }}</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-clock text-primary-500 mt-1 mr-3"></i>
@@ -740,8 +863,10 @@
                     <h3 class="text-lg font-semibold mb-6">Subscribe to Newsletter</h3>
                     <p class="text-gray-400 mb-4">Get updates on new routes and special offers</p>
                     <form class="flex">
-                        <input type="email" placeholder="Your email address" class="px-4 py-2 w-full rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900">
-                        <button type="submit" class="bg-primary-600 px-4 py-2 rounded-r-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        <input type="email" placeholder="Your email address"
+                            class="px-4 py-2 w-full rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900">
+                        <button type="submit"
+                            class="bg-primary-600 px-4 py-2 rounded-r-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </form>
@@ -749,17 +874,126 @@
             </div>
 
             <div class="border-t border-gray-800 mt-16 pt-8 flex flex-col md:flex-row justify-between items-center">
-                <p class="text-gray-400">© {{ date('Y') }} Ferry Ticket System. All rights reserved.</p>
+                <p class="text-gray-400">
+                    {{ $settings['footer_copyright'] ?? '© ' . date('Y') . ' Ferry Ticket System. All rights reserved.' }}
+                </p>
                 <div class="mt-4 md:mt-0">
-                    <img src="https://www.svgrepo.com/show/410289/payment-method.svg" alt="Payment Methods" class="h-8">
+                    <img src="https://www.svgrepo.com/show/410289/payment-method.svg" alt="Payment Methods"
+                        class="h-8">
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- App Download Modal with SVG Blobs -->
+    <div id="appDownloadModal"
+        class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 relative overflow-hidden modal-fade-in">
+            <!-- Close button -->
+            <button id="closeAppModal"
+                class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10 bg-white bg-opacity-80 rounded-full w-8 h-8 flex items-center justify-center">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+
+            <!-- Background decorative blobs -->
+            <div
+                class="absolute -top-20 -left-16 w-64 h-64 bg-primary-100 rounded-full blur-2xl opacity-50 blob-animation">
+            </div>
+            <div class="absolute -bottom-20 -right-16 w-72 h-72 bg-secondary-100 rounded-full blur-2xl opacity-50 blob-animation"
+                style="animation-delay: 1s;"></div>
+
+            <div class="relative z-10">
+                <!-- Header with wave decoration -->
+                <div class="text-center mb-6 relative">
+                    <div
+                        class="relative w-20 h-20 mx-auto mb-4 bg-primary-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-mobile-alt text-4xl text-white"></i>
+                        <!-- Small floating element -->
+                        <svg class="absolute -top-2 -right-2 w-8 h-8 text-primary-300" viewBox="0 0 24 24"
+                            fill="currentColor">
+                            <path
+                                d="M20.222 0c1.406 0 2.54 1.137 2.607 2.534V24l-2.677-2.273l-1.47-1.338l-1.604-1.398l.67 2.205H3.71c-1.402 0-2.54-1.065-2.54-2.476V2.534C1.17 1.137 2.31.003 3.715.003H20.22Z">
+                            </path>
+                        </svg>
+                    </div>
+
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Get Our Mobile App</h3>
+                    <p class="text-gray-600 mb-1">Scan the QR code below to download</p>
+                    <p class="text-gray-600 mb-4 text-sm">For a seamless ferry booking experience</p>
+
+                    <!-- Decorative wave -->
+                    <svg class="w-full h-6 text-primary-100" viewBox="0 0 100 10" preserveAspectRatio="none">
+                        <path d="M0 10 C 30 4 70 4 100 10 L 100 0 L 0 0 Z" fill="currentColor"></path>
+                    </svg>
+                </div>
+
+                <!-- QR Code section with animation -->
+                <div class="flex justify-center mb-8">
+                    <div class="relative bounce-animation">
+                        <!-- QR Code Container with styling -->
+                        <div class="p-3 bg-white border-2 border-primary-100 rounded-lg shadow-lg">
+                            <!-- Replace with your actual QR code image -->
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://yourappdownloadlink.com"
+                                alt="Download App QR Code" class="h-36 w-36">
+                        </div>
+
+                        <!-- Phone icon indicator -->
+                        <div class="absolute -top-2 -right-2 bg-primary-500 text-white p-2 rounded-full">
+                            <i class="fas fa-qrcode"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-sm text-gray-500 mb-6 text-center">Scan with your phone camera</p>
+
+                <!-- App store buttons -->
+                <div class="flex justify-center space-x-4 mb-4">
+                    <a href="#"
+                        class="flex items-center justify-center bg-black text-white px-4 py-2 rounded-lg transition-transform hover:scale-105">
+                        <i class="fab fa-apple text-xl mr-2"></i>
+                        <div class="text-left">
+                            <div class="text-xs">Download on the</div>
+                            <div class="text-sm font-semibold">App Store</div>
+                        </div>
+                    </a>
+                    <a href="#"
+                        class="flex items-center justify-center bg-black text-white px-4 py-2 rounded-lg transition-transform hover:scale-105">
+                        <i class="fab fa-google-play text-xl mr-2"></i>
+                        <div class="text-left">
+                            <div class="text-xs">Get it on</div>
+                            <div class="text-sm font-semibold">Google Play</div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Benefits of the app -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-2">
+                    <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                        <i class="fas fa-star text-yellow-400 mr-2"></i>
+                        App Benefits
+                    </h4>
+                    <ul class="text-sm text-gray-600 space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-primary-500 mt-1 mr-2"></i>
+                            <span>Faster booking process</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-primary-500 mt-1 mr-2"></i>
+                            <span>Exclusive mobile discounts</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-primary-500 mt-1 mr-2"></i>
+                            <span>Real-time ferry status updates</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
-        // Mobile menu toggle
+        // Mobile menu toggle and all existing script logic
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuButton = document.querySelector('.mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
@@ -771,15 +1005,17 @@
             // Smooth scrolling for anchor links
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 anchor.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
-                    if (target) {
-                        window.scrollTo({
-                            top: target.offsetTop - 70,
-                            behavior: 'smooth'
-                        });
-                        // Close mobile menu if open
-                        mobileMenu.classList.add('hidden');
+                    if (!this.classList.contains('show-app-modal')) {
+                        e.preventDefault();
+                        const target = document.querySelector(this.getAttribute('href'));
+                        if (target) {
+                            window.scrollTo({
+                                top: target.offsetTop - 70,
+                                behavior: 'smooth'
+                            });
+                            // Close mobile menu if open
+                            mobileMenu.classList.add('hidden');
+                        }
                     }
                 });
             });
@@ -793,7 +1029,46 @@
                     navbar.classList.remove('bg-white', 'shadow-md');
                 }
             });
+
+            // App download modal functionality
+            const appDownloadModal = document.getElementById('appDownloadModal');
+            const closeAppModal = document.getElementById('closeAppModal');
+
+            // Function to show the app download modal
+            function showAppDownloadModal(e) {
+                e.preventDefault(); // Prevent the default link behavior
+                appDownloadModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+            }
+
+            // Add click event listeners to all elements with the show-app-modal class
+            document.querySelectorAll('.show-app-modal').forEach(button => {
+                button.addEventListener('click', showAppDownloadModal);
+            });
+
+            // Close modal when the close button is clicked
+            closeAppModal.addEventListener('click', function() {
+                appDownloadModal.classList.add('hidden');
+                document.body.style.overflow = ''; // Re-enable scrolling
+            });
+
+            // Close modal when clicking outside the modal content
+            appDownloadModal.addEventListener('click', function(e) {
+                if (e.target === appDownloadModal) {
+                    appDownloadModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            });
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && !appDownloadModal.classList.contains('hidden')) {
+                    appDownloadModal.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+            });
         });
     </script>
 </body>
+
 </html>

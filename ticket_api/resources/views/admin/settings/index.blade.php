@@ -1,8 +1,7 @@
+{{-- resources/views/admin/settings/index.blade.php --}}
 @extends('admin.layouts.app')
-
 @section('title', 'System Settings')
 @section('header', 'System Settings')
-
 @section('styles')
 <style>
     /* Enhanced Tab Navigation */
@@ -32,7 +31,6 @@
     .tab-button:hover:not(.active):after {
         background-color: #d1d5db;
     }
-
     /* Enhanced Card Styling */
     .settings-card {
         transition: all 0.3s ease;
@@ -43,7 +41,6 @@
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         border-color: rgba(209, 213, 219, 0.8);
     }
-
     /* Enhanced Form Elements */
     .form-input {
         transition: all 0.2s ease;
@@ -67,7 +64,6 @@
         color: #6366f1;
         font-size: 0.875rem;
     }
-
     /* Enhanced Section Titles */
     .section-title {
         font-size: 1.125rem;
@@ -93,7 +89,6 @@
         margin-right: 0.5rem;
         color: #4f46e5;
     }
-
     /* Enhanced Buttons */
     .save-button {
         transition: all 0.3s ease;
@@ -106,7 +101,6 @@
     .save-button:active {
         transform: translateY(1px);
     }
-
     /* Enhanced Form Descriptions */
     .form-description {
         color: #6b7280;
@@ -120,64 +114,6 @@
         color: #9ca3af;
         font-size: 0.75rem;
     }
-
-    /* Enhanced Toggle Switches */
-    .toggle-wrapper {
-        position: relative;
-        display: inline-block;
-        width: 3rem;
-        height: 1.5rem;
-    }
-    .toggle-input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-    .toggle-slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #e5e7eb;
-        transition: .4s;
-        border-radius: 1.5rem;
-    }
-    .toggle-slider:before {
-        position: absolute;
-        content: "";
-        height: 1.125rem;
-        width: 1.125rem;
-        left: 0.1875rem;
-        bottom: 0.1875rem;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    .toggle-input:checked + .toggle-slider {
-        background-color: #4f46e5;
-    }
-    .toggle-input:checked + .toggle-slider:before {
-        transform: translateX(1.5rem);
-    }
-    .toggle-input:focus + .toggle-slider {
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-    }
-
-    /* Responsive Styles */
-    @media (max-width: 640px) {
-        .tab-button {
-            padding-left: 0.75rem;
-            padding-right: 0.75rem;
-            font-size: 0.875rem;
-        }
-        .section-title {
-            font-size: 1rem;
-        }
-    }
-
     /* Hide scrollbar but allow scrolling */
     .hide-scrollbar::-webkit-scrollbar {
         display: none;
@@ -186,7 +122,6 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
-
     /* Card Header Styling */
     .card-header {
         background: linear-gradient(to right, #f9fafb, #ffffff);
@@ -218,7 +153,6 @@
         color: #6b7280;
         font-size: 0.875rem;
     }
-
     /* Info Box Styling */
     .info-box {
         background-color: #eff6ff;
@@ -244,18 +178,55 @@
         font-size: 1rem;
         margin-right: 1rem;
     }
+    /* Enhanced Tab Pills */
+    .tab-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .tab-pill {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .tab-pill i {
+        margin-right: 0.5rem;
+    }
+    .tab-pill.active {
+        background-color: #4f46e5;
+        color: white;
+        font-weight: 500;
+    }
+    .tab-pill:not(.active) {
+        background-color: #f3f4f6;
+        color: #6b7280;
+    }
+    .tab-pill:not(.active):hover {
+        background-color: #e5e7eb;
+        color: #4b5563;
+    }
 </style>
 @endsection
-
 @section('content')
-<div x-data="{ activeTab: 'system' }" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div x-data="{ activeTab: 'system', activeSection: 'general' }" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <!-- Enhanced Tab Navigation -->
     <div class="mb-8 border-b border-gray-200 overflow-x-auto hide-scrollbar">
         <div class="flex -mb-px space-x-6 sm:space-x-8">
-            <button @click="activeTab = 'system'"
+            <button @click="activeTab = 'system'; activeSection = 'general'"
                 class="tab-button py-4 px-2 text-sm font-medium text-center flex items-center focus:outline-none whitespace-nowrap"
                 :class="activeTab === 'system' ? 'active text-indigo-600' : 'text-gray-500 hover:text-gray-700'">
                 <i class="fas fa-cog mr-2 text-lg"></i> <span>System Settings</span>
+            </button>
+            <button @click="activeTab = 'landing'; activeSection = 'hero'"
+                class="tab-button py-4 px-2 text-sm font-medium text-center flex items-center focus:outline-none whitespace-nowrap"
+                :class="activeTab === 'landing' ? 'active text-indigo-600' : 'text-gray-500 hover:text-gray-700'">
+                <i class="fas fa-home mr-2 text-lg"></i> <span>Landing Page</span>
             </button>
             <a href="{{ route('admin.settings.profile') }}"
                 class="tab-button py-4 px-2 text-sm font-medium text-center flex items-center text-gray-500 hover:text-gray-700 focus:outline-none whitespace-nowrap">
@@ -264,13 +235,12 @@
         </div>
     </div>
 
-    <!-- Enhanced System Settings Tab -->
+    <!-- System Settings Tab -->
     <div x-show="activeTab === 'system'"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0 transform scale-95"
          x-transition:enter-end="opacity-100 transform scale-100"
          class="space-y-8">
-
         <!-- General Settings Card -->
         <div class="settings-card bg-white rounded-xl overflow-hidden">
             <div class="card-header">
@@ -282,7 +252,6 @@
                     <p class="card-subtitle">Configure the general settings for your ferry ticket system.</p>
                 </div>
             </div>
-
             <div class="p-6 sm:p-8">
                 <form action="{{ route('admin.settings.update-system') }}" method="POST">
                     @csrf
@@ -303,7 +272,6 @@
                                 <i class="fas fa-info-circle"></i> This will be displayed in browser tabs and email notifications.
                             </p>
                         </div>
-
                         <div class="sm:col-span-3">
                             <label for="contact_email" class="block text-sm font-medium form-label">
                                 <i class="fas fa-envelope"></i> Contact Email
@@ -320,7 +288,6 @@
                                 <i class="fas fa-info-circle"></i> This email will be used for system notifications and customer support.
                             </p>
                         </div>
-
                         <div class="sm:col-span-3">
                             <label for="phone_number" class="block text-sm font-medium form-label">
                                 <i class="fas fa-phone-alt"></i> Contact Phone
@@ -337,7 +304,6 @@
                                 <i class="fas fa-info-circle"></i> Customer support phone number (optional).
                             </p>
                         </div>
-
                         <div class="sm:col-span-3">
                             <label for="booking_expiry_hours" class="block text-sm font-medium form-label">
                                 <i class="fas fa-hourglass-half"></i> Booking Expiry Hours
@@ -361,13 +327,11 @@
                             </p>
                         </div>
                     </div>
-
                     <!-- Payment Settings Section -->
                     <div class="mt-10 pt-6 border-t border-gray-200">
                         <h3 class="section-title">
                             <i class="fas fa-credit-card"></i> Payment Settings
                         </h3>
-
                         <div class="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6 mt-6">
                             <div class="sm:col-span-3">
                                 <label for="currency" class="block text-sm font-medium form-label">
@@ -392,7 +356,6 @@
                                     <i class="fas fa-info-circle"></i> Primary currency for all transactions.
                                 </p>
                             </div>
-
                             <div class="sm:col-span-3">
                                 <label for="tax_percentage" class="block text-sm font-medium form-label">
                                     <i class="fas fa-percentage"></i> Tax Percentage (%)
@@ -415,113 +378,6 @@
                                     <i class="fas fa-info-circle"></i> Tax rate applied to all bookings.
                                 </p>
                             </div>
-
-                            <div class="sm:col-span-3">
-                                <label for="payment_gateway" class="block text-sm font-medium form-label">
-                                    <i class="fas fa-credit-card"></i> Payment Gateway
-                                </label>
-                                <div class="mt-1 relative rounded-md shadow-sm">
-                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <i class="fas fa-credit-card text-gray-400"></i>
-                                    </div>
-                                    <select id="payment_gateway" name="payment_gateway"
-                                        class="form-input shadow-sm block w-full pl-10 sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 appearance-none py-2.5">
-                                        <option value="stripe" {{ ($settings['payment_gateway']->value ?? 'stripe') == 'stripe' ? 'selected' : '' }}>Stripe</option>
-                                        <option value="paypal" {{ ($settings['payment_gateway']->value ?? '') == 'paypal' ? 'selected' : '' }}>PayPal</option>
-                                        <option value="midtrans" {{ ($settings['payment_gateway']->value ?? '') == 'midtrans' ? 'selected' : '' }}>Midtrans</option>
-                                    </select>
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <i class="fas fa-chevron-down text-gray-400"></i>
-                                    </div>
-                                </div>
-                                <p class="form-description">
-                                    <i class="fas fa-info-circle"></i> Default payment processor for transactions.
-                                </p>
-                            </div>
-
-                            <div class="sm:col-span-3">
-                                <label for="receipt_prefix" class="block text-sm font-medium form-label">
-                                    <i class="fas fa-file-invoice"></i> Receipt Prefix
-                                </label>
-                                <div class="mt-1 relative rounded-md shadow-sm">
-                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <i class="fas fa-file-invoice text-gray-400"></i>
-                                    </div>
-                                    <input type="text" name="receipt_prefix" id="receipt_prefix"
-                                        value="{{ $settings['receipt_prefix']->value ?? 'FTX-' }}" maxlength="10"
-                                        class="form-input shadow-sm block w-full pl-10 sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
-                                </div>
-                                <p class="form-description">
-                                    <i class="fas fa-info-circle"></i> Prefix for receipt numbers (e.g., FTX-00001).
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Email Configuration Section -->
-                    <div class="mt-10 pt-6 border-t border-gray-200">
-                        <h3 class="section-title">
-                            <i class="fas fa-envelope"></i> Email Configuration
-                        </h3>
-
-                        <div class="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6 mt-6">
-                            <div class="sm:col-span-3">
-                                <label for="email_sender_name" class="block text-sm font-medium form-label">
-                                    <i class="fas fa-user"></i> Sender Name
-                                </label>
-                                <div class="mt-1 relative rounded-md shadow-sm">
-                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <i class="fas fa-user text-gray-400"></i>
-                                    </div>
-                                    <input type="text" name="email_sender_name" id="email_sender_name"
-                                        value="{{ $settings['email_sender_name']->value ?? 'Ferry Ticket System' }}"
-                                        class="form-input shadow-sm block w-full pl-10 sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
-                                </div>
-                                <p class="form-description">
-                                    <i class="fas fa-info-circle"></i> Name displayed in the "From" field of emails.
-                                </p>
-                            </div>
-
-                            <div class="sm:col-span-3">
-                                <label for="email_footer_text" class="block text-sm font-medium form-label">
-                                    <i class="fas fa-paragraph"></i> Email Footer Text
-                                </label>
-                                <div class="mt-1 relative rounded-md shadow-sm">
-                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <i class="fas fa-paragraph text-gray-400"></i>
-                                    </div>
-                                    <input type="text" name="email_footer_text" id="email_footer_text"
-                                        value="{{ $settings['email_footer_text']->value ?? '© '.date('Y').' Ferry Ticket System. All rights reserved.' }}"
-                                        class="form-input shadow-sm block w-full pl-10 sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
-                                </div>
-                                <p class="form-description">
-                                    <i class="fas fa-info-circle"></i> Text displayed at the bottom of all emails.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Info Box Section -->
-                    <div class="info-box">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <div class="info-icon">
-                                    <i class="fas fa-info"></i>
-                                </div>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-semibold text-blue-800">Changes take effect immediately</h3>
-                                <div class="mt-2 text-sm text-blue-700">
-                                    <p>All changes to system settings will be applied immediately after saving. Make sure your changes won't disrupt ongoing operations.</p>
-                                </div>
-                                <div class="mt-3">
-                                    <a href="#" class="text-blue-700 hover:text-blue-900 font-medium text-sm inline-flex items-center rounded-md px-2.5 py-1.5 hover:bg-blue-100 transition-colors">
-                                        <i class="fas fa-book mr-1.5"></i>
-                                        Read documentation
-                                        <i class="fas fa-chevron-right ml-1 text-xs"></i>
-                                    </a>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -530,7 +386,6 @@
                         <button type="button" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
                             <i class="fas fa-undo mr-2"></i> Reset to Defaults
                         </button>
-
                         <button type="submit" class="w-full sm:w-auto save-button inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
                             <i class="fas fa-save mr-2"></i> Save Settings
                         </button>
@@ -538,59 +393,498 @@
                 </form>
             </div>
         </div>
+    </div>
 
-        <!-- Advanced Settings Card -->
-        <div class="settings-card bg-white rounded-xl overflow-hidden">
+    <!-- Landing Page Settings Tab -->
+    <div x-show="activeTab === 'landing'"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         class="space-y-8">
+
+        <!-- Section Tabs -->
+        <div class="tab-pills">
+            <button @click="activeSection = 'hero'"
+                :class="activeSection === 'hero' ? 'active' : ''"
+                class="tab-pill">
+                <i class="fas fa-image"></i> Hero Section
+            </button>
+            <button @click="activeSection = 'features'"
+                :class="activeSection === 'features' ? 'active' : ''"
+                class="tab-pill">
+                <i class="fas fa-list-ul"></i> Features
+            </button>
+            <button @click="activeSection = 'routes'"
+                :class="activeSection === 'routes' ? 'active' : ''"
+                class="tab-pill">
+                <i class="fas fa-route"></i> Routes
+            </button>
+            <button @click="activeSection = 'howto'"
+                :class="activeSection === 'howto' ? 'active' : ''"
+                class="tab-pill">
+                <i class="fas fa-info-circle"></i> How To Book
+            </button>
+            <button @click="activeSection = 'about'"
+                :class="activeSection === 'about' ? 'active' : ''"
+                class="tab-pill">
+                <i class="fas fa-building"></i> About Us
+            </button>
+            <button @click="activeSection = 'footer'"
+                :class="activeSection === 'footer' ? 'active' : ''"
+                class="tab-pill">
+                <i class="fas fa-shoe-prints"></i> Footer
+            </button>
+            <button @click="activeSection = 'seo'"
+                :class="activeSection === 'seo' ? 'active' : ''"
+                class="tab-pill">
+                <i class="fas fa-search"></i> SEO
+            </button>
+        </div>
+
+        <!-- Hero Section Settings -->
+        <div x-show="activeSection === 'hero'" class="settings-card bg-white rounded-xl overflow-hidden">
             <div class="card-header">
-                <div class="header-icon bg-purple-100 text-purple-600">
-                    <i class="fas fa-sliders-h"></i>
+                <div class="header-icon bg-blue-100 text-blue-600">
+                    <i class="fas fa-image"></i>
                 </div>
                 <div>
-                    <h3 class="card-title">Advanced Settings</h3>
-                    <p class="card-subtitle">Configure advanced system settings and behaviors.</p>
+                    <h3 class="card-title">Hero Section</h3>
+                    <p class="card-subtitle">Configure the main banner section at the top of your landing page.</p>
                 </div>
             </div>
-
             <div class="p-6 sm:p-8">
-                <div class="space-y-6">
-                    <!-- Toggle Item 1 -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-900">Enable maintenance mode</h4>
-                            <p class="text-xs text-gray-500 mt-1">When enabled, the site will be inaccessible to regular users.</p>
+                <form action="{{ route('admin.settings.update-hero') }}" method="POST">
+                    @csrf
+                    <div class="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                        <div class="sm:col-span-6">
+                            <label for="hero_title" class="block text-sm font-medium form-label">
+                                <i class="fas fa-heading"></i> Hero Title
+                            </label>
+                            <div class="mt-1">
+                                <input type="text" name="hero_title" id="hero_title"
+                                    value="{{ $settings['hero_title']->value ?? 'Explore the Sea with Our Ferry Service' }}"
+                                    class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                            </div>
+                            <p class="form-description">
+                                <i class="fas fa-info-circle"></i> The main headline displayed in the hero section.
+                            </p>
                         </div>
-                        <div class="toggle-wrapper">
-                            <input type="checkbox" id="maintenance_mode" name="maintenance_mode" class="toggle-input" />
-                            <label for="maintenance_mode" class="toggle-slider"></label>
+                        <div class="sm:col-span-6">
+                            <label for="hero_subtitle" class="block text-sm font-medium form-label">
+                                <i class="fas fa-align-left"></i> Hero Subtitle
+                            </label>
+                            <div class="mt-1">
+                                <textarea name="hero_subtitle" id="hero_subtitle" rows="3"
+                                    class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">{{ $settings['hero_subtitle']->value ?? 'Book your ferry tickets online for a seamless travel experience. Safe, convenient, and affordable sea transportation to your destination.' }}</textarea>
+                            </div>
+                            <p class="form-description">
+                                <i class="fas fa-info-circle"></i> Descriptive text displayed below the hero title.
+                            </p>
+                        </div>
+                        <div class="sm:col-span-6">
+                            <label for="hero_image" class="block text-sm font-medium form-label">
+                                <i class="fas fa-image"></i> Hero Background Image URL
+                            </label>
+                            <div class="mt-1">
+                                <input type="text" name="hero_image" id="hero_image"
+                                    value="{{ $settings['hero_image']->value ?? 'https://images.unsplash.com/photo-1523292562811-8fa7962a78c8?q=80&w=2070' }}"
+                                    class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                            </div>
+                            <p class="form-description">
+                                <i class="fas fa-info-circle"></i> URL of the background image for the hero section.
+                            </p>
+
+                            <!-- Image Preview -->
+                            <div class="mt-3 rounded-md overflow-hidden h-48 bg-gray-100">
+                                <img id="hero_image_preview" src="{{ $settings['hero_image']->value ?? 'https://images.unsplash.com/photo-1523292562811-8fa7962a78c8?q=80&w=2070' }}"
+                                     alt="Hero Image Preview" class="w-full h-full object-cover">
+                            </div>
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label for="primary_button_text" class="block text-sm font-medium form-label">
+                                <i class="fas fa-mouse-pointer"></i> Primary Button Text
+                            </label>
+                            <div class="mt-1">
+                                <input type="text" name="primary_button_text" id="primary_button_text"
+                                    value="{{ $settings['primary_button_text']->value ?? 'Check Available Routes' }}"
+                                    class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                            </div>
+                            <p class="form-description">
+                                <i class="fas fa-info-circle"></i> Text for the primary call-to-action button.
+                            </p>
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label for="secondary_button_text" class="block text-sm font-medium form-label">
+                                <i class="fas fa-mouse-pointer"></i> Secondary Button Text
+                            </label>
+                            <div class="mt-1">
+                                <input type="text" name="secondary_button_text" id="secondary_button_text"
+                                    value="{{ $settings['secondary_button_text']->value ?? 'Learn How to Book' }}"
+                                    class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                            </div>
+                            <p class="form-description">
+                                <i class="fas fa-info-circle"></i> Text for the secondary call-to-action button.
+                            </p>
                         </div>
                     </div>
 
-                    <!-- Toggle Item 2 -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-900">Enable debug mode</h4>
-                            <p class="text-xs text-gray-500 mt-1">Show detailed error messages (not recommended for production).</p>
+                    <!-- Form Actions -->
+                    <div class="pt-6 mt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end items-center space-y-3 sm:space-y-0">
+                        <button type="submit" class="w-full sm:w-auto save-button inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i> Save Hero Section
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Features Section Settings -->
+        <div x-show="activeSection === 'features'" class="settings-card bg-white rounded-xl overflow-hidden">
+            <div class="card-header">
+                <div class="header-icon bg-green-100 text-green-600">
+                    <i class="fas fa-list-ul"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">Features Section</h3>
+                    <p class="card-subtitle">Customize the features and benefits section of your landing page.</p>
+                </div>
+            </div>
+            <div class="p-6 sm:p-8">
+                <form action="{{ route('admin.settings.update-features') }}" method="POST">
+                    @csrf
+                    <div class="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                        <div class="sm:col-span-6">
+                            <label for="features_title" class="block text-sm font-medium form-label">
+                                <i class="fas fa-heading"></i> Section Title
+                            </label>
+                            <div class="mt-1">
+                                <input type="text" name="features_title" id="features_title"
+                                    value="{{ $settings['features_title']->value ?? 'Why Choose Our Ferry Service' }}"
+                                    class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                            </div>
                         </div>
-                        <div class="toggle-wrapper">
-                            <input type="checkbox" id="debug_mode" name="debug_mode" class="toggle-input" />
-                            <label for="debug_mode" class="toggle-slider"></label>
+                        <div class="sm:col-span-6">
+                            <label for="features_subtitle" class="block text-sm font-medium form-label">
+                                <i class="fas fa-align-left"></i> Section Subtitle
+                            </label>
+                            <div class="mt-1">
+                                <input type="text" name="features_subtitle" id="features_subtitle"
+                                    value="{{ $settings['features_subtitle']->value ?? 'Experience the best sea travel with these benefits' }}"
+                                    class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Toggle Item 3 -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div>
-                            <h4 class="text-sm font-medium text-gray-900">Allow user registrations</h4>
-                            <p class="text-xs text-gray-500 mt-1">Let visitors create new accounts on your site.</p>
-                        </div>
-                        <div class="toggle-wrapper">
-                            <input type="checkbox" id="allow_registrations" name="allow_registrations" checked class="toggle-input" />
-                            <label for="allow_registrations" class="toggle-slider"></label>
+                    <!-- Feature 1 -->
+                    <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="font-medium text-gray-900 mb-4">Feature 1</h3>
+                        <div class="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                            <div class="sm:col-span-2">
+                                <label for="feature1_icon" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-icons"></i> Icon
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature1_icon" id="feature1_icon"
+                                        value="{{ $settings['feature1_icon']->value ?? 'fas fa-anchor' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                                <p class="form-description">
+                                    <i class="fas fa-info-circle"></i> Font Awesome icon class
+                                </p>
+                            </div>
+                            <div class="sm:col-span-4">
+                                <label for="feature1_title" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-heading"></i> Title
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature1_title" id="feature1_title"
+                                        value="{{ $settings['feature1_title']->value ?? 'Reliable Service' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                            </div>
+                            <div class="sm:col-span-6">
+                                <label for="feature1_description" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-align-left"></i> Description
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature1_description" id="feature1_description"
+                                        value="{{ $settings['feature1_description']->value ?? 'Punctual departures and arrivals with a focus on passenger satisfaction' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Feature 2 -->
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="font-medium text-gray-900 mb-4">Feature 2</h3>
+                        <div class="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                            <div class="sm:col-span-2">
+                                <label for="feature2_icon" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-icons"></i> Icon
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature2_icon" id="feature2_icon"
+                                        value="{{ $settings['feature2_icon']->value ?? 'fas fa-shield-alt' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                                <p class="form-description">
+                                    <i class="fas fa-info-circle"></i> Font Awesome icon class
+                                </p>
+                            </div>
+                            <div class="sm:col-span-4">
+                                <label for="feature2_title" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-heading"></i> Title
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature2_title" id="feature2_title"
+                                        value="{{ $settings['feature2_title']->value ?? 'Safety First' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                            </div>
+                            <div class="sm:col-span-6">
+                                <label for="feature2_description" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-align-left"></i> Description
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature2_description" id="feature2_description"
+                                        value="{{ $settings['feature2_description']->value ?? 'We prioritize safety with well-maintained vessels and trained staff' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="font-medium text-gray-900 mb-4">Feature 3</h3>
+                        <div class="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                            <div class="sm:col-span-2">
+                                <label for="feature3_icon" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-icons"></i> Icon
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature3_icon" id="feature3_icon"
+                                        value="{{ $settings['feature3_icon']->value ?? 'fas fa-ticket-alt' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                                <p class="form-description">
+                                    <i class="fas fa-info-circle"></i> Font Awesome icon class
+                                </p>
+                            </div>
+                            <div class="sm:col-span-4">
+                                <label for="feature3_title" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-heading"></i> Title
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature3_title" id="feature3_title"
+                                        value="{{ $settings['feature3_title']->value ?? 'Easy Booking' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                            </div>
+                            <div class="sm:col-span-6">
+                                <label for="feature3_description" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-align-left"></i> Description
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature3_description" id="feature3_description"
+                                        value="{{ $settings['feature3_description']->value ?? 'Simple online booking system for tickets with instant confirmation' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feature 4 -->
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="font-medium text-gray-900 mb-4">Feature 4</h3>
+                        <div class="grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                            <div class="sm:col-span-2">
+                                <label for="feature4_icon" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-icons"></i> Icon
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature4_icon" id="feature4_icon"
+                                        value="{{ $settings['feature4_icon']->value ?? 'fas fa-wallet' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                                <p class="form-description">
+                                    <i class="fas fa-info-circle"></i> Font Awesome icon class
+                                </p>
+                            </div>
+                            <div class="sm:col-span-4">
+                                <label for="feature4_title" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-heading"></i> Title
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature4_title" id="feature4_title"
+                                        value="{{ $settings['feature4_title']->value ?? 'Affordable Rates' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                            </div>
+                            <div class="sm:col-span-6">
+                                <label for="feature4_description" class="block text-sm font-medium form-label">
+                                    <i class="fas fa-align-left"></i> Description
+                                </label>
+                                <div class="mt-1">
+                                    <input type="text" name="feature4_description" id="feature4_description"
+                                        value="{{ $settings['feature4_description']->value ?? 'Competitive pricing with special discounts for regular travelers' }}"
+                                        class="form-input shadow-sm block w-full sm:text-sm border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 py-2.5">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="pt-6 mt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end items-center space-y-3 sm:space-y-0">
+                        <button type="submit" class="w-full sm:w-auto save-button inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i> Save Features Section
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Additional section tabs would be added here -->
+        <div x-show="activeSection === 'howto'" class="settings-card bg-white rounded-xl overflow-hidden">
+            <!-- How to Book section content -->
+            <div class="card-header">
+                <div class="header-icon bg-purple-100 text-purple-600">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">How to Book Section</h3>
+                    <p class="card-subtitle">Customize the booking instructions section of your landing page.</p>
+                </div>
+            </div>
+            <div class="p-6 sm:p-8">
+                <form action="{{ route('admin.settings.update-howto') }}" method="POST">
+                    @csrf
+                    <!-- Section content form fields -->
+                    <!-- Form Actions -->
+                    <div class="pt-6 mt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end items-center space-y-3 sm:space-y-0">
+                        <button type="submit" class="w-full sm:w-auto save-button inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i> Save How to Book Section
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div x-show="activeSection === 'about'" class="settings-card bg-white rounded-xl overflow-hidden">
+            <!-- About Us section content -->
+            <div class="card-header">
+                <div class="header-icon bg-yellow-100 text-yellow-600">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">About Us Section</h3>
+                    <p class="card-subtitle">Customize the about us section of your landing page.</p>
+                </div>
+            </div>
+            <div class="p-6 sm:p-8">
+                <form action="{{ route('admin.settings.update-about') }}" method="POST">
+                    @csrf
+                    <!-- Form content here -->
+                    <!-- Form Actions -->
+                    <div class="pt-6 mt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end items-center space-y-3 sm:space-y-0">
+                        <button type="submit" class="w-full sm:w-auto save-button inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i> Save About Section
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div x-show="activeSection === 'footer'" class="settings-card bg-white rounded-xl overflow-hidden">
+            <!-- Footer section content -->
+            <div class="card-header">
+                <div class="header-icon bg-gray-100 text-gray-600">
+                    <i class="fas fa-shoe-prints"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">Footer Section</h3>
+                    <p class="card-subtitle">Customize the footer section of your landing page.</p>
+                </div>
+            </div>
+            <div class="p-6 sm:p-8">
+                <form action="{{ route('admin.settings.update-footer') }}" method="POST">
+                    @csrf
+                    <!-- Form content here -->
+                    <!-- Form Actions -->
+                    <div class="pt-6 mt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end items-center space-y-3 sm:space-y-0">
+                        <button type="submit" class="w-full sm:w-auto save-button inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i> Save Footer Section
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div x-show="activeSection === 'seo'" class="settings-card bg-white rounded-xl overflow-hidden">
+            <!-- SEO settings content -->
+            <div class="card-header">
+                <div class="header-icon bg-red-100 text-red-600">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">SEO Settings</h3>
+                    <p class="card-subtitle">Customize the SEO settings for your landing page.</p>
+                </div>
+            </div>
+            <div class="p-6 sm:p-8">
+                <form action="{{ route('admin.settings.update-seo') }}" method="POST">
+                    @csrf
+                    <!-- Form content here -->
+                    <!-- Form Actions -->
+                    <div class="pt-6 mt-6 border-t border-gray-200 flex flex-col sm:flex-row justify-end items-center space-y-3 sm:space-y-0">
+                        <button type="submit" class="w-full sm:w-auto save-button inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                            <i class="fas fa-save mr-2"></i> Save SEO Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div x-show="activeSection === 'routes'" class="settings-card bg-white rounded-xl overflow-hidden">
+            <!-- Routes section content -->
+            <div class="card-header">
+                <div class="header-icon bg-teal-100 text-teal-600">
+                    <i class="fas fa-route"></i>
+                </div>
+                <div>
+                    <h3 class="card-title">Routes Section</h3>
+                    <p class="card-subtitle">This section is managed through the Routes module.</p>
+                </div>
+            </div>
+            <div class="p-6 sm:p-8">
+                <div class="text-center py-8">
+                    <i class="fas fa-link text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Routes are managed separately</h3>
+                    <p class="text-gray-600 max-w-md mx-auto mb-6">
+                        Popular routes displayed on the landing page are managed through the Routes module where you can set which routes should be featured.
+                    </p>
+                    <a href="{{ route('admin.routes.index') }}" class="inline-flex justify-center py-2.5 px-5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                        <i class="fas fa-external-link-alt mr-2"></i> Go to Routes Management
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- JavaScript for Image Preview -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hero image preview
+        const heroImageInput = document.getElementById('hero_image');
+        const heroImagePreview = document.getElementById('hero_image_preview');
+
+        if (heroImageInput && heroImagePreview) {
+            heroImageInput.addEventListener('change', function() {
+                heroImagePreview.src = this.value;
+            });
+        }
+    });
+</script>
 @endsection
