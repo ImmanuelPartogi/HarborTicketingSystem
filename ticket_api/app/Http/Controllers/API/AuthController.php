@@ -78,6 +78,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email',
             'password' => 'required|string',
+            'remember' => 'boolean', // Tambahkan validasi untuk remember me
         ]);
 
         if ($validator->fails()) {
@@ -89,14 +90,25 @@ class AuthController extends Controller
         }
 
         try {
-            $result = $this->authService->loginUser($request->only('email', 'password'));
+            // Ambil nilai remember dari request, default false jika tidak ada
+            $remember = $request->boolean('remember', false);
 
+            // Kirim parameter remember ke AuthService
+            $result = $this->authService->loginUser(
+                $request->only('email', 'password'),
+                $remember
+            );
+
+            // Tambahkan info remember di response
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful',
                 'data' => [
                     'user' => $result['user'],
-                    'token' => $result['token']
+                    'token' => $result['token'],
+                    'token_type' => 'Bearer',
+                    'is_remembered' => $remember,
+                    'expiration' => $remember ? '30 days' : config('sanctum.expiration') . ' minutes'
                 ]
             ]);
         } catch (ValidationException $e) {

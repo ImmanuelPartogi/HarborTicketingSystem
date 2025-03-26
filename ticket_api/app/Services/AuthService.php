@@ -7,6 +7,7 @@ use App\Models\Admin;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon; // Add Carbon import for DateTime handling
 
 class AuthService
 {
@@ -32,22 +33,38 @@ class AuthService
      * Authenticate a user and generate a token.
      *
      * @param array $credentials
+     * @param bool $remember
      * @return array
      */
-    public function loginUser(array $credentials)
+    public function loginUser(array $credentials, bool $remember = false)
     {
-        if (!Auth::attempt($credentials)) {
+        if (!Auth::attempt($credentials, $remember)) {
             throw ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
             ]);
         }
 
         $user = User::where('email', $credentials['email'])->firstOrFail();
-        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Delete existing tokens
+        $user->tokens()->delete();
+
+        // Set token expiration based on remember me
+        $minutes = $remember
+            ? config('sanctum.remember_expiration', 43200)  // 30 days default
+            : config('sanctum.expiration', 120);            // 2 hours default
+
+        // Create DateTime object for expiration
+        $expiresAt = Carbon::now()->addMinutes($minutes);
+
+        // Create token with proper expiration format
+        $token = $user->createToken('auth_token', [], $expiresAt)->plainTextToken;
 
         return [
             'user' => $user,
             'token' => $token,
+            'expiration' => $minutes, // Return minutes for compatibility with frontend
+            'remember' => $remember,
         ];
     }
 
@@ -55,11 +72,12 @@ class AuthService
      * Authenticate an admin.
      *
      * @param array $credentials
+     * @param bool $remember
      * @return Admin|null
      */
-    public function loginAdmin(array $credentials)
+    public function loginAdmin(array $credentials, bool $remember = false)
     {
-        if (Auth::guard('admin')->attempt($credentials)) {
+        if (Auth::guard('admin')->attempt($credentials, $remember)) {
             return Auth::guard('admin')->user();
         }
 

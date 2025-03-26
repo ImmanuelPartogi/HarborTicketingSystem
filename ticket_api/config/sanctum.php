@@ -46,7 +46,19 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION', 120), // 2 jam jika tidak diingat
+
+    /*
+    |--------------------------------------------------------------------------
+    | Remember Me Expiration Minutes
+    |--------------------------------------------------------------------------
+    |
+    | This value controls the number of minutes until an issued token will be
+    | considered expired when "remember me" is checked.
+    |
+    */
+
+    'remember_expiration' => (int) env('SANCTUM_REMEMBER_EXPIRATION', 43200), // 30 hari jika diingat
 
     /*
     |--------------------------------------------------------------------------

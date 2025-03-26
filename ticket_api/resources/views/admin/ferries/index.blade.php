@@ -114,16 +114,23 @@
 @section('content')
     <div class="bg-white shadow-lg rounded-lg overflow-hidden table-shadow">
         <!-- Header -->
-        <div class="page-header p-6 text-white">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="page-header p-6 text-white relative">
+            <div class="absolute right-0 bottom-0 opacity-30 pointer-events-none">
+                <svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M30.5,-45.6C40.1,-42.3,49.1,-35.8,55.9,-26.5C62.8,-17.3,67.4,-5.4,64.2,4.5C61,14.3,50.1,22.2,40.7,28.4C31.3,34.6,23.5,39.2,14.9,43.3C6.2,47.4,-3.2,51,-13.3,50.1C-23.4,49.3,-34.2,44,-43.5,35.7C-52.8,27.4,-60.6,16.1,-61.5,4.5C-62.4,-7.2,-56.4,-19.1,-48.2,-28.2C-40,-37.4,-29.6,-43.7,-19.4,-46.5C-9.2,-49.3,0.8,-48.5,10.9,-46.9C20.9,-45.3,30.9,-42.8,40.9,-39.9C40.9,-39.9,30.5,-45.6,30.5,-45.6Z"
+                        transform="translate(75 75)" fill="#FFFFFF" />
+                </svg>
+            </div>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
                 <div>
-                    <h1 class="text-2xl font-bold text-white flex items-center">
+                    <h1 class="text-2xl font-bold flex items-center">
                         <i class="fas fa-ship mr-3 text-blue-200"></i> Manajemen Kapal Ferry
                     </h1>
                     <p class="text-blue-100 mt-1">Kelola semua kapal ferry dalam sistem</p>
                 </div>
                 <a href="{{ route('admin.ferries.create') }}"
-                    class="bg-white text-blue-600 hover:bg-blue-50 py-2 px-4 rounded-lg transition shadow-sm hover:shadow flex items-center">
+                    class="bg-white hover:bg-blue-700 hover:text-white text-blue-700 font-medium py-2 px-4 rounded-lg flex items-center transition-colors shadow-md">
                     <i class="fas fa-plus mr-2"></i> Tambah Kapal Baru
                 </a>
             </div>
