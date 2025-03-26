@@ -10,6 +10,7 @@ class User {
   final String? gender;
   final String? address;
   final String? photoUrl;
+  final bool isVerified;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +26,8 @@ class User {
     this.gender,
     this.address,
     this.photoUrl,
+    // Use email_verified_at to determine verification status
+    this.isVerified = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -32,18 +35,23 @@ class User {
   factory User.fromJson(Map<String, dynamic> json) {
     print('USER JSON: $json'); // Debug
 
+    // User is verified if email_verified_at is not null
+    final bool isVerified =
+        json['email_verified_at'] != null || json['is_verified'] == true;
+
     return User(
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
-      identityNumber: json['id_number'],
-      identityType: json['id_type'],
-      dateOfBirth: json['dob'],
-      placeOfBirth: null, // Tidak ada di Laravel
+      identityNumber: json['id_number'] ?? json['identity_number'],
+      identityType: json['id_type'] ?? json['identity_type'],
+      dateOfBirth: json['dob'] ?? json['date_of_birth'],
+      placeOfBirth: json['place_of_birth'],
       gender: json['gender'],
       address: json['address'],
-      photoUrl: null, // Tidak ada di Laravel
+      photoUrl: json['photo_url'],
+      isVerified: isVerified, // Use the determined verification status
       createdAt:
           json['created_at'] != null
               ? DateTime.parse(json['created_at'])
@@ -68,6 +76,7 @@ class User {
       'gender': gender,
       'address': address,
       'photo_url': photoUrl,
+      'is_verified': isVerified, // Include verification status
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -85,6 +94,7 @@ class User {
     String? gender,
     String? address,
     String? photoUrl,
+    bool? isVerified, // Add to copyWith
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -100,6 +110,7 @@ class User {
       gender: gender ?? this.gender,
       address: address ?? this.address,
       photoUrl: photoUrl ?? this.photoUrl,
+      isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -124,13 +135,10 @@ class AuthResponse {
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     // Debug untuk memahami struktur
     print('AUTH RESPONSE JSON: $json');
-
     // Cek apakah data berada dalam nested data object
     final data = json.containsKey('data') ? json['data'] : json;
-
     // Cek struktur token
     final String token = data['token'] is String ? data['token'] : '';
-
     return AuthResponse(
       accessToken: token,
       refreshToken: '', // Laravel tidak mengembalikan refresh token
