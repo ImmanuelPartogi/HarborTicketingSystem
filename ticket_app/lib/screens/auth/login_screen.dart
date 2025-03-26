@@ -17,14 +17,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _isPasswordVisible = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -34,13 +34,25 @@ class _LoginScreenState extends State<LoginScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
       final success = await authProvider.login(
-        _phoneController.text.trim(),
+        _emailController.text.trim(),
         _passwordController.text,
       );
       
       if (success && mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
+        // Check if the user is verified
+        if (authProvider.isAuthenticated) {
+          // User is authenticated and verified, navigate to home
+          Navigator.pushReplacementNamed(context, AppRoutes.home);
+        } else if (authProvider.isRegisteredButNotVerified) {
+          // User is registered but not verified, navigate to OTP verification
+          Navigator.pushReplacementNamed(
+            context, 
+            AppRoutes.otpVerification,
+            arguments: {'phoneNumber': authProvider.user?.phone ?? ''},
+          );
+        }
       } else if (mounted) {
+        // Login failed
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authProvider.error ?? 'Login failed'),
@@ -53,6 +65,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _goToRegister() {
     Navigator.pushNamed(context, AppRoutes.register);
+  }
+  
+  void _goToForgotPassword() {
+    Navigator.pushNamed(context, AppRoutes.forgotPassword);
   }
 
   @override
@@ -118,19 +134,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: AppTheme.paddingLarge),
                       
-                      // Phone Field
+                      // Email Field
                       CustomTextField(
-                        label: 'Phone Number',
-                        hintText: 'Enter your phone number',
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        prefixIcon: Icons.phone,
+                        label: 'Email',
+                        hintText: 'Enter your email address',
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        prefixIcon: Icons.email,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter your phone number';
+                            return 'Please enter your email address';
                           }
-                          if (value.length < 10) {
-                            return 'Phone number must be at least 10 digits';
+                          // Simple email validation
+                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                            return 'Please enter a valid email address';
                           }
                           return null;
                         },
@@ -189,9 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                           TextButton(
-                            onPressed: () {
-                              // Navigate to forgot password screen
-                            },
+                            onPressed: _goToForgotPassword,
                             child: Text(
                               'Forgot Password?',
                               style: TextStyle(

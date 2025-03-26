@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../models/ferry_model.dart';
 import '../models/route_model.dart';
 import '../models/schedule_model.dart';
@@ -29,6 +30,9 @@ class FerryProvider extends ChangeNotifier {
   String? _selectedArrivalPort;
   DateTime? _selectedDate;
   String _sortBy = 'departure_time_asc';
+  
+  // List of ongoing request cancellation tokens
+  final List<Completer> _cancellationTokens = [];
 
   // Getters
   List<Ferry> get ferries => _ferries;
@@ -50,26 +54,34 @@ class FerryProvider extends ChangeNotifier {
   DateTime? get selectedDate => _selectedDate;
   String get sortBy => _sortBy;
 
-  // Constructor menerima StorageService yang sudah diinisialisasi
+  // Constructor
   FerryProvider(StorageService storageService) {
     _apiService = ApiService(storageService);
     _ferryService = FerryService(_apiService);
   }
 
-  // External initialization
-  void initialize(ApiService apiService) {
-    _apiService = apiService;
-    _ferryService = FerryService(_apiService);
+  @override
+  void dispose() {
+    // Cancel all active requests
+    for (var token in _cancellationTokens) {
+      if (!token.isCompleted) {
+        token.complete();
+      }
+    }
+    _cancellationTokens.clear();
+    super.dispose();
   }
 
-  // Fetch ferries - Metode dimodifikasi untuk menghindari notifyListeners() di awal
+  // Fetch ferries
   Future<void> fetchFerries({bool activeOnly = true, String? type}) async {
-    // Hanya set loading state jika belum loading
-    if (!_isLoadingFerries) {
-      _isLoadingFerries = true;
-      _ferryError = null;
-      notifyListeners();
-    }
+    if (_isLoadingFerries) return; // Prevent duplicate requests
+    
+    _isLoadingFerries = true;
+    _ferryError = null;
+    notifyListeners();
+    
+    final cancelToken = Completer();
+    _cancellationTokens.add(cancelToken);
 
     try {
       final result = await _ferryService.getFerries(
@@ -77,26 +89,36 @@ class FerryProvider extends ChangeNotifier {
         type: type,
       );
 
-      _ferries = result;
-      _isLoadingFerries = false;
-      notifyListeners();
+      if (!cancelToken.isCompleted) {
+        _ferries = result;
+        _isLoadingFerries = false;
+        notifyListeners();
+      }
     } catch (e) {
-      _ferryError = 'Failed to load ferries: ${e.toString()}';
-      _isLoadingFerries = false;
-      notifyListeners();
+      if (!cancelToken.isCompleted) {
+        _ferryError = 'Failed to load ferries: ${e.toString()}';
+        _isLoadingFerries = false;
+        notifyListeners();
+      }
+    } finally {
+      _cancellationTokens.remove(cancelToken);
     }
   }
 
-  // Fetch routes - Metode dimodifikasi untuk menghindari notifyListeners() di awal
+  // Fetch routes
   Future<void> fetchRoutes({
     bool activeOnly = true,
     String? departurePort,
     String? arrivalPort,
   }) async {
-    // Set loading state terlebih dahulu tanpa notifyListeners
+    if (_isLoadingRoutes) return; // Prevent duplicate requests
+    
     _isLoadingRoutes = true;
     _routeError = null;
-    // TIDAK memanggil notifyListeners() di sini!
+    notifyListeners();
+    
+    final cancelToken = Completer();
+    _cancellationTokens.add(cancelToken);
 
     try {
       final result = await _ferryService.getRoutes(
@@ -105,14 +127,19 @@ class FerryProvider extends ChangeNotifier {
         arrivalPort: arrivalPort,
       );
 
-      // Update state dan beri tahu listener setelah operasi async selesai
-      _routes = result;
-      _isLoadingRoutes = false;
-      notifyListeners();
+      if (!cancelToken.isCompleted) {
+        _routes = result;
+        _isLoadingRoutes = false;
+        notifyListeners();
+      }
     } catch (e) {
-      _routeError = 'Failed to load routes: ${e.toString()}';
-      _isLoadingRoutes = false;
-      notifyListeners();
+      if (!cancelToken.isCompleted) {
+        _routeError = 'Failed to load routes: ${e.toString()}';
+        _isLoadingRoutes = false;
+        notifyListeners();
+      }
+    } finally {
+      _cancellationTokens.remove(cancelToken);
     }
   }
 
@@ -124,15 +151,20 @@ class FerryProvider extends ChangeNotifier {
     int? ferryId,
     bool includeFullyBooked = false,
   }) async {
+    if (_isLoadingSchedules) return; // Prevent duplicate requests
+    
     _isLoadingSchedules = true;
     _scheduleError = null;
     _selectedDeparturePort = departurePort;
     _selectedArrivalPort = arrivalPort;
     _selectedDate = departureDate;
     notifyListeners();
+    
+    final cancelToken = Completer();
+    _cancellationTokens.add(cancelToken);
 
     try {
-      _schedules = await _ferryService.getSchedules(
+      final result = await _ferryService.getSchedules(
         departurePort: departurePort,
         arrivalPort: arrivalPort,
         departureDate: departureDate,
@@ -140,50 +172,68 @@ class FerryProvider extends ChangeNotifier {
         includeFullyBooked: includeFullyBooked,
       );
 
-      // Sort schedules
-      _sortSchedules();
+      if (!cancelToken.isCompleted) {
+        _schedules = result;
+        _sortSchedules();
+        _isLoadingSchedules = false;
+        notifyListeners();
 
-      _isLoadingSchedules = false;
-      notifyListeners();
-
-      // Save recent search to storage
-      _saveRecentSearch(departurePort, arrivalPort, departureDate);
+        // Save recent search to storage
+        _saveRecentSearch(departurePort, arrivalPort, departureDate);
+      }
     } catch (e) {
-      _scheduleError = 'Failed to load schedules: ${e.toString()}';
-      _isLoadingSchedules = false;
-      notifyListeners();
+      if (!cancelToken.isCompleted) {
+        _scheduleError = 'Failed to load schedules: ${e.toString()}';
+        _isLoadingSchedules = false;
+        notifyListeners();
+      }
+    } finally {
+      _cancellationTokens.remove(cancelToken);
     }
   }
 
   // Fetch schedule detail
   Future<void> fetchScheduleDetail(int id) async {
+    if (_isLoadingScheduleDetail) return; // Prevent duplicate requests
+    
     _isLoadingScheduleDetail = true;
     _scheduleError = null;
     notifyListeners();
+    
+    final cancelToken = Completer();
+    _cancellationTokens.add(cancelToken);
 
     try {
       final schedule = await _ferryService.getScheduleDetail(id);
-      _selectedSchedule = schedule;
-      _isLoadingScheduleDetail = false;
-      notifyListeners();
+      
+      if (!cancelToken.isCompleted) {
+        _selectedSchedule = schedule;
+        _isLoadingScheduleDetail = false;
+        notifyListeners();
+      }
     } catch (e) {
-      _scheduleError = 'Failed to load schedule details: ${e.toString()}';
-      _isLoadingScheduleDetail = false;
-      notifyListeners();
+      if (!cancelToken.isCompleted) {
+        _scheduleError = 'Failed to load schedule details: ${e.toString()}';
+        _isLoadingScheduleDetail = false;
+        notifyListeners();
+      }
+    } finally {
+      _cancellationTokens.remove(cancelToken);
     }
   }
 
   // Set selected schedule from the list
   void setSelectedSchedule(int scheduleId) {
-    _selectedSchedule = _schedules.firstWhere(
+    final schedule = _schedules.firstWhere(
       (schedule) => schedule.id == scheduleId,
       orElse: () => null as Schedule,
     );
 
-    if (_selectedSchedule == null) {
-      fetchScheduleDetail(scheduleId);
-    } else {
+    if (schedule != null) {
+      _selectedSchedule = schedule;
       notifyListeners();
+    } else {
+      fetchScheduleDetail(scheduleId);
     }
   }
 
