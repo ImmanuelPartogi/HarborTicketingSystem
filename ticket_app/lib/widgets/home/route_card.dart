@@ -8,11 +8,8 @@ class RouteCard extends StatelessWidget {
   final RouteModel route;
   final VoidCallback? onTap;
 
-  const RouteCard({
-    Key? key,
-    required this.route,
-    this.onTap,
-  }) : super(key: key);
+  const RouteCard({Key? key, required this.route, this.onTap})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +59,9 @@ class RouteCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: route.isActive ? Colors.green : Colors.red,
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusRound),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusRound,
+                      ),
                     ),
                     child: Text(
                       route.isActive ? 'Active' : 'Inactive',
@@ -75,9 +74,9 @@ class RouteCard extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: AppTheme.paddingRegular),
-              
+
               // Route details
               Row(
                 children: [
@@ -123,9 +122,9 @@ class RouteCard extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: AppTheme.paddingRegular),
-              
+
               // Action button
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -155,11 +154,7 @@ class RouteCard extends StatelessWidget {
   }) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: theme.hintColor,
-        ),
+        Icon(icon, size: 16, color: theme.hintColor),
         const SizedBox(width: AppTheme.paddingSmall),
         Expanded(
           child: Column(
@@ -189,6 +184,7 @@ class RouteCard extends StatelessWidget {
   }
 }
 
+// Versi yang diperbaiki untuk PopularRouteCard
 class PopularRouteCard extends StatelessWidget {
   final String departureName;
   final String arrivalName;
@@ -207,6 +203,7 @@ class PopularRouteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 200,
+      height: 174, // Menggunakan height yang tepat sama dengan constraint parent
       margin: const EdgeInsets.only(
         left: AppTheme.paddingMedium,
         right: AppTheme.paddingSmall,
@@ -226,16 +223,15 @@ class PopularRouteCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Route image
+            // Route image dengan ukuran yang lebih kecil
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(AppTheme.borderRadiusRegular),
                 topRight: Radius.circular(AppTheme.borderRadiusRegular),
               ),
               child: SizedBox(
-                height: 120,
+                height: 100, // Mengurangi height gambar
                 width: double.infinity,
                 child: imageUrl != null
                     ? Image.network(
@@ -263,47 +259,56 @@ class PopularRouteCard extends StatelessWidget {
               ),
             ),
             
-            // Route info
-            Container(
-              padding: const EdgeInsets.all(AppTheme.paddingMedium),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(AppTheme.borderRadiusRegular),
-                  bottomRight: Radius.circular(AppTheme.borderRadiusRegular),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$departureName → $arrivalName',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: AppTheme.fontSizeRegular,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+            // Route info - dengan padding minimal
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(AppTheme.borderRadiusRegular),
+                    bottomRight: Radius.circular(AppTheme.borderRadiusRegular),
                   ),
-                  const SizedBox(height: AppTheme.paddingXSmall),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.navigation,
-                        size: 14,
-                        color: AppTheme.primaryColor,
+                ),
+                // Mengurangi padding
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$departureName → $arrivalName',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12, // Ukuran font lebih kecil
                       ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Popular Route',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2), // Jarak minimum
+                    Row(
+                      children: const [
+                        Icon(
+                          Icons.navigation,
+                          size: 12, // Icon lebih kecil
                           color: AppTheme.primaryColor,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        SizedBox(width: 2), // Jarak minimum
+                        Expanded(
+                          child: Text(
+                            'Popular Route',
+                            style: TextStyle(
+                              fontSize: 10, // Font lebih kecil
+                              color: AppTheme.primaryColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

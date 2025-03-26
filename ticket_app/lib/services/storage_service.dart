@@ -4,12 +4,13 @@ import '../models/user_model.dart';
 
 class StorageService {
   final SharedPreferences _prefs;
-
   // Storage keys
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _tokenExpiryKey = 'token_expiry';
   static const String _userKey = 'user';
+  static const String _tempPhoneKey = 'temp_phone';
+  static const String _tempUserIdKey = 'temp_user_id';
   static const String _themeModeKey = 'theme_mode';
   static const String _languageCodeKey = 'language_code';
   static const String _recentSearchesKey = 'recent_searches';
@@ -61,13 +62,37 @@ class StorageService {
     return User.fromJson(jsonDecode(userJson));
   }
 
+  // Temporary data for registration/verification flow
+  Future<void> setTempPhone(String phone) async {
+    await _prefs.setString(_tempPhoneKey, phone);
+  }
+
+  Future<String?> getTempPhone() async {
+    return _prefs.getString(_tempPhoneKey);
+  }
+
+  Future<void> setTempUserId(int id) async {
+    await _prefs.setInt(_tempUserIdKey, id);
+  }
+
+  Future<int?> getTempUserId() async {
+    return _prefs.getInt(_tempUserIdKey);
+  }
+
+  // Clear methods
   Future<void> clearAuthData() async {
     await _prefs.remove(_accessTokenKey);
     await _prefs.remove(_refreshTokenKey);
     await _prefs.remove(_tokenExpiryKey);
     await _prefs.remove(_userKey);
+    await clearTempData();
   }
 
+  Future<void> clearTempData() async {
+    await _prefs.remove(_tempPhoneKey);
+    await _prefs.remove(_tempUserIdKey);
+  }
+  
   // App settings methods
   Future<void> setThemeMode(String mode) async {
     await _prefs.setString(_themeModeKey, mode);
@@ -104,22 +129,18 @@ class StorageService {
   // Recent searches
   Future<void> addRecentSearch(Map<String, dynamic> search) async {
     final searches = getRecentSearches();
-
     // Remove duplicate if exists
     searches.removeWhere(
       (s) =>
           s['departure_port'] == search['departure_port'] &&
           s['arrival_port'] == search['arrival_port'],
     );
-
     // Add new search at the beginning
     searches.insert(0, search);
-
     // Limit to 10 recent searches
     if (searches.length > 10) {
       searches.removeLast();
     }
-
     await _prefs.setString(_recentSearchesKey, jsonEncode(searches));
   }
 
@@ -128,7 +149,6 @@ class StorageService {
     if (searchesJson == null) {
       return [];
     }
-
     return List<Map<String, dynamic>>.from(
       jsonDecode(searchesJson).map((x) => Map<String, dynamic>.from(x)),
     );
@@ -141,7 +161,6 @@ class StorageService {
   // Saved passengers
   Future<void> savePassenger(Map<String, dynamic> passenger) async {
     final passengers = getSavedPassengers();
-
     // Update if exists, add if new
     final index = passengers.indexWhere((p) => p['id'] == passenger['id']);
     if (index >= 0) {
@@ -149,7 +168,6 @@ class StorageService {
     } else {
       passengers.add(passenger);
     }
-
     await _prefs.setString(_savedPassengersKey, jsonEncode(passengers));
   }
 
@@ -158,7 +176,6 @@ class StorageService {
     if (passengersJson == null) {
       return [];
     }
-
     return List<Map<String, dynamic>>.from(
       jsonDecode(passengersJson).map((x) => Map<String, dynamic>.from(x)),
     );
@@ -173,7 +190,6 @@ class StorageService {
   // Saved vehicles
   Future<void> saveVehicle(Map<String, dynamic> vehicle) async {
     final vehicles = getSavedVehicles();
-
     // Update if exists, add if new
     final index = vehicles.indexWhere(
       (v) => v['license_plate'] == vehicle['license_plate'],
@@ -183,7 +199,6 @@ class StorageService {
     } else {
       vehicles.add(vehicle);
     }
-
     await _prefs.setString(_savedVehiclesKey, jsonEncode(vehicles));
   }
 
@@ -192,7 +207,6 @@ class StorageService {
     if (vehiclesJson == null) {
       return [];
     }
-
     return List<Map<String, dynamic>>.from(
       jsonDecode(vehiclesJson).map((x) => Map<String, dynamic>.from(x)),
     );

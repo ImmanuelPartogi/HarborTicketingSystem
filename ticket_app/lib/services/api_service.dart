@@ -265,10 +265,10 @@ class ApiService {
 
   // Existing API methods...
 
-  Future<dynamic> login(String phone, String password) {
+  Future<dynamic> login(String email, String password) {
     return post(
       ApiConfig.login,
-      body: {'phone': phone, 'password': password},
+      body: {'email': email, 'password': password},
       requireAuth: false,
     );
   }
