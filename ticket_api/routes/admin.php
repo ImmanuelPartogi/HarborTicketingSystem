@@ -60,7 +60,12 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth:admi
     Route::get('bookings/{booking}/tickets', [BookingController::class, 'tickets'])->name('bookings.tickets');
     Route::post('bookings/{booking}/confirm', [BookingController::class, 'confirm'])->name('bookings.confirm');
     Route::post('bookings/{booking}/cancel', [BookingController::class, 'cancel'])->name('bookings.cancel');
-    Route::post('bookings/{booking}/complete', [BookingController::class, 'complete'])->name('bookings.complete');
+    Route::post('bookings/{booking}/complete', action: [BookingController::class, 'complete'])->name('bookings.complete');
+    Route::get('bookings/{booking}/print-tickets', [BookingController::class, 'printTickets'])->name('bookings.printTickets');
+    Route::post('bookings/{booking}/cancel', [BookingController::class, 'cancel'])->name('bookings.cancel');
+    Route::post('bookings/{booking}/complete', action: [BookingController::class, 'complete'])->name('bookings.complete');
+    Route::post('bookings/{booking}/reschedule', [BookingController::class, 'reschedule'])->name('bookings.reschedule');
+    Route::post('bookings/{booking}/refund', [BookingController::class, 'refund'])->name('bookings.refund');
 
     // Reports
     Route::get('reports/daily', [ReportController::class, 'daily'])->name('reports.daily');
@@ -71,6 +76,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth:admi
     Route::get('reports/export/monthly', [ReportController::class, 'exportMonthly'])->name('reports.export.monthly');
     Route::get('reports/export/routes', [ReportController::class, 'exportRoutes'])->name('reports.export.routes');
     Route::get('reports/export/occupancy', [ReportController::class, 'exportOccupancy'])->name('reports.export.occupancy');
+    Route::get('reports/routes/{id}/details', [ReportController::class, 'routeDetails'])->name('reports.routes.details');
 
     // Settings Routes
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');

@@ -276,7 +276,7 @@
                                 <i class="fas fa-chart-line mr-1"></i> Performa Rute
                             </div>
                             <div class="flex space-x-2">
-                                <a href="{{ route('admin.reports.details', ['route_id' => $route->id]) }}"
+                                <a href="{{ route('reports.routes.details', ['id' => $route->id]) }}"
                                     class="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg transition-all duration-200 flex items-center">
                                     <i class="fas fa-chart-bar mr-1"></i> Detail
                                 </a>
