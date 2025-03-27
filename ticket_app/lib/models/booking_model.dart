@@ -15,7 +15,7 @@ class Booking {
   final DateTime? cancelledAt;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final Schedule? schedule;
+  final ScheduleModel? schedule;
   final List<Ticket>? tickets;
   final List<Vehicle>? vehicles;
   final Payment? payment;
@@ -39,27 +39,83 @@ class Booking {
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
-    return Booking(
-      id: json['id'],
-      userId: json['user_id'],
-      scheduleId: json['schedule_id'],
-      bookingNumber: json['booking_number'],
-      status: json['status'],
-      passengerCount: json['passenger_count'],
-      totalAmount: json['total_amount'].toDouble(),
-      bookedAt: DateTime.parse(json['booked_at']),
-      cancelledAt: json['cancelled_at'] != null ? DateTime.parse(json['cancelled_at']) : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
-      schedule: json['schedule'] != null ? Schedule.fromJson(json['schedule']) : null,
-      tickets: json['tickets'] != null
-          ? List<Ticket>.from(json['tickets'].map((x) => Ticket.fromJson(x)))
-          : null,
-      vehicles: json['vehicles'] != null
-          ? List<Vehicle>.from(json['vehicles'].map((x) => Vehicle.fromJson(x)))
-          : null,
-      payment: json['payment'] != null ? Payment.fromJson(json['payment']) : null,
-    );
+    try {
+      // Helper functions untuk parsing data dengan aman
+      int parseInt(dynamic value, {int defaultValue = 0}) {
+        if (value == null) return defaultValue;
+        if (value is int) return value;
+        try {
+          return int.parse(value.toString());
+        } catch (e) {
+          print('Error parsing int: $value');
+          return defaultValue;
+        }
+      }
+      
+      double parseDouble(dynamic value, {double defaultValue = 0.0}) {
+        if (value == null) return defaultValue;
+        if (value is double) return value;
+        try {
+          return double.parse(value.toString());
+        } catch (e) {
+          print('Error parsing double: $value');
+          return defaultValue;
+        }
+      }
+      
+      String parseString(dynamic value, {String defaultValue = ''}) {
+        if (value == null) return defaultValue;
+        return value.toString();
+      }
+      
+      DateTime parseDateTime(dynamic value, {DateTime? defaultValue}) {
+        if (value == null) {
+          return defaultValue ?? DateTime.now();
+        }
+        try {
+          return DateTime.parse(value.toString());
+        } catch (e) {
+          print('Error parsing datetime: $value');
+          return defaultValue ?? DateTime.now();
+        }
+      }
+      
+      DateTime? parseNullableDateTime(dynamic value) {
+        if (value == null) return null;
+        try {
+          return DateTime.parse(value.toString());
+        } catch (e) {
+          print('Error parsing nullable datetime: $value');
+          return null;
+        }
+      }
+      
+      return Booking(
+        id: parseInt(json['id']),
+        userId: parseInt(json['user_id']),
+        scheduleId: parseInt(json['schedule_id']),
+        bookingNumber: parseString(json['booking_number']),
+        status: parseString(json['status'], defaultValue: 'pending'),
+        passengerCount: parseInt(json['passenger_count']),
+        totalAmount: parseDouble(json['total_amount']),
+        bookedAt: parseDateTime(json['booked_at']),
+        cancelledAt: parseNullableDateTime(json['cancelled_at']),
+        createdAt: parseDateTime(json['created_at']),
+        updatedAt: parseDateTime(json['updated_at']),
+        schedule: json['schedule'] != null ? ScheduleModel.fromJson(json['schedule']) : null,
+        tickets: json['tickets'] != null
+            ? List<Ticket>.from(json['tickets'].map((x) => Ticket.fromJson(x)))
+            : null,
+        vehicles: json['vehicles'] != null
+            ? List<Vehicle>.from(json['vehicles'].map((x) => Vehicle.fromJson(x)))
+            : null,
+        payment: json['payment'] != null ? Payment.fromJson(json['payment']) : null,
+      );
+    } catch (e) {
+      print('Error parsing booking: $e');
+      print('JSON data: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {

@@ -11,10 +11,8 @@ import '../../widgets/common/loading_indicator.dart';
 class FerryDetailsScreen extends StatefulWidget {
   final int scheduleId;
 
-  const FerryDetailsScreen({
-    Key? key,
-    required this.scheduleId,
-  }) : super(key: key);
+  const FerryDetailsScreen({Key? key, required this.scheduleId})
+    : super(key: key);
 
   @override
   State<FerryDetailsScreen> createState() => _FerryDetailsScreenState();
@@ -23,18 +21,22 @@ class FerryDetailsScreen extends StatefulWidget {
 class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
   int _passengerCount = 1;
   bool _hasVehicle = false;
-  
+
   @override
   void initState() {
     super.initState();
-    _loadScheduleDetail();
+    // Use addPostFrameCallback to ensure this runs after the first build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadScheduleDetail();
+    });
   }
-  
+
   Future<void> _loadScheduleDetail() async {
+    if (!mounted) return;
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
     await ferryProvider.fetchScheduleDetail(widget.scheduleId);
   }
-  
+
   void _updatePassengerCount(int count) {
     if (count >= 1 && count <= 50) {
       setState(() {
@@ -42,35 +44,53 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
       });
     }
   }
-  
+
   void _proceedToBooking() {
+    // Add explicit debug logs
+    print("BUTTON PRESSED: _proceedToBooking called");
+
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
     final schedule = ferryProvider.selectedSchedule;
-    
-    if (schedule == null) return;
-    
-    // Check if there are enough seats available
-    if (schedule.availableSeats < _passengerCount) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Not enough seats available. Only ${schedule.availableSeats} seats left.',
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
+
+    print("Schedule: ${schedule?.id}, Available: ${schedule?.isAvailable}");
+
+    if (schedule == null) {
+      print("ERROR: Schedule is null");
       return;
     }
-    
-    Navigator.pushNamed(
-      context,
-      AppRoutes.passengerDetails,
-      arguments: {
-        'scheduleId': schedule.id,
-        'passengerCount': _passengerCount,
-        'hasVehicle': _hasVehicle,
-      },
-    );
+
+    // Force navigation regardless of seat availability for testing
+    try {
+      print(
+        "NAVIGATING to passengerDetails with scheduleId=${schedule.id}, count=$_passengerCount",
+      );
+
+      Navigator.of(context).pushNamed(
+        AppRoutes.passengerDetails,
+        arguments: {
+          'scheduleId': schedule.id,
+          'passengerCount': _passengerCount,
+          'hasVehicle': _hasVehicle,
+        },
+      );
+    } catch (e) {
+      print("NAVIGATION ERROR: $e");
+      // Show an error dialog for better visibility
+      showDialog(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: Text("Navigation Error"),
+              content: Text("Failed to navigate: $e"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text("OK"),
+                ),
+              ],
+            ),
+      );
+    }
   }
 
   @override
@@ -81,26 +101,26 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
       symbol: 'Rp ',
       decimalDigits: 0,
     );
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ferry Details'),
-      ),
+      appBar: AppBar(title: const Text('Ferry Details')),
       body: Consumer<FerryProvider>(
         builder: (context, ferryProvider, _) {
           if (ferryProvider.isLoadingScheduleDetail) {
-            return const Center(child: LoadingIndicator(message: 'Loading details...'));
+            return const Center(
+              child: LoadingIndicator(message: 'Loading details...'),
+            );
           }
-          
+
           final schedule = ferryProvider.selectedSchedule;
-          
+
           if (schedule == null) {
             return const Center(child: Text('Schedule not found'));
           }
-          
+
           final hasFerry = schedule.ferry != null;
           final hasRoute = schedule.route != null;
-          
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppTheme.paddingMedium),
             child: Column(
@@ -111,7 +131,9 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                   padding: const EdgeInsets.all(AppTheme.paddingMedium),
                   decoration: BoxDecoration(
                     color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusMedium,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
@@ -132,16 +154,18 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      
+
                       const SizedBox(height: AppTheme.paddingMedium),
-                      
+
                       // Departure date and time
                       Row(
                         children: [
                           const Icon(Icons.calendar_today, size: 18),
                           const SizedBox(width: AppTheme.paddingSmall),
                           Text(
-                            DateFormat('EEE, dd MMM yyyy').format(schedule.departureTime),
+                            DateFormat(
+                              'EEE, dd MMM yyyy',
+                            ).format(schedule.departureTime),
                             style: const TextStyle(
                               fontSize: AppTheme.fontSizeRegular,
                               fontWeight: FontWeight.w500,
@@ -150,7 +174,7 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                         ],
                       ),
                       const SizedBox(height: AppTheme.paddingSmall),
-                      
+
                       Row(
                         children: [
                           const Icon(Icons.access_time, size: 18),
@@ -164,7 +188,7 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                           ),
                         ],
                       ),
-                      
+
                       if (hasRoute) ...[
                         const SizedBox(height: AppTheme.paddingSmall),
                         Row(
@@ -180,9 +204,9 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                           ],
                         ),
                       ],
-                      
+
                       const SizedBox(height: AppTheme.paddingMedium),
-                      
+
                       // Status indicator
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -190,15 +214,21 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                           vertical: AppTheme.paddingXSmall,
                         ),
                         decoration: BoxDecoration(
-                          color: schedule.isAvailable
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusRound),
+                          color:
+                              schedule.isAvailable
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.borderRadiusRound,
+                          ),
                         ),
                         child: Text(
                           schedule.statusText,
                           style: TextStyle(
-                            color: schedule.isAvailable ? Colors.green : Colors.red,
+                            color:
+                                schedule.isAvailable
+                                    ? Colors.green
+                                    : Colors.red,
                             fontWeight: FontWeight.w600,
                             fontSize: AppTheme.fontSizeSmall,
                           ),
@@ -207,9 +237,9 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingLarge),
-                
+
                 // Ferry information
                 if (hasFerry) ...[
                   Text(
@@ -221,12 +251,14 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: AppTheme.paddingMedium),
-                  
+
                   Container(
                     padding: const EdgeInsets.all(AppTheme.paddingMedium),
                     decoration: BoxDecoration(
                       color: theme.cardColor,
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusMedium,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
@@ -242,10 +274,14 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(AppTheme.paddingSmall),
+                              padding: const EdgeInsets.all(
+                                AppTheme.paddingSmall,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppTheme.primaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.borderRadiusRegular,
+                                ),
                               ),
                               child: const Icon(
                                 Icons.directions_boat,
@@ -277,11 +313,11 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: AppTheme.paddingMedium),
                         const Divider(),
                         const SizedBox(height: AppTheme.paddingMedium),
-                        
+
                         // Capacity info
                         Row(
                           children: [
@@ -308,7 +344,8 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                                       Text(
                                         ' / ${schedule.ferry!.capacity} available',
                                         style: TextStyle(
-                                          color: theme.textTheme.bodyMedium?.color,
+                                          color:
+                                              theme.textTheme.bodyMedium?.color,
                                           fontSize: AppTheme.fontSizeRegular,
                                         ),
                                       ),
@@ -350,10 +387,10 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: AppTheme.paddingLarge),
                 ],
-                
+
                 // Booking options
                 Text(
                   'Booking Options',
@@ -364,12 +401,14 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: AppTheme.paddingMedium),
-                
+
                 Container(
                   padding: const EdgeInsets.all(AppTheme.paddingMedium),
                   decoration: BoxDecoration(
                     color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusMedium,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
@@ -393,20 +432,27 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                       Row(
                         children: [
                           InkWell(
-                            onTap: () => _updatePassengerCount(_passengerCount - 1),
-                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                            onTap:
+                                () =>
+                                    _updatePassengerCount(_passengerCount - 1),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusRegular,
+                            ),
                             child: Container(
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
                                 border: Border.all(color: theme.dividerColor),
-                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.borderRadiusRegular,
+                                ),
                               ),
                               child: Icon(
                                 Icons.remove,
-                                color: _passengerCount > 1
-                                    ? theme.textTheme.bodyLarge?.color
-                                    : theme.disabledColor,
+                                color:
+                                    _passengerCount > 1
+                                        ? theme.textTheme.bodyLarge?.color
+                                        : theme.disabledColor,
                               ),
                             ),
                           ),
@@ -422,21 +468,29 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                             ),
                           ),
                           InkWell(
-                            onTap: () => _updatePassengerCount(_passengerCount + 1),
-                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                            onTap:
+                                () =>
+                                    _updatePassengerCount(_passengerCount + 1),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusRegular,
+                            ),
                             child: Container(
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
                                 border: Border.all(color: theme.dividerColor),
-                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.borderRadiusRegular,
+                                ),
                               ),
                               child: const Icon(Icons.add),
                             ),
                           ),
                           const Spacer(),
                           Text(
-                            currencyFormat.format(schedule.finalPrice * _passengerCount),
+                            currencyFormat.format(
+                              schedule.finalPrice * _passengerCount,
+                            ),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: AppTheme.fontSizeLarge,
@@ -444,17 +498,17 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: AppTheme.paddingMedium),
                       const Divider(),
                       const SizedBox(height: AppTheme.paddingMedium),
-                      
+
                       // Vehicle option
                       if (hasFerry &&
                           (schedule.ferry!.carCapacity > 0 ||
-                           schedule.ferry!.motorcycleCapacity > 0 ||
-                           schedule.ferry!.busCapacity > 0 ||
-                           schedule.ferry!.truckCapacity > 0)) ...[
+                              schedule.ferry!.motorcycleCapacity > 0 ||
+                              schedule.ferry!.busCapacity > 0 ||
+                              schedule.ferry!.truckCapacity > 0)) ...[
                         Row(
                           children: [
                             Expanded(
@@ -487,12 +541,12 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                             ),
                           ),
                         ],
-                        
+
                         const SizedBox(height: AppTheme.paddingMedium),
                         const Divider(),
                         const SizedBox(height: AppTheme.paddingMedium),
                       ],
-                      
+
                       // Price breakdown
                       Text(
                         'Price Breakdown',
@@ -513,9 +567,7 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                           ),
                           Text(
                             '${currencyFormat.format(schedule.finalPrice)} x $_passengerCount',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -531,9 +583,7 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                           ),
                           Text(
                             _hasVehicle ? 'To be calculated' : 'Not selected',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                         ],
                       ),
@@ -554,7 +604,9 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                currencyFormat.format(schedule.finalPrice * _passengerCount),
+                                currencyFormat.format(
+                                  schedule.finalPrice * _passengerCount,
+                                ),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: AppTheme.fontSizeMedium,
@@ -583,11 +635,11 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
       bottomNavigationBar: Consumer<FerryProvider>(
         builder: (context, ferryProvider, _) {
           final schedule = ferryProvider.selectedSchedule;
-          
+
           if (schedule == null) {
             return const SizedBox.shrink();
           }
-          
+
           return Container(
             padding: const EdgeInsets.all(AppTheme.paddingMedium),
             decoration: BoxDecoration(
@@ -600,12 +652,29 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
                 ),
               ],
             ),
-            child: CustomButton(
-              text: 'Continue to Booking',
-              onPressed: schedule.isAvailable ? _proceedToBooking : null,
-              type: ButtonType.primary,
-              isFullWidth: true,
-              size: ButtonSize.large,
+            child: ElevatedButton(
+              // Use a simple ElevatedButton for testing
+              onPressed: () {
+                print("DIRECT BUTTON PRESS");
+                final schedule = ferryProvider.selectedSchedule;
+                if (schedule != null) {
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.passengerDetails,
+                    arguments: {
+                      'scheduleId': schedule.id,
+                      'passengerCount': _passengerCount,
+                      'hasVehicle': _hasVehicle,
+                    },
+                  );
+                } else {
+                  print("Schedule is null in direct button press");
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                minimumSize: Size(double.infinity, 50),
+              ),
+              child: Text("Continue to Booking (Direct)"),
             ),
           );
         },

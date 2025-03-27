@@ -11,10 +11,10 @@ class FerryProvider extends ChangeNotifier {
   late ApiService _apiService;
   late FerryService _ferryService;
 
-  List<Ferry> _ferries = [];
+  List<FerryModel> _ferries = [];
   List<RouteModel> _routes = [];
-  List<Schedule> _schedules = [];
-  Schedule? _selectedSchedule;
+  List<ScheduleModel> _schedules = [];
+  ScheduleModel? _selectedSchedule;
 
   bool _isLoadingFerries = false;
   bool _isLoadingRoutes = false;
@@ -30,15 +30,15 @@ class FerryProvider extends ChangeNotifier {
   String? _selectedArrivalPort;
   DateTime? _selectedDate;
   String _sortBy = 'departure_time_asc';
-  
+
   // List of ongoing request cancellation tokens
   final List<Completer> _cancellationTokens = [];
 
   // Getters
-  List<Ferry> get ferries => _ferries;
+  List<FerryModel> get ferries => _ferries;
   List<RouteModel> get routes => _routes;
-  List<Schedule> get schedules => _schedules;
-  Schedule? get selectedSchedule => _selectedSchedule;
+  List<ScheduleModel> get schedules => _schedules;
+  ScheduleModel? get selectedSchedule => _selectedSchedule;
 
   bool get isLoadingFerries => _isLoadingFerries;
   bool get isLoadingRoutes => _isLoadingRoutes;
@@ -75,11 +75,11 @@ class FerryProvider extends ChangeNotifier {
   // Fetch ferries
   Future<void> fetchFerries({bool activeOnly = true, String? type}) async {
     if (_isLoadingFerries) return; // Prevent duplicate requests
-    
+
     _isLoadingFerries = true;
     _ferryError = null;
     notifyListeners();
-    
+
     final cancelToken = Completer();
     _cancellationTokens.add(cancelToken);
 
@@ -112,11 +112,11 @@ class FerryProvider extends ChangeNotifier {
     String? arrivalPort,
   }) async {
     if (_isLoadingRoutes) return; // Prevent duplicate requests
-    
+
     _isLoadingRoutes = true;
     _routeError = null;
     notifyListeners();
-    
+
     final cancelToken = Completer();
     _cancellationTokens.add(cancelToken);
 
@@ -152,14 +152,14 @@ class FerryProvider extends ChangeNotifier {
     bool includeFullyBooked = false,
   }) async {
     if (_isLoadingSchedules) return; // Prevent duplicate requests
-    
+
     _isLoadingSchedules = true;
     _scheduleError = null;
     _selectedDeparturePort = departurePort;
     _selectedArrivalPort = arrivalPort;
     _selectedDate = departureDate;
     notifyListeners();
-    
+
     final cancelToken = Completer();
     _cancellationTokens.add(cancelToken);
 
@@ -194,28 +194,39 @@ class FerryProvider extends ChangeNotifier {
 
   // Fetch schedule detail
   Future<void> fetchScheduleDetail(int id) async {
-    if (_isLoadingScheduleDetail) return; // Prevent duplicate requests
-    
+    if (_isLoadingScheduleDetail) return;
+
+    // First set loading state without notifying
     _isLoadingScheduleDetail = true;
-    _scheduleError = null;
-    notifyListeners();
-    
+
+    // Create a variable to track if we need to notify afterward
+    bool shouldNotify = true;
+
     final cancelToken = Completer();
     _cancellationTokens.add(cancelToken);
 
     try {
+      // First notify AFTER the current build frame
+      await Future.microtask(() {
+        if (!cancelToken.isCompleted) {
+          notifyListeners();
+        } else {
+          shouldNotify = false;
+        }
+      });
+
       final schedule = await _ferryService.getScheduleDetail(id);
-      
+
       if (!cancelToken.isCompleted) {
         _selectedSchedule = schedule;
         _isLoadingScheduleDetail = false;
-        notifyListeners();
+        if (shouldNotify) notifyListeners();
       }
     } catch (e) {
       if (!cancelToken.isCompleted) {
         _scheduleError = 'Failed to load schedule details: ${e.toString()}';
         _isLoadingScheduleDetail = false;
-        notifyListeners();
+        if (shouldNotify) notifyListeners();
       }
     } finally {
       _cancellationTokens.remove(cancelToken);
@@ -226,15 +237,11 @@ class FerryProvider extends ChangeNotifier {
   void setSelectedSchedule(int scheduleId) {
     final schedule = _schedules.firstWhere(
       (schedule) => schedule.id == scheduleId,
-      orElse: () => null as Schedule,
+      orElse: () => throw Exception('Schedule not found'),
     );
 
-    if (schedule != null) {
-      _selectedSchedule = schedule;
-      notifyListeners();
-    } else {
-      fetchScheduleDetail(scheduleId);
-    }
+    _selectedSchedule = schedule;
+    notifyListeners();
   }
 
   // Clear selected schedule
@@ -256,7 +263,7 @@ class FerryProvider extends ChangeNotifier {
   }
 
   // Filter schedules by vehicle requirements
-  List<Schedule> filterSchedulesByVehicleRequirements({
+  List<ScheduleModel> filterSchedulesByVehicleRequirements({
     int? carsNeeded,
     int? motorcyclesNeeded,
     int? busesNeeded,

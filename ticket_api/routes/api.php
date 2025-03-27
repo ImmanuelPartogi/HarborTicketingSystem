@@ -41,15 +41,17 @@ Route::prefix('v1')->group(function () {
     Route::get('/routes/destinations', [RouteController::class, 'destinations']);
     Route::get('/routes/origin/{origin}/destinations', [RouteController::class, 'destinationsForOrigin']);
 
-    // Schedule Search
+    // Schedule Routes - Update to use the new getSchedule method for individual schedules
+    Route::get('/schedules', [ScheduleController::class, 'index']);
     Route::get('/schedules/search', [ScheduleController::class, 'search']);
-    Route::get('/schedules/{id}', [ScheduleController::class, 'show']);
+    Route::get('/schedules/{id}', [ScheduleController::class, 'getSchedule']); // Changed method
     Route::post('/schedules/check-availability', [ScheduleController::class, 'checkAvailability']);
 
     // Payment Notification Callback (from Midtrans)
     Route::post('/payments/notification', [PaymentController::class, 'notification']);
 });
 
+// Rest of your routes remain unchanged
 // Protected Routes (requires authentication)
 Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // User Profile
@@ -75,7 +77,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(functi
     Route::post('/tickets/{ticketCode}/check-in', [TicketController::class, 'checkIn']);
 });
 
-// Staff/Operator Routes (requires special token)
+// Staff/Operator Routes
 Route::prefix('v1/staff')->middleware(['auth:sanctum', 'verify.staff', 'throttle:60,1'])->group(function () {
     Route::post('/tickets/validate', [TicketController::class, 'validateTicket']);
     Route::post('/tickets/mark-boarded', [TicketController::class, 'markAsBoarded']);

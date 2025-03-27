@@ -13,6 +13,121 @@ use Carbon\Carbon;
 class ScheduleController extends Controller
 {
     /**
+     * Display a listing of schedules.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function index(Request $request)
+    {
+        $query = Schedule::query();
+
+        // Filter by status if provided
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        } else {
+            // Default to active schedules
+            $query->where('status', 'ACTIVE');
+        }
+
+        // Filter by departure_port and arrival_port if provided
+        if ($request->has('departure_port') && $request->departure_port) {
+            $query->whereHas('route', function ($q) use ($request) {
+                $q->where('origin', $request->departure_port);
+            });
+        }
+
+        if ($request->has('arrival_port') && $request->arrival_port) {
+            $query->whereHas('route', function ($q) use ($request) {
+                $q->where('destination', $request->arrival_port);
+            });
+        }
+
+        // Filter by departure_date if provided
+        if ($request->has('departure_date') && $request->departure_date) {
+            $departureDate = Carbon::parse($request->departure_date);
+            $dayOfWeek = $departureDate->dayOfWeek == 0 ? 7 : $departureDate->dayOfWeek;
+
+            $query->where(function ($q) use ($dayOfWeek) {
+                $q->whereRaw("FIND_IN_SET(?, days)", [$dayOfWeek]);
+            });
+        }
+
+        // Include relationships
+        $query->with(['route', 'ferry']);
+
+        // Apply ordering
+        $query->orderBy('departure_time');
+
+        $schedules = $query->get();
+
+        // Transform the data to ensure consistent types for client-side parsing
+        $formattedSchedules = $schedules->map(function ($schedule) use ($request) {
+            $scheduleData = $schedule->toArray();
+
+            // Ensure all integer fields are actually integers, not null
+            $scheduleData['id'] = (int)$scheduleData['id'];
+            $scheduleData['route_id'] = (int)$scheduleData['route_id'];
+            $scheduleData['ferry_id'] = (int)$scheduleData['ferry_id'];
+
+            // Ensure ferry data has all required fields with proper types
+            if (isset($scheduleData['ferry'])) {
+                $scheduleData['ferry']['id'] = (int)$scheduleData['ferry']['id'];
+                $scheduleData['ferry']['capacity_passenger'] = (int)($scheduleData['ferry']['capacity_passenger'] ?? 0);
+                $scheduleData['ferry']['capacity_vehicle_motorcycle'] = (int)($scheduleData['ferry']['capacity_vehicle_motorcycle'] ?? 0);
+                $scheduleData['ferry']['capacity_vehicle_car'] = (int)($scheduleData['ferry']['capacity_vehicle_car'] ?? 0);
+                $scheduleData['ferry']['capacity_vehicle_bus'] = (int)($scheduleData['ferry']['capacity_vehicle_bus'] ?? 0);
+                $scheduleData['ferry']['capacity_vehicle_truck'] = (int)($scheduleData['ferry']['capacity_vehicle_truck'] ?? 0);
+            }
+
+            // Ensure route data has proper types
+            if (isset($scheduleData['route'])) {
+                $scheduleData['route']['id'] = (int)$scheduleData['route']['id'];
+                $scheduleData['route']['duration'] = (int)($scheduleData['route']['duration'] ?? 0);
+                $scheduleData['route']['distance'] = (float)($scheduleData['route']['distance'] ?? 0);
+                $scheduleData['route']['base_price'] = (float)($scheduleData['route']['base_price'] ?? 0);
+                $scheduleData['route']['motorcycle_price'] = (float)($scheduleData['route']['motorcycle_price'] ?? 0);
+                $scheduleData['route']['car_price'] = (float)($scheduleData['route']['car_price'] ?? 0);
+                $scheduleData['route']['bus_price'] = (float)($scheduleData['route']['bus_price'] ?? 0);
+                $scheduleData['route']['truck_price'] = (float)($scheduleData['route']['truck_price'] ?? 0);
+            }
+
+            // Add availability information if departure_date is provided
+            if ($request->has('departure_date') && $request->departure_date) {
+                $scheduleDate = ScheduleDate::where('schedule_id', $schedule->id)
+                    ->where('date', $request->departure_date)
+                    ->first();
+
+                $remainingPassengerCapacity = $schedule->ferry ?
+                    (int)$schedule->ferry->capacity_passenger : 0;
+
+                if ($scheduleDate) {
+                    if ($scheduleDate->status !== 'AVAILABLE') {
+                        $scheduleData['is_available'] = false;
+                        $scheduleData['unavailability_reason'] = 'Schedule is not available for this date';
+                    } else {
+                        $remainingPassengerCapacity -= (int)($scheduleDate->passenger_count ?? 0);
+                        $scheduleData['is_available'] = true;
+                        $scheduleData['remaining_passenger_capacity'] = $remainingPassengerCapacity;
+                    }
+                } else {
+                    $scheduleData['is_available'] = true;
+                    $scheduleData['remaining_passenger_capacity'] = $remainingPassengerCapacity;
+                }
+            }
+
+            return $scheduleData;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'schedules' => $formattedSchedules
+            ]
+        ]);
+    }
+
+    /**
      * Search for available schedules.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -114,9 +229,11 @@ class ScheduleController extends Controller
             }
 
             // Check if enough capacity for passengers and vehicles
-            if ($isAvailable &&
+            if (
+                $isAvailable &&
                 $remainingPassengerCapacity >= $request->passenger_count &&
-                (!$request->vehicle_count || $remainingVehicleCapacity >= $request->vehicle_count)) {
+                (!$request->vehicle_count || $remainingVehicleCapacity >= $request->vehicle_count)
+            ) {
                 $schedule->remaining_passenger_capacity = $remainingPassengerCapacity;
                 $schedule->remaining_vehicle_capacity = $remainingVehicleCapacity;
                 $availableSchedules[] = $schedule;
@@ -445,5 +562,32 @@ class ScheduleController extends Controller
                 'reason' => !$isAvailable ? 'Not enough capacity' : null
             ]
         ]);
+    }
+
+    // Add this new method to handle API requests for a single schedule
+    /**
+     * Get a specific schedule (API method).
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSchedule($id)
+    {
+        try {
+            $schedule = Schedule::with(['route', 'ferry'])->findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'schedule' => $schedule
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve schedule',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

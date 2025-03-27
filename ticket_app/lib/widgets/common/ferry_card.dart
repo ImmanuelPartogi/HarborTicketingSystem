@@ -5,7 +5,7 @@ import '../../config/theme.dart';
 import '../../models/schedule_model.dart';
 
 class FerryCard extends StatelessWidget {
-  final Schedule schedule;
+  final ScheduleModel schedule;
   final VoidCallback? onTap;
   final bool isDetailed;
   final VoidCallback? onBookPressed;

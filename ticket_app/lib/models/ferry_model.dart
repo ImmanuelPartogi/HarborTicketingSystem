@@ -1,50 +1,56 @@
-class Ferry {
+class FerryModel {
   final int id;
   final String name;
   final String type;
-  final int capacity;
-  final int carCapacity;
-  final int motorcycleCapacity;
-  final int truckCapacity;
-  final int busCapacity;
+  final String status;
+  final int capacityPassenger;
+  final int capacityVehicleMotorcycle;
+  final int capacityVehicleCar;
+  final int capacityVehicleBus;
+  final int capacityVehicleTruck;
   final String? photoUrl;
   final String? description;
-  final bool isActive;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
-  Ferry({
+  FerryModel({
     required this.id,
     required this.name,
-    required this.type,
-    required this.capacity,
-    required this.carCapacity,
-    required this.motorcycleCapacity,
-    required this.truckCapacity,
-    required this.busCapacity,
+    this.type = '',
+    required this.status,
+    required this.capacityPassenger,
+    required this.capacityVehicleMotorcycle,
+    required this.capacityVehicleCar,
+    required this.capacityVehicleBus,
+    required this.capacityVehicleTruck,
     this.photoUrl,
     this.description,
-    required this.isActive,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
   });
 
-  factory Ferry.fromJson(Map<String, dynamic> json) {
-    return Ferry(
-      id: json['id'],
-      name: json['name'],
-      type: json['type'],
-      capacity: json['capacity'],
-      carCapacity: json['car_capacity'],
-      motorcycleCapacity: json['motorcycle_capacity'],
-      truckCapacity: json['truck_capacity'],
-      busCapacity: json['bus_capacity'],
-      photoUrl: json['photo_url'],
-      description: json['description'],
-      isActive: json['is_active'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
-    );
+  factory FerryModel.fromJson(Map<String, dynamic> json) {
+    try {
+      return FerryModel(
+        id: json['id'] ?? 0,
+        name: json['name'] ?? '',
+        type: json['type'] ?? '',
+        status: json['status'] ?? 'INACTIVE',
+        capacityPassenger: json['capacity_passenger'] ?? 0,
+        capacityVehicleMotorcycle: json['capacity_vehicle_motorcycle'] ?? 0,
+        capacityVehicleCar: json['capacity_vehicle_car'] ?? 0,
+        capacityVehicleBus: json['capacity_vehicle_bus'] ?? 0,
+        capacityVehicleTruck: json['capacity_vehicle_truck'] ?? 0,
+        photoUrl: json['photo_url'],
+        description: json['description'],
+        createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+        updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      );
+    } catch (e) {
+      print('Error parsing ferry: $e');
+      print('JSON data: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -52,35 +58,59 @@ class Ferry {
       'id': id,
       'name': name,
       'type': type,
-      'capacity': capacity,
-      'car_capacity': carCapacity,
-      'motorcycle_capacity': motorcycleCapacity,
-      'truck_capacity': truckCapacity,
-      'bus_capacity': busCapacity,
+      'status': status,
+      'capacity_passenger': capacityPassenger,
+      'capacity_vehicle_motorcycle': capacityVehicleMotorcycle,
+      'capacity_vehicle_car': capacityVehicleCar,
+      'capacity_vehicle_bus': capacityVehicleBus,
+      'capacity_vehicle_truck': capacityVehicleTruck,
       'photo_url': photoUrl,
       'description': description,
-      'is_active': isActive,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
+  }
+
+  String get statusText {
+    switch (status.toUpperCase()) {
+      case 'ACTIVE':
+        return 'Active';
+      case 'INACTIVE':
+        return 'Inactive';
+      case 'MAINTENANCE':
+        return 'Under Maintenance';
+      default:
+        return status;
+    }
+  }
+
+  bool get isActive {
+    return status.toUpperCase() == 'ACTIVE';
   }
 
   String get vehicleCapacityText {
     List<String> capacities = [];
     
-    if (carCapacity > 0) {
-      capacities.add('$carCapacity Cars');
+    if (capacityVehicleCar > 0) {
+      capacities.add('$capacityVehicleCar Cars');
     }
-    if (motorcycleCapacity > 0) {
-      capacities.add('$motorcycleCapacity Motorcycles');
+    if (capacityVehicleMotorcycle > 0) {
+      capacities.add('$capacityVehicleMotorcycle Motorcycles');
     }
-    if (truckCapacity > 0) {
-      capacities.add('$truckCapacity Trucks');
+    if (capacityVehicleTruck > 0) {
+      capacities.add('$capacityVehicleTruck Trucks');
     }
-    if (busCapacity > 0) {
-      capacities.add('$busCapacity Buses');
+    if (capacityVehicleBus > 0) {
+      capacities.add('$capacityVehicleBus Buses');
     }
     
     return capacities.join(', ');
   }
+
+  // For compatibility with old code
+  int get capacity => capacityPassenger;
+  int get carCapacity => capacityVehicleCar;
+  int get motorcycleCapacity => capacityVehicleMotorcycle;
+  int get truckCapacity => capacityVehicleTruck;
+  int get busCapacity => capacityVehicleBus;
 }

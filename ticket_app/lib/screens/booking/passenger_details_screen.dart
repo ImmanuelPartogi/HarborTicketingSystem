@@ -30,49 +30,58 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   final List<GlobalKey<FormState>> _formKeys = [];
   final List<Map<String, dynamic>> _passengerData = [];
   final List<bool> _savePassengerInfo = [];
-  
+
   bool _isLoading = false;
   List<Map<String, dynamic>> _savedPassengers = [];
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize lists based on passenger count
     for (int i = 0; i < widget.passengerCount; i++) {
       _formKeys.add(GlobalKey<FormState>());
       _passengerData.add({});
       _savePassengerInfo.add(i == 0); // Default to save for first passenger
     }
-    
+
     // Set schedule ID in the booking provider
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
     bookingProvider.setScheduleId(widget.scheduleId);
-    
+
     // Load saved passengers
     _loadSavedPassengers();
   }
-  
+
   Future<void> _loadSavedPassengers() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+      final bookingProvider = Provider.of<BookingProvider>(
+        context,
+        listen: false,
+      );
       final savedPassengers = await bookingProvider.loadSavedPassengers();
-      
+
       setState(() {
         _savedPassengers = savedPassengers;
-        
+
         // Pre-fill first passenger data with user information if available
         if (savedPassengers.isNotEmpty && _passengerData.isNotEmpty) {
           _passengerData[0] = {...savedPassengers[0]};
         } else {
           // Try to use current user data if available
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final authProvider = Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          );
           final user = authProvider.user;
-          
+
           if (user != null && _passengerData.isNotEmpty) {
             _passengerData[0] = {
               'name': user.name,
@@ -93,15 +102,18 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       });
     }
   }
-  
-  void _useSavedPassenger(int passengerIndex, Map<String, dynamic> savedPassenger) {
+
+  void _useSavedPassenger(
+    int passengerIndex,
+    Map<String, dynamic> savedPassenger,
+  ) {
     setState(() {
       _passengerData[passengerIndex] = {...savedPassenger};
     });
-    
+
     Navigator.pop(context); // Close the bottom sheet
   }
-  
+
   void _showSavedPassengersBottomSheet(int passengerIndex) {
     showModalBottomSheet(
       context: context,
@@ -130,30 +142,33 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 ),
               ),
               const SizedBox(height: AppTheme.paddingMedium),
-              
+
               Expanded(
-                child: _savedPassengers.isEmpty
-                    ? const Center(
-                        child: Text('No saved passengers found'),
-                      )
-                    : ListView.builder(
-                        itemCount: _savedPassengers.length,
-                        itemBuilder: (context, index) {
-                          final passenger = _savedPassengers[index];
-                          return ListTile(
-                            title: Text(passenger['name'] ?? 'Unknown'),
-                            subtitle: Text(
-                              '${passenger['identity_type']?.toUpperCase() ?? 'ID'}: ${passenger['identity_number'] ?? 'Unknown'}',
-                            ),
-                            onTap: () => _useSavedPassenger(passengerIndex, passenger),
-                            trailing: const Icon(Icons.check_circle_outline),
-                          );
-                        },
-                      ),
+                child:
+                    _savedPassengers.isEmpty
+                        ? const Center(child: Text('No saved passengers found'))
+                        : ListView.builder(
+                          itemCount: _savedPassengers.length,
+                          itemBuilder: (context, index) {
+                            final passenger = _savedPassengers[index];
+                            return ListTile(
+                              title: Text(passenger['name'] ?? 'Unknown'),
+                              subtitle: Text(
+                                '${passenger['identity_type']?.toUpperCase() ?? 'ID'}: ${passenger['identity_number'] ?? 'Unknown'}',
+                              ),
+                              onTap:
+                                  () => _useSavedPassenger(
+                                    passengerIndex,
+                                    passenger,
+                                  ),
+                              trailing: const Icon(Icons.check_circle_outline),
+                            );
+                          },
+                        ),
               ),
-              
+
               const SizedBox(height: AppTheme.paddingMedium),
-              
+
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -166,19 +181,19 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       },
     );
   }
-  
+
   bool _validateForms() {
     bool isValid = true;
-    
+
     for (int i = 0; i < _formKeys.length; i++) {
       if (!(_formKeys[i].currentState?.validate() ?? false)) {
         isValid = false;
       }
     }
-    
+
     return isValid;
   }
-  
+
   Future<void> _proceedToNext() async {
     if (!_validateForms()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -189,21 +204,24 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       );
       return;
     }
-    
+
     // Save form data for each passenger
     for (int i = 0; i < _formKeys.length; i++) {
       _formKeys[i].currentState?.save();
       _passengerData[i]['save_info'] = _savePassengerInfo[i];
     }
-    
+
     // Add passengers to booking provider
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
     bookingProvider.clearPassengers();
-    
+
     for (var passengerData in _passengerData) {
       bookingProvider.addPassenger(passengerData);
     }
-    
+
     // Navigate to next screen
     if (widget.hasVehicle) {
       Navigator.pushNamed(
@@ -211,7 +229,8 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         AppRoutes.vehicleDetails,
         arguments: {
           'scheduleId': widget.scheduleId,
-          'passengerIds': _passengerData.map((p) => p['id']).toList(),
+          // Remove passengerIds or pass an empty list with the correct type
+          'passengerIds': <int>[],
         },
       );
     } else {
@@ -220,12 +239,12 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         setState(() {
           _isLoading = true;
         });
-        
+
         final success = await bookingProvider.createBooking();
-        
+
         if (success && mounted) {
           final currentBooking = bookingProvider.currentBooking;
-          
+
           Navigator.pushNamed(
             context,
             AppRoutes.payment,
@@ -237,7 +256,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(bookingProvider.bookingError ?? 'Failed to create booking'),
+              content: Text(
+                bookingProvider.bookingError ?? 'Failed to create booking',
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -255,11 +276,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Passenger Details'),
-      ),
+      appBar: AppBar(title: const Text('Passenger Details')),
       body: LoadingOverlay(
         isLoading: _isLoading,
         loadingMessage: 'Processing booking...',
@@ -280,7 +299,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                         labelColor: AppTheme.primaryColor,
                         unselectedLabelColor: theme.textTheme.bodyMedium?.color,
                       ),
-                    
+
                     // Tab content with passenger forms
                     Expanded(
                       child: TabBarView(
@@ -294,7 +313,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 ),
               ),
             ),
-            
+
             // Bottom navigation bar with continue button
             Container(
               padding: const EdgeInsets.all(AppTheme.paddingMedium),
@@ -309,7 +328,10 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 ],
               ),
               child: CustomButton(
-                text: widget.hasVehicle ? 'Continue to Vehicle Details' : 'Continue to Payment',
+                text:
+                    widget.hasVehicle
+                        ? 'Continue to Vehicle Details'
+                        : 'Continue to Payment',
                 onPressed: _proceedToNext,
                 type: ButtonType.primary,
                 isFullWidth: true,
@@ -320,10 +342,10 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       ),
     );
   }
-  
+
   Widget _buildPassengerForm(int passengerIndex) {
     final theme = Theme.of(context);
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppTheme.paddingMedium),
       child: Form(
@@ -345,15 +367,16 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 ),
                 if (_savedPassengers.isNotEmpty)
                   TextButton.icon(
-                    onPressed: () => _showSavedPassengersBottomSheet(passengerIndex),
+                    onPressed:
+                        () => _showSavedPassengersBottomSheet(passengerIndex),
                     icon: const Icon(Icons.person, size: 18),
                     label: const Text('Use Saved'),
                   ),
               ],
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Name
             CustomTextField(
               label: 'Full Name',
@@ -371,9 +394,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 _passengerData[passengerIndex]['name'] = value;
               },
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // ID type and number
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,27 +429,25 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
-                        value: _passengerData[passengerIndex]['identity_type'] ?? 'ktp',
+                        value:
+                            _passengerData[passengerIndex]['identity_type'] ??
+                            'ktp',
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: AppTheme.paddingMedium,
                             vertical: AppTheme.paddingRegular,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusRegular,
+                            ),
                           ),
                           filled: true,
                           fillColor: theme.cardColor,
                         ),
                         items: const [
-                          DropdownMenuItem(
-                            value: 'ktp',
-                            child: Text('KTP'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'sim',
-                            child: Text('SIM'),
-                          ),
+                          DropdownMenuItem(value: 'ktp', child: Text('KTP')),
+                          DropdownMenuItem(value: 'sim', child: Text('SIM')),
                           DropdownMenuItem(
                             value: 'passport',
                             child: Text('Passport'),
@@ -434,7 +455,8 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                         ],
                         onChanged: (value) {
                           setState(() {
-                            _passengerData[passengerIndex]['identity_type'] = value;
+                            _passengerData[passengerIndex]['identity_type'] =
+                                value;
                           });
                         },
                         validator: (value) {
@@ -447,9 +469,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: AppTheme.paddingMedium),
-                
+
                 // ID Number
                 Expanded(
                   flex: 3,
@@ -457,7 +479,8 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                     label: 'ID Number',
                     hintText: 'Enter ID number',
                     isRequired: true,
-                    initialValue: _passengerData[passengerIndex]['identity_number'],
+                    initialValue:
+                        _passengerData[passengerIndex]['identity_number'],
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'ID number is required';
@@ -471,9 +494,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Gender and Date of Birth
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,20 +535,16 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                             vertical: AppTheme.paddingRegular,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusRegular,
+                            ),
                           ),
                           filled: true,
                           fillColor: theme.cardColor,
                         ),
                         items: const [
-                          DropdownMenuItem(
-                            value: 'm',
-                            child: Text('Male'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'f',
-                            child: Text('Female'),
-                          ),
+                          DropdownMenuItem(value: 'm', child: Text('Male')),
+                          DropdownMenuItem(value: 'f', child: Text('Female')),
                         ],
                         onChanged: (value) {
                           setState(() {
@@ -542,16 +561,17 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: AppTheme.paddingMedium),
-                
+
                 // Date of Birth
                 Expanded(
                   child: CustomTextField(
                     label: 'Date of Birth',
                     hintText: 'YYYY-MM-DD',
                     isRequired: true,
-                    initialValue: _passengerData[passengerIndex]['date_of_birth'],
+                    initialValue:
+                        _passengerData[passengerIndex]['date_of_birth'],
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Date of birth is required';
@@ -570,9 +590,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Contact: Phone, Email
             CustomTextField(
               label: 'Phone Number',
@@ -590,9 +610,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 _passengerData[passengerIndex]['phone'] = value;
               },
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             CustomTextField(
               label: 'Email',
               hintText: 'Enter email address',
@@ -612,9 +632,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 _passengerData[passengerIndex]['email'] = value;
               },
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Address
             CustomTextField(
               label: 'Address',
@@ -625,9 +645,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 _passengerData[passengerIndex]['address'] = value;
               },
             ),
-            
+
             const SizedBox(height: AppTheme.paddingMedium),
-            
+
             // Save passenger info checkbox
             Row(
               children: [
@@ -644,7 +664,8 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                   child: GestureDetector(
                     onTap: () {
                       setState(() {
-                        _savePassengerInfo[passengerIndex] = !_savePassengerInfo[passengerIndex];
+                        _savePassengerInfo[passengerIndex] =
+                            !_savePassengerInfo[passengerIndex];
                       });
                     },
                     child: Text(
@@ -658,7 +679,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: AppTheme.paddingLarge),
           ],
         ),

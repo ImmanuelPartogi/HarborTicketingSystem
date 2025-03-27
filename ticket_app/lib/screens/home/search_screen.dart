@@ -64,6 +64,8 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       return;
     }
     
+    if (!mounted) return; // Add this check
+    
     setState(() {
       _isSearching = true;
     });
@@ -77,13 +79,17 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         departureDate: _selectedDate ?? DateTime.now(),
       );
       
+      if (!mounted) return; // Add this check
+      
       // Reset animation controller and forward to trigger animations
       _animationController.reset();
       _animationController.forward();
     } finally {
-      setState(() {
-        _isSearching = false;
-      });
+      if (mounted) { // Add this check
+        setState(() {
+          _isSearching = false;
+        });
+      }
     }
   }
   
@@ -609,6 +615,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 const SizedBox(width: AppTheme.paddingMedium),
                 ElevatedButton.icon(
                   onPressed: () {
+                    if (!mounted) return; // Add this check
                     // Set date to tomorrow and search again
                     setState(() {
                       _selectedDate = DateTime.now().add(const Duration(days: 1));
@@ -638,7 +645,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
   }
   
-  void _selectSchedule(Schedule schedule) {
+  void _selectSchedule(ScheduleModel schedule) { // Changed type from Schedule to ScheduleModel
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
     ferryProvider.setSelectedSchedule(schedule.id);
     

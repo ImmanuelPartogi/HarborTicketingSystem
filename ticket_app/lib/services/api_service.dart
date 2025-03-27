@@ -39,9 +39,8 @@ class ApiService {
     try {
       final headers = await _getHeaders(requireAuth: requireAuth);
 
-      final uri = Uri.parse(
-        '${ApiConfig.baseUrl}$endpoint',
-      ).replace(queryParameters: queryParams);
+      // Properly construct the URI with the endpoint
+      final uri = _buildUri(endpoint, queryParams);
 
       debugPrint('GET Request: ${uri.toString()}');
       final response = await _client
@@ -58,6 +57,31 @@ class ApiService {
     } catch (e) {
       throw Exception('Unexpected error: $e');
     }
+  }
+
+  // Add this helper method for URI construction
+  Uri _buildUri(String endpoint, Map<String, dynamic>? queryParams) {
+    // Get the base URL
+    String baseUrl = ApiConfig.baseUrl;
+
+    // Check if the endpoint already starts with the base URL
+    // This can happen if someone passes a full URL instead of just an endpoint
+    if (endpoint.startsWith('http')) {
+      return Uri.parse(endpoint).replace(queryParameters: queryParams);
+    }
+
+    // Handle trailing slashes in baseUrl and leading slashes in endpoint
+    if (baseUrl.endsWith('/') && endpoint.startsWith('/')) {
+      // Remove the leading slash from endpoint if baseUrl already has trailing slash
+      endpoint = endpoint.substring(1);
+    } else if (!baseUrl.endsWith('/') && !endpoint.startsWith('/')) {
+      // Add a slash between baseUrl and endpoint if both don't have one
+      baseUrl = '$baseUrl/';
+    }
+
+    // Combine and parse the URL
+    final url = baseUrl + endpoint;
+    return Uri.parse(url).replace(queryParameters: queryParams);
   }
 
   Future<dynamic> post(

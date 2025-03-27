@@ -11,7 +11,7 @@ class Ticket {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? usedAt;
-  final Schedule? schedule;
+  final ScheduleModel? schedule;
   final Passenger? passenger;
 
   Ticket({
@@ -89,12 +89,12 @@ class Ticket {
   }
   
   // Helper method untuk parsing schedule dengan penanganan error
-  static Schedule? _parseSchedule(dynamic scheduleData) {
+  static ScheduleModel? _parseSchedule(dynamic scheduleData) {
     if (scheduleData == null) return null;
     try {
-      return Schedule.fromJson(scheduleData);
+      return ScheduleModel.fromJson(scheduleData);
     } catch (e) {
-      print('Error parsing schedule: $e');
+      print('Error parsing schedule in ticket: $e');
       return null;
     }
   }
