@@ -167,21 +167,39 @@ class AuthController extends Controller
     }
 
     /**
-     * Update user profile.
+     * Update user profile
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateProfile(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'string|max:255',
-            'phone' => 'string|max:20|unique:users,phone,' . $request->user()->id,
-            'address' => 'nullable|string',
+        $user = $request->user();
+
+        // Map field names from Flutter to Laravel if needed
+        $data = $request->all();
+
+        // Handle field name differences
+        if (isset($data['identity_number'])) {
+            $data['id_number'] = $data['identity_number'];
+        }
+
+        if (isset($data['identity_type'])) {
+            $data['id_type'] = $data['identity_type'];
+        }
+
+        if (isset($data['date_of_birth'])) {
+            $data['dob'] = $data['date_of_birth'];
+        }
+
+        $validator = Validator::make($data, [
+            'name' => 'sometimes|string|max:255',
+            'phone' => 'sometimes|string|max:20',
             'id_number' => 'nullable|string|max:30',
             'id_type' => 'nullable|in:KTP,SIM,PASPOR',
-            'dob' => 'nullable|date',
+            'dob' => 'nullable|date_format:Y-m-d',
             'gender' => 'nullable|in:MALE,FEMALE',
+            'address' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -193,7 +211,8 @@ class AuthController extends Controller
         }
 
         try {
-            $user = $this->authService->updateUserProfile($request->user(), $request->all());
+            // Update only the fields that are in the fillable array
+            $user->update($data);
 
             return response()->json([
                 'success' => true,
@@ -205,7 +224,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Profile update failed',
+                'message' => 'Failed to update profile',
                 'error' => $e->getMessage()
             ], 500);
         }

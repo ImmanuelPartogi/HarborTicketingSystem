@@ -4,6 +4,9 @@ import '../models/user_model.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 class AuthProvider extends ChangeNotifier {
   final StorageService _storageService;
@@ -12,17 +15,19 @@ class AuthProvider extends ChangeNotifier {
 
   User? _user;
   bool _isLoading = false;
+  String? _token;
   String? _error;
-  
+
   // Tambahkan property baru untuk tracking waktu terakhir fetch profile
   DateTime? lastProfileFetchTime;
-  
+
   // Tambahkan debounce timer
   Timer? _profileDebounceTimer;
 
   // Getters
   User? get user => _user;
   bool get isLoading => _isLoading;
+  String? get token => _token;
   String? get error => _error;
   bool get isAuthenticated =>
       _user != null && _user!.isVerified; // Check verification status
@@ -47,59 +52,33 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Get current user data from server and update
-  Future<void> getCurrentUser() async {
-    // Hindari multiple calls dalam 2 detik
-    if (_profileDebounceTimer != null && _profileDebounceTimer!.isActive) {
-      return;
-    }
-    
-    // Set debounce timer
-    _profileDebounceTimer = Timer(const Duration(seconds: 2), () {});
-    
-    _setLoading(true);
-    _clearError();
-
+  Future<bool> getCurrentUser() async {
+    _error = null;
     try {
-      // Try to get user from local storage first
-      User? localUser = await _authService.getCurrentUser();
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/profile');
+      final response = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $_token'},
+      );
 
-      // If user exists in local storage but not in provider, set it
-      if (localUser != null && _user == null) {
-        _user = localUser;
-      }
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
 
-      // Only try to get profile from server if user is verified 
-      // DAN jika waktu terakhir fetch sudah lewat 5 menit
-      bool shouldFetchFromServer = localUser != null && 
-                                  localUser.isVerified &&
-                                  (lastProfileFetchTime == null || 
-                                   DateTime.now().difference(lastProfileFetchTime!).inMinutes > 5);
-                                   
-      if (shouldFetchFromServer) {
-        // Get latest data from server
-        final response = await _apiService.getProfile();
-        if (response != null && response['user'] != null) {
-          final updatedUser = User.fromJson(response['user']);
-
-          // Update user in provider and storage
-          _user = updatedUser;
-          await _storageService.setUser(updatedUser);
-          
-          // Update last fetch time
-          lastProfileFetchTime = DateTime.now();
+        if (responseData['success'] == true) {
+          _user = User.fromJson(responseData['data']['user']);
+          notifyListeners();
+          return true;
+        } else {
+          _error = responseData['message'];
+          return false;
         }
+      } else {
+        _error = 'Error: ${response.statusCode}';
+        return false;
       }
-
-      _setLoading(false);
     } catch (e) {
-      // If failed to get from server, keep using local data
-      // and don't set error (for better UX)
-      _setLoading(false);
-
-      // Log error but don't show to user if local data is available
-      if (_user == null) {
-        _setError('Failed to get user profile: ${e.toString()}');
-      }
+      _error = e.toString();
+      return false;
     }
   }
 
@@ -111,7 +90,8 @@ class AuthProvider extends ChangeNotifier {
     try {
       // Pass 'email' instead of 'phone' to match the API expectation
       _user = await _authService.login(email, password);
-      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful login
+      lastProfileFetchTime =
+          DateTime.now(); // Set fetch time after successful login
       _setLoading(false);
       notifyListeners();
       return true;
@@ -129,7 +109,8 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _user = await _authService.register(userData);
-      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful registration
+      lastProfileFetchTime =
+          DateTime.now(); // Set fetch time after successful registration
       _setLoading(false);
       notifyListeners();
       return true;
@@ -147,7 +128,8 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _user = await _authService.verifyOtp(phone, otp);
-      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful verification
+      lastProfileFetchTime =
+          DateTime.now(); // Set fetch time after successful verification
       _setLoading(false);
       notifyListeners();
       return true;
@@ -175,20 +157,53 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Update user profile
+  // Fixed method to update user profile
   Future<bool> updateProfile(Map<String, dynamic> profileData) async {
-    _setLoading(true);
-    _clearError();
-
+    _error = null;
     try {
-      _user = await _authService.updateProfile(profileData);
-      lastProfileFetchTime = DateTime.now(); // Set fetch time after profile update
-      _setLoading(false);
-      notifyListeners();
-      return true;
+      // Keep the same field mappings if necessary
+      final convertedData = {
+        'name': profileData['name'],
+        'email': profileData['email'],
+        'phone': profileData['phone'],
+        'identity_number': profileData['identity_number'],
+        'identity_type': profileData['identity_type'],
+        'date_of_birth': profileData['date_of_birth'],
+        'gender': profileData['gender'],
+        'address': profileData['address'],
+      };
+
+      // Use the correct endpoint with POST method
+      final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/profile');
+
+      // Changed from PUT to POST
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+        body: json.encode(convertedData),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        if (responseData['success'] == true) {
+          // Update the local user object
+          _user = User.fromJson(responseData['data']['user']);
+          notifyListeners();
+          return true;
+        } else {
+          _error = responseData['message'] ?? 'Failed to update profile';
+          return false;
+        }
+      } else {
+        _error = 'Error: ${response.statusCode}';
+        return false;
+      }
     } catch (e) {
-      _setError('Profile update failed: ${e.toString()}');
-      _setLoading(false);
+      _error = e.toString();
       return false;
     }
   }
@@ -218,7 +233,8 @@ class AuthProvider extends ChangeNotifier {
 
     if (isLoggedIn && _user == null) {
       _user = await _storageService.getUser();
-      lastProfileFetchTime = DateTime.now(); // Set fetch time when retrieving user
+      lastProfileFetchTime =
+          DateTime.now(); // Set fetch time when retrieving user
       notifyListeners();
     }
 
