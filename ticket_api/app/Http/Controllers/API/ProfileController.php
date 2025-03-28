@@ -37,28 +37,8 @@ class ProfileController extends Controller
      */
     public function updateProfile(Request $request)
     {
-        // Map incoming field names to database field names
-        $data = $request->all();
-
-        // Handle field name differences
-        if (isset($data['identity_number'])) {
-            $data['id_number'] = $data['identity_number'];
-            unset($data['identity_number']);
-        }
-
-        if (isset($data['identity_type'])) {
-            $data['id_type'] = $data['identity_type'];
-            unset($data['identity_type']);
-        }
-
-        if (isset($data['date_of_birth'])) {
-            $data['dob'] = $data['date_of_birth'];
-            unset($data['date_of_birth']);
-        }
-
-        $validator = Validator::make($data, [
+        $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|email|max:255|unique:users,email,' . $request->user()->id,
             'phone' => 'sometimes|required|string|max:20|unique:users,phone,' . $request->user()->id,
             'address' => 'nullable|string',
             'id_number' => 'nullable|string|max:30',
@@ -77,7 +57,7 @@ class ProfileController extends Controller
 
         try {
             $user = $request->user();
-            $user->update($data);
+            $user->update($request->all());
 
             return response()->json([
                 'success' => true,

@@ -56,8 +56,7 @@ Route::prefix('v1')->group(function () {
 Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // User Profile
     Route::get('/profile', [AuthController::class, 'profile']);
-    Route::post('/profile', [AuthController::class, 'updateProfile']); // Keep the original POST
-    Route::put('/profile', [AuthController::class, 'updateProfile']);  // Add PUT support
+    Route::post('/profile', [AuthController::class, 'updateProfile']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
 

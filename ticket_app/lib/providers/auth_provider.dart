@@ -37,9 +37,10 @@ class AuthProvider extends ChangeNotifier {
     _apiService = ApiService(_storageService);
     _authService = AuthService(_apiService, _storageService);
     _loadUserFromStorage();
+    _initializeToken(); // Tambahkan inisialisasi token saat startup
   }
 
-  // Load user from storage on app start
+  // Load user and token from storage on app start
   Future<void> _loadUserFromStorage() async {
     _setLoading(true);
     try {
@@ -51,19 +52,40 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Initialize token from storage
+  Future<void> _initializeToken() async {
+    try {
+      _token = await _storageService.getAccessToken();
+      debugPrint('Token initialized: ${_token != null}');
+    } catch (e) {
+      debugPrint('Failed to initialize token: $e');
+    }
+  }
+
   // Get current user data from server and update
-  Future<bool> getCurrentUser() async {
+   Future<bool> getCurrentUser() async {
     _error = null;
     try {
+      final token = await _storageService.getAccessToken();
+      
+      if (token == null) {
+        _error = 'Tidak ada token otentikasi';
+        return false;
+      }
+      
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/profile');
       final response = await http.get(
         url,
-        headers: {'Authorization': 'Bearer $_token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
       );
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-
+        
         if (responseData['success'] == true) {
           _user = User.fromJson(responseData['data']['user']);
           notifyListeners();
@@ -90,8 +112,9 @@ class AuthProvider extends ChangeNotifier {
     try {
       // Pass 'email' instead of 'phone' to match the API expectation
       _user = await _authService.login(email, password);
-      lastProfileFetchTime =
-          DateTime.now(); // Set fetch time after successful login
+      // Update token after successful login
+      _token = await _storageService.getAccessToken();
+      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful login
       _setLoading(false);
       notifyListeners();
       return true;
@@ -109,8 +132,9 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _user = await _authService.register(userData);
-      lastProfileFetchTime =
-          DateTime.now(); // Set fetch time after successful registration
+      // Update token if available after registration
+      _token = await _storageService.getAccessToken();
+      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful registration
       _setLoading(false);
       notifyListeners();
       return true;
@@ -128,8 +152,9 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _user = await _authService.verifyOtp(phone, otp);
-      lastProfileFetchTime =
-          DateTime.now(); // Set fetch time after successful verification
+      // Update token after verification
+      _token = await _storageService.getAccessToken();
+      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful verification
       _setLoading(false);
       notifyListeners();
       return true;
@@ -148,6 +173,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.logout();
       _user = null;
+      _token = null;
       lastProfileFetchTime = null; // Reset fetch time on logout
       _setLoading(false);
       notifyListeners();
@@ -160,31 +186,46 @@ class AuthProvider extends ChangeNotifier {
   // Fixed method to update user profile
   Future<bool> updateProfile(Map<String, dynamic> profileData) async {
     _error = null;
+    _setLoading(true);
+    
     try {
-      // Keep the same field mappings if necessary
+      // Dapatkan token terlebih dahulu
+      final token = await _storageService.getAccessToken();
+      
+      if (token == null) {
+        _error = 'Tidak ada token otentikasi';
+        _setLoading(false);
+        return false;
+      }
+      
+      // PERBAIKAN: Pastikan field name konsisten dengan apa yang diharapkan backend
       final convertedData = {
         'name': profileData['name'],
-        'email': profileData['email'],
         'phone': profileData['phone'],
-        'identity_number': profileData['identity_number'],
-        'identity_type': profileData['identity_type'],
-        'date_of_birth': profileData['date_of_birth'],
+        'id_number': profileData['identity_number'],
+        'id_type': profileData['identity_type'],
+        'dob': profileData['date_of_birth'],
         'gender': profileData['gender'],
         'address': profileData['address'],
       };
 
-      // Use the correct endpoint with POST method
+      debugPrint('Updating profile with data: ${json.encode(convertedData)}');
+      
+      // PERBAIKAN: Gunakan metode POST untuk sesuai dengan definisi route di backend
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/profile');
-
-      // Changed from PUT to POST
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $_token',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
         },
         body: json.encode(convertedData),
       );
+
+      _setLoading(false);
+      
+      debugPrint('Update profile response: ${response.statusCode}, body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
@@ -195,15 +236,38 @@ class AuthProvider extends ChangeNotifier {
           notifyListeners();
           return true;
         } else {
-          _error = responseData['message'] ?? 'Failed to update profile';
+          _error = responseData['message'] ?? 'Gagal mengupdate profil';
           return false;
         }
+      } else if (response.statusCode == 422) {
+        // Validasi error
+        final responseData = json.decode(response.body);
+        if (responseData.containsKey('errors')) {
+          final errors = responseData['errors'];
+          if (errors is Map && errors.isNotEmpty) {
+            final firstErrorField = errors.keys.first;
+            final firstErrorMessages = errors[firstErrorField];
+            
+            if (firstErrorMessages is List && firstErrorMessages.isNotEmpty) {
+              _error = 'Validasi error: ${firstErrorMessages.first}';
+            } else {
+              _error = 'Validasi error pada field: $firstErrorField';
+            }
+          } else {
+            _error = 'Validasi gagal';
+          }
+        } else {
+          _error = responseData['message'] ?? 'Validasi gagal';
+        }
+        return false;
       } else {
         _error = 'Error: ${response.statusCode}';
         return false;
       }
     } catch (e) {
+      _setLoading(false);
       _error = e.toString();
+      debugPrint('Exception when updating profile: $e');
       return false;
     }
   }
@@ -233,8 +297,8 @@ class AuthProvider extends ChangeNotifier {
 
     if (isLoggedIn && _user == null) {
       _user = await _storageService.getUser();
-      lastProfileFetchTime =
-          DateTime.now(); // Set fetch time when retrieving user
+      _token = await _storageService.getAccessToken();
+      lastProfileFetchTime = DateTime.now(); // Set fetch time when retrieving user
       notifyListeners();
     }
 

@@ -1,14 +1,23 @@
 class AppConfig {
-  // API configuration
-  static const String apiBaseUrl = 'http://127.0.0.1:8000';
+  // API configuration - UPDATED FOR DIFFERENT ENVIRONMENTS
+  
+  // For Android Emulator:
+  // static const String apiBaseUrl = 'http://10.0.2.2:8000';
+  
+  // For iOS Simulator (uncomment if needed):
+  static const String apiBaseUrl = 'http://localhost:8000';
+  
+  // For Physical Device (uncomment and update IP):
+  // static const String apiBaseUrl = 'http://192.168.1.x:8000'; // Replace with your PC's IP
+  
   static const String apiPrefix = '/api/v1';
   static const int apiConnectTimeout = 30000; // 30 seconds
   static const int apiReceiveTimeout = 30000; // 30 seconds
 
-  // App information
+  // The rest of your AppConfig remains unchanged
   static const String appName = 'Ferry Ticket App';
   static const String appVersion = '1.0.0';
-
+  
   // Feature flags
   static const bool enablePushNotifications = true;
   static const bool enableInAppReview = true;
