@@ -3,7 +3,7 @@ import 'schedule_model.dart';
 
 class Ticket {
   final int id;
-  final int bookingId;
+  final int bookingId; // Pastikan field ini tersedia dan terisi dengan benar
   final int scheduleId;
   final int passengerId;
   final String ticketNumber;
@@ -16,7 +16,7 @@ class Ticket {
 
   Ticket({
     required this.id,
-    required this.bookingId,
+    required this.bookingId, // Memastikan bookingId tersedia
     required this.scheduleId,
     required this.passengerId,
     required this.ticketNumber,
@@ -31,7 +31,7 @@ class Ticket {
   factory Ticket.fromJson(Map<String, dynamic> json) {
     // Debug log untuk melihat data yang diterima
     print('Parsing Ticket data: ${json.keys.toList()}');
-    
+
     // Helper functions untuk parsing data dengan aman
     int parseInt(dynamic value, {int defaultValue = 0}) {
       if (value == null) return defaultValue;
@@ -43,12 +43,12 @@ class Ticket {
         return defaultValue;
       }
     }
-    
+
     String parseString(dynamic value, {String defaultValue = ''}) {
       if (value == null) return defaultValue;
       return value.toString();
     }
-    
+
     DateTime parseDateTime(dynamic value, {DateTime? defaultValue}) {
       if (value == null) {
         return defaultValue ?? DateTime.now();
@@ -60,7 +60,7 @@ class Ticket {
         return defaultValue ?? DateTime.now();
       }
     }
-    
+
     DateTime? parseNullableDateTime(dynamic value) {
       if (value == null) return null;
       try {
@@ -70,10 +70,12 @@ class Ticket {
         return null;
       }
     }
-    
+
     return Ticket(
       id: parseInt(json['id']),
-      bookingId: parseInt(json['booking_id']),
+      bookingId: parseInt(
+        json['booking_id'],
+      ), // Memastikan bookingId diambil dengan benar
       scheduleId: parseInt(json['schedule_id']),
       passengerId: parseInt(json['passenger_id']),
       ticketNumber: parseString(json['ticket_number']),
@@ -81,14 +83,14 @@ class Ticket {
       createdAt: parseDateTime(json['created_at']),
       updatedAt: parseDateTime(json['updated_at']),
       usedAt: parseNullableDateTime(json['used_at']),
-      schedule: json['schedule'] != null ? 
-        _parseSchedule(json['schedule']) : null,
-      passenger: json['passenger'] != null ? 
-        _parsePassenger(json['passenger']) : null,
+      schedule:
+          json['schedule'] != null ? _parseSchedule(json['schedule']) : null,
+      passenger:
+          json['passenger'] != null ? _parsePassenger(json['passenger']) : null,
     );
   }
-  
-  // Helper method untuk parsing schedule dengan penanganan error
+
+  // Helper method untuk parsing schedule dengan penanganan error (tidak berubah)
   static ScheduleModel? _parseSchedule(dynamic scheduleData) {
     if (scheduleData == null) return null;
     try {
@@ -98,8 +100,8 @@ class Ticket {
       return null;
     }
   }
-  
-  // Helper method untuk parsing passenger dengan penanganan error
+
+  // Helper method untuk parsing passenger dengan penanganan error (tidak berubah)
   static Passenger? _parsePassenger(dynamic passengerData) {
     if (passengerData == null) return null;
     try {
@@ -113,7 +115,7 @@ class Ticket {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'booking_id': bookingId,
+      'booking_id': bookingId, // Memastikan bookingId disertakan dalam JSON
       'schedule_id': scheduleId,
       'passenger_id': passengerId,
       'ticket_number': ticketNumber,
@@ -205,7 +207,7 @@ class Passenger {
   factory Passenger.fromJson(Map<String, dynamic> json) {
     // Debug log untuk melihat data yang diterima
     print('Parsing Passenger data: ${json.keys.toList()}');
-    
+
     // Helper functions untuk parsing data dengan aman
     int parseInt(dynamic value, {int defaultValue = 0}) {
       if (value == null) return defaultValue;
@@ -217,7 +219,7 @@ class Passenger {
         return defaultValue;
       }
     }
-    
+
     int? parseNullableInt(dynamic value) {
       if (value == null) return null;
       if (value is int) return value;
@@ -228,17 +230,17 @@ class Passenger {
         return null;
       }
     }
-    
+
     String parseString(dynamic value, {String defaultValue = ''}) {
       if (value == null) return defaultValue;
       return value.toString();
     }
-    
+
     String? parseNullableString(dynamic value) {
       if (value == null) return null;
       return value.toString();
     }
-    
+
     DateTime parseDateTime(dynamic value, {DateTime? defaultValue}) {
       if (value == null) {
         return defaultValue ?? DateTime.now();
@@ -250,7 +252,7 @@ class Passenger {
         return defaultValue ?? DateTime.now();
       }
     }
-    
+
     return Passenger(
       id: parseInt(json['id']),
       userId: parseNullableInt(json['user_id']),
@@ -299,7 +301,7 @@ class Passenger {
 
   String get genderText {
     if (gender == null) return '';
-    
+
     switch (gender!.toLowerCase()) {
       case 'm':
       case 'male':

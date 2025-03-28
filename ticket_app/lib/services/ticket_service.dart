@@ -167,6 +167,48 @@ class TicketService {
     }
   }
 
+  Future<List<Ticket>> getTicketsByBookingId(int bookingId) async {
+  try {
+    final response = await _apiService.getTickets(
+      queryParams: {'booking_id': bookingId.toString()},
+    );
+    
+    // Proses hasil untuk mengekstrak tiket
+    final dynamic data = response['data'];
+    List<dynamic> ticketsData;
+    
+    if (data is Map<String, dynamic>) {
+      if (data.containsKey('tickets')) {
+        ticketsData = data['tickets'] as List<dynamic>;
+      } else if (data.containsKey('items')) {
+        ticketsData = data['items'] as List<dynamic>;
+      } else {
+        ticketsData = [data];
+      }
+    } else if (data is List<dynamic>) {
+      ticketsData = data;
+    } else {
+      return [];
+    }
+    
+    // Konversi ke objek Ticket
+    final tickets = <Ticket>[];
+    for (var ticketData in ticketsData) {
+      try {
+        final ticket = Ticket.fromJson(ticketData);
+        tickets.add(ticket);
+      } catch (e) {
+        print('Error parsing ticket: $e');
+      }
+    }
+    
+    return tickets;
+  } catch (e) {
+    print('Error getting tickets by booking ID: $e');
+    return [];
+  }
+}
+
   // Generate QR code for a ticket
   Widget generateTicketQR(String ticketNumber, int ticketId, DateTime validUntil) {
     final timestamp = DateTime.now().millisecondsSinceEpoch;

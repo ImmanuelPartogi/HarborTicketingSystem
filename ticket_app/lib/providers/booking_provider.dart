@@ -29,6 +29,7 @@ class BookingProvider extends ChangeNotifier {
   bool _isLoadingBookingDetail = false;
   bool _isCancellingBooking = false;
   bool _isReschedulingBooking = false;
+  bool _isGeneratingTickets = false;
 
   String? _bookingError;
   String? _paymentError;
@@ -47,6 +48,7 @@ class BookingProvider extends ChangeNotifier {
   bool get isLoadingBookingDetail => _isLoadingBookingDetail;
   bool get isCancellingBooking => _isCancellingBooking;
   bool get isReschedulingBooking => _isReschedulingBooking;
+  bool get isGeneratingTickets => _isGeneratingTickets;
 
   String? get bookingError => _bookingError;
   String? get paymentError => _paymentError;
@@ -349,6 +351,49 @@ class BookingProvider extends ChangeNotifier {
     } catch (e) {
       return false;
     }
+  }
+
+  // Tambahkan fungsi untuk membuat tiket secara manual jika diperlukan
+  Future<bool> generateTickets(int bookingId) async {
+    if (_currentBooking == null || _currentBooking!.id != bookingId) {
+      await fetchBookingDetail(bookingId);
+    }
+
+    if (_currentBooking == null || !_currentBooking!.isConfirmed) {
+      _bookingError = 'Booking not found or not confirmed';
+      notifyListeners();
+      return false;
+    }
+
+    _isGeneratingTickets = true;
+    _bookingError = null;
+    notifyListeners();
+
+    try {
+      // Gunakan method helper khusus di ApiService
+      await _apiService.generateTicketsForBooking(bookingId);
+
+      // Refresh booking untuk memastikan tiket telah dibuat
+      await fetchBookingDetail(bookingId);
+
+      _isGeneratingTickets = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _bookingError = 'Failed to generate tickets: ${e.toString()}';
+      _isGeneratingTickets = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Tambahkan fungsi untuk memeriksa apakah tiket sudah ada untuk booking ini
+  bool hasTickets() {
+    if (_currentBooking == null) return false;
+
+    // Periksa apakah relasi tickets sudah dimuat dan memiliki data
+    return _currentBooking!.tickets != null &&
+        _currentBooking!.tickets!.isNotEmpty;
   }
 
   // Get payment methods

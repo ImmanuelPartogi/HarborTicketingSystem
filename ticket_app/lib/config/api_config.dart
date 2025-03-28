@@ -24,7 +24,8 @@ class ApiConfig {
   static const String bookingDetail = '/api/v1/bookings/{id}';
   static const String cancelBooking = '/api/v1/bookings/{id}/cancel';
   static const String rescheduleBooking = '/api/v1/bookings/{id}/reschedule';
-  
+  static const String generateTickets = 'bookings/{id}/generate-tickets'; 
+
   static const String payments = '/api/v1/payments';
   static const String paymentStatus = '/api/v1/payments/{id}/status';
   

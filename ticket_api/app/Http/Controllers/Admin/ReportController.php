@@ -150,10 +150,10 @@ class ReportController extends Controller
         $passengerCount = Booking::whereBetween('bookings.created_at', [$startDate, $endDate])->sum('passenger_count'); // Tambahkan prefix 'bookings.'
 
         // Get route statistics
-        $routeStats = Booking::whereBetween('bookings.created_at', [$startDate, $endDate]) // Tambahkan prefix 'bookings.'
+        $routeStats = Booking::whereBetween('bookings.created_at', [$startDate, $endDate->format('Y-m-d') . ' 23:59:59'])
             ->join('schedules', 'bookings.schedule_id', '=', 'schedules.id')
             ->join('routes', 'schedules.route_id', '=', 'routes.id')
-            ->selectRaw('routes.origin, routes.destination, COUNT(*) as booking_count, SUM(bookings.passenger_count) as passenger_count, SUM(bookings.total_amount) as revenue')
+            ->selectRaw('routes.id, routes.origin, routes.destination, COUNT(*) as booking_count, SUM(bookings.passenger_count) as passenger_count, SUM(bookings.total_amount) as revenue')
             ->groupBy('routes.id', 'routes.origin', 'routes.destination')
             ->orderByDesc('booking_count')
             ->get();
@@ -181,10 +181,10 @@ class ReportController extends Controller
         $endDate = $request->query('date_to') ? Carbon::parse($request->query('date_to')) : Carbon::now()->endOfMonth();
 
         // Get route performance statistics
-        $routeStats = Booking::whereBetween('bookings.created_at', [$startDate, $endDate->format('Y-m-d') . ' 23:59:59']) // Perbaikan disini
+        $routeStats = Booking::whereBetween('bookings.created_at', [$startDate, $endDate->format('Y-m-d') . ' 23:59:59'])
             ->join('schedules', 'bookings.schedule_id', '=', 'schedules.id')
             ->join('routes', 'schedules.route_id', '=', 'routes.id')
-            ->selectRaw('routes.origin, routes.destination, COUNT(*) as booking_count, SUM(bookings.passenger_count) as passenger_count, SUM(bookings.total_amount) as revenue')
+            ->selectRaw('routes.id, routes.origin, routes.destination, COUNT(*) as booking_count, SUM(bookings.passenger_count) as passenger_count, SUM(bookings.total_amount) as revenue')
             ->groupBy('routes.id', 'routes.origin', 'routes.destination')
             ->orderByDesc('booking_count')
             ->get();
@@ -199,27 +199,27 @@ class ReportController extends Controller
      * @return \Illuminate\View\View
      */
     public function occupancy(Request $request)
-{
-    $startDate = $request->query('date_from') ? Carbon::parse($request->query('date_from')) : Carbon::now()->startOfMonth();
-    $endDate = $request->query('date_to') ? Carbon::parse($request->query('date_to')) : Carbon::now()->endOfMonth();
-    $ferryId = $request->query('ferry_id');
+    {
+        $startDate = $request->query('date_from') ? Carbon::parse($request->query('date_from')) : Carbon::now()->startOfMonth();
+        $endDate = $request->query('date_to') ? Carbon::parse($request->query('date_to')) : Carbon::now()->endOfMonth();
+        $ferryId = $request->query('ferry_id');
 
-    $ferries = Ferry::all();
+        $ferries = Ferry::all();
 
-    // Query dasar untuk data okupansi
-    $query = Booking::whereBetween('bookings.created_at', [$startDate, $endDate->format('Y-m-d') . ' 23:59:59'])
-        ->join('schedules', 'bookings.schedule_id', '=', 'schedules.id')
-        ->join('ferries', 'schedules.ferry_id', '=', 'ferries.id')
-        ->join('routes', 'schedules.route_id', '=', 'routes.id');
+        // Query dasar untuk data okupansi
+        $query = Booking::whereBetween('bookings.created_at', [$startDate, $endDate->format('Y-m-d') . ' 23:59:59'])
+            ->join('schedules', 'bookings.schedule_id', '=', 'schedules.id')
+            ->join('ferries', 'schedules.ferry_id', '=', 'ferries.id')
+            ->join('routes', 'schedules.route_id', '=', 'routes.id');
 
-    // Filter berdasarkan ferry jika ada
-    if ($ferryId) {
-        $query->where('ferries.id', $ferryId);
-    }
+        // Filter berdasarkan ferry jika ada
+        if ($ferryId) {
+            $query->where('ferries.id', $ferryId);
+        }
 
-    // Lanjutkan query dengan select dan group by
-    // Menggunakan nama kolom yang benar: capacity_passenger (bukan passenger_capacity)
-    $occupancyData = $query->selectRaw('
+        // Lanjutkan query dengan select dan group by
+        // Menggunakan nama kolom yang benar: capacity_passenger (bukan passenger_capacity)
+        $occupancyData = $query->selectRaw('
             ferries.name as ferry_name,
             routes.origin,
             routes.destination,
@@ -228,12 +228,12 @@ class ReportController extends Controller
             SUM(bookings.passenger_count) as total_passengers,
             (SUM(bookings.passenger_count) / SUM(ferries.capacity_passenger)) * 100 as occupancy_rate
         ')
-        ->groupBy('ferries.id', 'ferries.name', 'routes.id', 'routes.origin', 'routes.destination')
-        ->orderByDesc('occupancy_rate')
-        ->get();
+            ->groupBy('ferries.id', 'ferries.name', 'routes.id', 'routes.origin', 'routes.destination')
+            ->orderByDesc('occupancy_rate')
+            ->get();
 
-    return view('admin.reports.occupancy', compact('occupancyData', 'ferries', 'startDate', 'endDate', 'ferryId'));
-}
+        return view('admin.reports.occupancy', compact('occupancyData', 'ferries', 'startDate', 'endDate', 'ferryId'));
+    }
 
     /**
      * Export daily report to Excel.
@@ -300,5 +300,47 @@ class ReportController extends Controller
             new OccupancyReportExport($startDate, $endDate, $ferryId),
             'occupancy_report_' . $startDate->format('Y-m-d') . '_to_' . $endDate->format('Y-m-d') . '.xlsx'
         );
+    }
+
+    /**
+     * Show detailed information for a specific route.
+     *
+     * @param int $id
+     * @return \Illuminate\View\View
+     */
+    public function routeDetails($id)
+    {
+        // Get the route information
+        $route = Route::findOrFail($id);
+
+        // Get booking statistics for this route
+        $bookings = Booking::join('schedules', 'bookings.schedule_id', '=', 'schedules.id')
+            ->where('schedules.route_id', $id)
+            ->with(['user', 'schedule.ferry'])
+            ->orderBy('bookings.created_at', 'desc')
+            ->get();
+
+        // Calculate statistics
+        $totalPassengers = $bookings->sum('passenger_count');
+        $totalRevenue = $bookings->sum('total_amount');
+        $averageTicketPrice = $totalPassengers > 0 ? $totalRevenue / $totalPassengers : 0;
+
+        // Get monthly trend data
+        $monthlyStats = Booking::join('schedules', 'bookings.schedule_id', '=', 'schedules.id')
+            ->where('schedules.route_id', $id)
+            ->selectRaw('YEAR(bookings.created_at) as year, MONTH(bookings.created_at) as month, COUNT(*) as booking_count, SUM(bookings.passenger_count) as passenger_count, SUM(bookings.total_amount) as revenue')
+            ->groupBy('year', 'month')
+            ->orderBy('year')
+            ->orderBy('month')
+            ->get();
+
+        return view('admin.reports.route_details', compact(
+            'route',
+            'bookings',
+            'totalPassengers',
+            'totalRevenue',
+            'averageTicketPrice',
+            'monthlyStats'
+        ));
     }
 }

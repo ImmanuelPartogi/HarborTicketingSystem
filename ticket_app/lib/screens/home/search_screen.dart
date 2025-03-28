@@ -28,7 +28,8 @@ class SearchScreen extends StatefulWidget {
   State createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderStateMixin {
+class _SearchScreenState extends State<SearchScreen>
+    with SingleTickerProviderStateMixin {
   String _sortBy = 'departure_time_asc';
   bool _isSearching = false;
   DateTime? _selectedDate;
@@ -36,7 +37,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   String? _selectedArrivalPort;
   int _passengerCount = 1;
   late AnimationController _animationController;
-  
+
   @override
   void initState() {
     super.initState();
@@ -44,55 +45,56 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     _selectedDeparturePort = widget.departurePort;
     _selectedArrivalPort = widget.arrivalPort;
     _passengerCount = widget.passengerCount ?? 1;
-    
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    
+
     _searchSchedules();
   }
-  
+
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _searchSchedules() async {
     if (_selectedDeparturePort == null || _selectedArrivalPort == null) {
       return;
     }
-    
+
     if (!mounted) return; // Add this check
-    
+
     setState(() {
       _isSearching = true;
     });
-    
+
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
-    
+
     try {
       await ferryProvider.fetchSchedules(
         departurePort: _selectedDeparturePort!,
         arrivalPort: _selectedArrivalPort!,
         departureDate: _selectedDate ?? DateTime.now(),
       );
-      
+
       if (!mounted) return; // Add this check
-      
+
       // Reset animation controller and forward to trigger animations
       _animationController.reset();
       _animationController.forward();
     } finally {
-      if (mounted) { // Add this check
+      if (mounted) {
+        // Add this check
         setState(() {
           _isSearching = false;
         });
       }
     }
   }
-  
+
   void _showFilterDialog() {
     showModalBottomSheet(
       context: context,
@@ -120,7 +122,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 left: AppTheme.paddingMedium,
                 right: AppTheme.paddingMedium,
                 top: AppTheme.paddingMedium,
-                bottom: MediaQuery.of(context).viewInsets.bottom + AppTheme.paddingMedium,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom +
+                    AppTheme.paddingMedium,
               ),
               child: Wrap(
                 children: [
@@ -129,14 +133,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                     child: Container(
                       height: 5,
                       width: 40,
-                      margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+                      margin: const EdgeInsets.only(
+                        bottom: AppTheme.paddingMedium,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(100),
                       ),
                     ),
                   ),
-                  
+
                   // Title
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -156,10 +162,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       ),
                     ],
                   ),
-                  
+
                   const Divider(),
                   const SizedBox(height: AppTheme.paddingSmall),
-                  
+
                   // Sort options
                   const Text(
                     'Sort By',
@@ -169,7 +175,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                     ),
                   ),
                   const SizedBox(height: AppTheme.paddingSmall),
-                  
+
                   // Sort options cards in a 2x2 grid
                   GridView.count(
                     crossAxisCount: 2,
@@ -225,14 +231,17 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: AppTheme.paddingLarge),
-                  
+
                   // Apply button
                   ElevatedButton(
                     onPressed: () {
                       // Apply filter
-                      final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
+                      final ferryProvider = Provider.of<FerryProvider>(
+                        context,
+                        listen: false,
+                      );
                       ferryProvider.setSortBy(_sortBy);
                       Navigator.pop(context);
                     },
@@ -241,7 +250,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 55),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusRegular,
+                        ),
                       ),
                       elevation: 2,
                     ),
@@ -253,7 +264,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: AppTheme.paddingSmall),
                 ],
               ),
@@ -263,7 +274,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       },
     );
   }
-  
+
   Widget _buildSortOptionCard({
     required String title,
     required IconData icon,
@@ -273,13 +284,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }) {
     final isSelected = value == currentValue;
     final theme = Theme.of(context);
-    
+
     return GestureDetector(
       onTap: () => onSelect(value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected ? theme.primaryColor.withOpacity(0.1) : theme.cardColor,
+          color:
+              isSelected
+                  ? theme.primaryColor.withOpacity(0.1)
+                  : theme.cardColor,
           borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
           border: Border.all(
             color: isSelected ? theme.primaryColor : theme.dividerColor,
@@ -304,17 +318,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeSmall,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
+                  color:
+                      isSelected
+                          ? theme.primaryColor
+                          : theme.textTheme.bodyMedium?.color,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: theme.primaryColor,
-                size: 18,
-              ),
+              Icon(Icons.check_circle, color: theme.primaryColor, size: 18),
           ],
         ),
       ),
@@ -324,7 +337,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -384,116 +397,132 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           ),
         ],
       ),
-      body: _isSearching
-          ? Center(
-              child: LoadingIndicator(
-                message: 'Searching for the best routes...',
-                color: theme.primaryColor,
-              ),
-            )
-          : Consumer<FerryProvider>(
-              builder: (context, ferryProvider, _) {
-                if (ferryProvider.isLoadingSchedules) {
-                  return Center(
-                    child: LoadingIndicator(
-                      message: 'Loading available schedules...',
-                      color: theme.primaryColor,
-                    ),
-                  );
-                }
-                
-                if (ferryProvider.scheduleError != null) {
-                  return _buildErrorState(ferryProvider.scheduleError!, theme);
-                }
-                
-                if (ferryProvider.schedules.isEmpty) {
-                  return _buildEmptyState(theme);
-                }
-                
-                // Show list of schedules with staggered animation
-                return Column(
-                  children: [
-                    // Search result info card
-                    Container(
-                      margin: const EdgeInsets.all(AppTheme.paddingMedium),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.paddingMedium,
-                        vertical: AppTheme.paddingSmall,
+      body:
+          _isSearching
+              ? Center(
+                child: LoadingIndicator(
+                  message: 'Searching for the best routes...',
+                  color: theme.primaryColor,
+                ),
+              )
+              : Consumer<FerryProvider>(
+                builder: (context, ferryProvider, _) {
+                  if (ferryProvider.isLoadingSchedules) {
+                    return Center(
+                      child: LoadingIndicator(
+                        message: 'Loading available schedules...',
+                        color: theme.primaryColor,
                       ),
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
-                        border: Border.all(
-                          color: theme.primaryColor.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: theme.primaryColor,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${ferryProvider.schedules.length} ${ferryProvider.schedules.length == 1 ? 'Schedule' : 'Schedules'} Found',
-                            style: TextStyle(
-                              fontSize: AppTheme.fontSizeRegular,
-                              fontWeight: FontWeight.bold,
-                              color: theme.primaryColor,
+                    );
+                  }
+
+                  if (ferryProvider.scheduleError != null) {
+                    return _buildErrorState(
+                      ferryProvider.scheduleError!,
+                      theme,
+                    );
+                  }
+
+                  if (ferryProvider.schedules.isEmpty) {
+                    return _buildEmptyState(theme);
+                  }
+
+                  // Show list of schedules with staggered animation
+                  return Column(
+                    children: [
+                      // Search result info card
+                      Container(
+                            margin: const EdgeInsets.all(
+                              AppTheme.paddingMedium,
                             ),
-                          ),
-                        ],
-                      ),
-                    ).animate(controller: _animationController)
-                      .fadeIn(duration: 500.ms)
-                      .slideY(begin: -0.2, end: 0, duration: 500.ms, curve: Curves.easeOutQuad),
-                    
-                    // Schedule list
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: ferryProvider.schedules.length,
-                        padding: const EdgeInsets.fromLTRB(
-                          AppTheme.paddingMedium,
-                          0,
-                          AppTheme.paddingMedium,
-                          AppTheme.paddingMedium,
-                        ),
-                        itemBuilder: (context, index) {
-                          final schedule = ferryProvider.schedules[index];
-                          
-                          // Enhanced Ferry Card with staggered animation
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
-                            child: FerryCard(
-                              schedule: schedule,
-                              onTap: () => _selectSchedule(schedule),
-                            )
-                              .animate(controller: _animationController)
-                              .fadeIn(
-                                duration: 400.ms,
-                                delay: (index * 100).ms,
-                                curve: Curves.easeOut,
-                              )
-                              .slideX(
-                                begin: 0.1,
-                                end: 0,
-                                duration: 400.ms,
-                                delay: (index * 100).ms,
-                                curve: Curves.easeOutQuad,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppTheme.paddingMedium,
+                              vertical: AppTheme.paddingSmall,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.borderRadiusRegular,
                               ),
-                          );
-                        },
+                              border: Border.all(
+                                color: theme.primaryColor.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  color: theme.primaryColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${ferryProvider.schedules.length} ${ferryProvider.schedules.length == 1 ? 'Schedule' : 'Schedules'} Found',
+                                  style: TextStyle(
+                                    fontSize: AppTheme.fontSizeRegular,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          .animate(controller: _animationController)
+                          .fadeIn(duration: 500.ms)
+                          .slideY(
+                            begin: -0.2,
+                            end: 0,
+                            duration: 500.ms,
+                            curve: Curves.easeOutQuad,
+                          ),
+
+                      // Schedule list
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: ferryProvider.schedules.length,
+                          padding: const EdgeInsets.fromLTRB(
+                            AppTheme.paddingMedium,
+                            0,
+                            AppTheme.paddingMedium,
+                            AppTheme.paddingMedium,
+                          ),
+                          itemBuilder: (context, index) {
+                            final schedule = ferryProvider.schedules[index];
+
+                            // Enhanced Ferry Card with staggered animation
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppTheme.paddingMedium,
+                              ),
+                              child: FerryCard(
+                                    schedule: schedule,
+                                    onTap: () => _selectSchedule(schedule),
+                                  )
+                                  .animate(controller: _animationController)
+                                  .fadeIn(
+                                    duration: 400.ms,
+                                    delay: (index * 100).ms,
+                                    curve: Curves.easeOut,
+                                  )
+                                  .slideX(
+                                    begin: 0.1,
+                                    end: 0,
+                                    duration: 400.ms,
+                                    delay: (index * 100).ms,
+                                    curve: Curves.easeOutQuad,
+                                  ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                    ],
+                  );
+                },
+              ),
     );
   }
-  
+
   Widget _buildErrorState(String errorMessage, ThemeData theme) {
     return Center(
       child: Padding(
@@ -545,7 +574,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 ),
                 elevation: 2,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                  borderRadius: BorderRadius.circular(
+                    AppTheme.borderRadiusRegular,
+                  ),
                 ),
               ),
             ),
@@ -554,7 +585,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       ),
     );
   }
-  
+
   Widget _buildEmptyState(ThemeData theme) {
     return Center(
       child: Padding(
@@ -608,7 +639,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       vertical: AppTheme.paddingSmall,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusRegular,
+                      ),
                     ),
                   ),
                 ),
@@ -618,7 +651,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                     if (!mounted) return; // Add this check
                     // Set date to tomorrow and search again
                     setState(() {
-                      _selectedDate = DateTime.now().add(const Duration(days: 1));
+                      _selectedDate = DateTime.now().add(
+                        const Duration(days: 1),
+                      );
                     });
                     _searchSchedules();
                   },
@@ -633,7 +668,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                     ),
                     elevation: 2,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusRegular,
+                      ),
                     ),
                   ),
                 ),
@@ -644,11 +681,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       ),
     );
   }
-  
-  void _selectSchedule(ScheduleModel schedule) { // Changed type from Schedule to ScheduleModel
+
+  void _selectSchedule(ScheduleModel schedule) {
+    // Changed type from Schedule to ScheduleModel
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
     ferryProvider.setSelectedSchedule(schedule.id);
-    
+
     Navigator.pushNamed(
       context,
       AppRoutes.ferryDetails,

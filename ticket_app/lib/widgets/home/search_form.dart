@@ -21,7 +21,9 @@ class _SearchFormState extends State<SearchForm> {
   String? _selectedArrivalPort;
   DateTime _selectedDate = DateTime.now();
   int _passengerCount = 1;
-  bool _isLoadingPorts = false;
+  bool _isLoadingDeparturePorts = false; // Loading state for departure ports
+  bool _isLoadingArrivalPorts =
+      false; // Loading state for arrival ports when departure port is selected
   bool _isDisposed = false;
 
   @override
@@ -48,12 +50,13 @@ class _SearchFormState extends State<SearchForm> {
     // Update state hanya jika widget masih terpasang
     if (mounted) {
       setState(() {
-        _isLoadingPorts = true;
+        _isLoadingDeparturePorts = true;
       });
     }
 
     try {
-      await ferryProvider.fetchRoutes();
+      // Load all routes without filtering
+      await ferryProvider.fetchRoutes(activeOnly: true);
     } catch (e) {
       print('Error loading routes: $e');
     }
@@ -61,7 +64,39 @@ class _SearchFormState extends State<SearchForm> {
     // Cek lagi apakah widget masih terpasang sebelum update state
     if (mounted) {
       setState(() {
-        _isLoadingPorts = false;
+        _isLoadingDeparturePorts = false;
+      });
+    }
+  }
+
+  // Method to load arrival ports when departure port is selected
+  Future<void> _loadArrivalPorts(String departurePort) async {
+    if (!mounted) return;
+
+    final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
+
+    // Show loading indicator for arrival ports
+    if (mounted) {
+      setState(() {
+        _isLoadingArrivalPorts = true;
+      });
+    }
+
+    try {
+      // Call the fetchRoutes with the departurePort filter to get specific arrival ports
+      // This leverages the existing fetchRoutes method in the FerryProvider
+      await ferryProvider.fetchRoutes(
+        activeOnly: true,
+        departurePort: departurePort,
+      );
+    } catch (e) {
+      print('Error loading arrival ports: $e');
+    }
+
+    // Hide loading indicator
+    if (mounted) {
+      setState(() {
+        _isLoadingArrivalPorts = false;
       });
     }
   }
@@ -76,7 +111,15 @@ class _SearchFormState extends State<SearchForm> {
     if (_selectedDeparturePort == null) {
       return [];
     }
-    return ferryProvider.getUniqueArrivalPorts(_selectedDeparturePort!);
+
+    // This uses the existing method in FerryProvider to get arrival ports for the selected departure port
+    List<String> arrivalPorts = ferryProvider.getUniqueArrivalPorts(
+      _selectedDeparturePort!,
+    );
+
+    // Sort the ports alphabetically for better user experience
+    arrivalPorts.sort();
+    return arrivalPorts;
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -186,6 +229,11 @@ class _SearchFormState extends State<SearchForm> {
                     _selectedArrivalPort =
                         null; // Reset arrival port when departure changes
                   });
+
+                  // Load arrival ports when departure port changes
+                  if (value != null) {
+                    _loadArrivalPorts(value as String);
+                  }
                 }
               },
               validator: (value) {
@@ -194,7 +242,7 @@ class _SearchFormState extends State<SearchForm> {
                 }
                 return null;
               },
-              isLoading: _isLoadingPorts,
+              isLoading: _isLoadingDeparturePorts,
             ),
 
             const SizedBox(height: AppTheme.paddingMedium),
@@ -231,7 +279,7 @@ class _SearchFormState extends State<SearchForm> {
                 }
                 return null;
               },
-              isLoading: _isLoadingPorts,
+              isLoading: _isLoadingArrivalPorts,
             ),
 
             const SizedBox(height: AppTheme.paddingMedium),
@@ -270,7 +318,7 @@ class _SearchFormState extends State<SearchForm> {
     );
   }
 
-  // Metode-metode pembangun UI lainnya tetap sama
+  // Modified to better handle the disabled state for arrival port
   Widget _buildDropdownField({
     required String label,
     required String hint,
@@ -282,6 +330,7 @@ class _SearchFormState extends State<SearchForm> {
     bool isLoading = false,
   }) {
     final theme = Theme.of(context);
+    final bool isDisabled = onChanged == null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,13 +348,34 @@ class _SearchFormState extends State<SearchForm> {
           value: value,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon),
+            hintStyle: TextStyle(
+              color: isDisabled ? theme.disabledColor : theme.hintColor,
+            ),
+            prefixIcon: Icon(
+              icon,
+              color: isDisabled ? theme.disabledColor : null,
+            ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppTheme.paddingMedium,
               vertical: AppTheme.paddingRegular,
             ),
             filled: true,
-            fillColor: theme.cardColor,
+            fillColor:
+                isDisabled
+                    ? theme.disabledColor.withOpacity(0.1)
+                    : theme.cardColor,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+              borderSide: BorderSide(
+                color: isDisabled ? theme.disabledColor : theme.dividerColor,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+              borderSide: BorderSide(
+                color: isDisabled ? theme.disabledColor : theme.dividerColor,
+              ),
+            ),
           ),
           items: isLoading ? [] : items,
           onChanged: isLoading ? null : onChanged,
@@ -323,8 +393,17 @@ class _SearchFormState extends State<SearchForm> {
                       ),
                     ),
                   )
-                  : const Icon(Icons.arrow_drop_down),
+                  : Icon(
+                    Icons.arrow_drop_down,
+                    color: isDisabled ? theme.disabledColor : null,
+                  ),
           dropdownColor: theme.cardColor,
+          style: TextStyle(
+            color:
+                isDisabled
+                    ? theme.disabledColor
+                    : theme.textTheme.bodyLarge?.color,
+          ),
         ),
       ],
     );

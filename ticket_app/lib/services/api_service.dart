@@ -420,4 +420,11 @@ class ApiService {
   Future<dynamic> getNotifications() {
     return get(ApiConfig.notifications);
   }
+
+  Future<dynamic> generateTicketsForBooking(int bookingId) {
+  return post(
+    _replacePathParams(ApiConfig.generateTickets, {'id': bookingId}),
+    body: {}
+  );
+}
 }
