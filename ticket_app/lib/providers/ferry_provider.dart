@@ -31,8 +31,15 @@ class FerryProvider extends ChangeNotifier {
   DateTime? _selectedDate;
   String _sortBy = 'departure_time_asc';
 
-  // List of ongoing request cancellation tokens
-  final List<Completer> _cancellationTokens = [];
+  // Throttling parameters
+  DateTime? _lastRoutesRequest;
+  DateTime? _lastFerriesRequest;
+  DateTime? _lastSchedulesRequest;
+  
+  // Flag untuk mencegah multiple fetch
+  bool _routesInitialized = false;
+  bool _ferriesInitialized = false;
+  bool _schedulesInitialized = false;
 
   // Getters
   List<FerryModel> get ferries => _ferries;
@@ -62,26 +69,36 @@ class FerryProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    // Cancel all active requests
-    for (var token in _cancellationTokens) {
-      if (!token.isCompleted) {
-        token.complete();
-      }
-    }
-    _cancellationTokens.clear();
     super.dispose();
   }
 
-  // Fetch ferries
-  Future<void> fetchFerries({bool activeOnly = true, String? type}) async {
-    if (_isLoadingFerries) return; // Prevent duplicate requests
+  // Fetch ferries dengan throttling sederhana
+  Future<void> fetchFerries({
+    bool activeOnly = true, 
+    String? type, 
+    bool forceRefresh = false
+  }) async {
+    // Cek jika sudah di-initialized dan tidak diminta force refresh
+    if (!forceRefresh && _ferriesInitialized && _ferries.isNotEmpty) {
+      debugPrint('SKIP FETCH: Ferries already initialized');
+      return;
+    }
+    
+    if (_isLoadingFerries) {
+      debugPrint('SKIP FETCH: Ferries already loading');
+      return;
+    }
+    
+    // Throttling sederhana - minimal jeda 30 detik antara request
+    if (!forceRefresh && _lastFerriesRequest != null && 
+        DateTime.now().difference(_lastFerriesRequest!).inSeconds < 30) {
+      debugPrint('THROTTLED: Please wait before refreshing ferries again');
+      return;
+    }
 
     _isLoadingFerries = true;
     _ferryError = null;
     notifyListeners();
-
-    final cancelToken = Completer();
-    _cancellationTokens.add(cancelToken);
 
     try {
       final result = await _ferryService.getFerries(
@@ -89,36 +106,46 @@ class FerryProvider extends ChangeNotifier {
         type: type,
       );
 
-      if (!cancelToken.isCompleted) {
-        _ferries = result;
-        _isLoadingFerries = false;
-        notifyListeners();
-      }
+      _ferries = result;
+      _isLoadingFerries = false;
+      _ferriesInitialized = true;
+      _lastFerriesRequest = DateTime.now();
+      notifyListeners();
     } catch (e) {
-      if (!cancelToken.isCompleted) {
-        _ferryError = 'Failed to load ferries: ${e.toString()}';
-        _isLoadingFerries = false;
-        notifyListeners();
-      }
-    } finally {
-      _cancellationTokens.remove(cancelToken);
+      _ferryError = 'Failed to load ferries: ${e.toString()}';
+      _isLoadingFerries = false;
+      notifyListeners();
     }
   }
 
-  // Fetch routes
+  // Fetch routes dengan throttling sederhana
   Future<void> fetchRoutes({
     bool activeOnly = true,
     String? departurePort,
     String? arrivalPort,
+    bool forceRefresh = false,
   }) async {
-    if (_isLoadingRoutes) return; // Prevent duplicate requests
+    // Cek jika sudah di-initialized dan tidak diminta force refresh
+    if (!forceRefresh && _routesInitialized && _routes.isNotEmpty) {
+      debugPrint('SKIP FETCH: Routes already initialized');
+      return;
+    }
+    
+    if (_isLoadingRoutes) {
+      debugPrint('SKIP FETCH: Routes already loading');
+      return;
+    }
+    
+    // Throttling sederhana - minimal jeda 30 detik antara request
+    if (!forceRefresh && _lastRoutesRequest != null && 
+        DateTime.now().difference(_lastRoutesRequest!).inSeconds < 30) {
+      debugPrint('THROTTLED: Please wait before refreshing routes again');
+      return;
+    }
 
     _isLoadingRoutes = true;
     _routeError = null;
     notifyListeners();
-
-    final cancelToken = Completer();
-    _cancellationTokens.add(cancelToken);
 
     try {
       final result = await _ferryService.getRoutes(
@@ -127,31 +154,50 @@ class FerryProvider extends ChangeNotifier {
         arrivalPort: arrivalPort,
       );
 
-      if (!cancelToken.isCompleted) {
-        _routes = result;
-        _isLoadingRoutes = false;
-        notifyListeners();
-      }
+      _routes = result;
+      _isLoadingRoutes = false;
+      _routesInitialized = true;
+      _lastRoutesRequest = DateTime.now();
+      notifyListeners();
     } catch (e) {
-      if (!cancelToken.isCompleted) {
-        _routeError = 'Failed to load routes: ${e.toString()}';
-        _isLoadingRoutes = false;
-        notifyListeners();
-      }
-    } finally {
-      _cancellationTokens.remove(cancelToken);
+      _routeError = 'Failed to load routes: ${e.toString()}';
+      _isLoadingRoutes = false;
+      notifyListeners();
     }
   }
 
-  // Fetch schedules based on search criteria
+  // Fetch schedules dengan throttling sederhana
   Future<void> fetchSchedules({
     required String departurePort,
     required String arrivalPort,
     required DateTime departureDate,
     int? ferryId,
     bool includeFullyBooked = false,
+    bool forceRefresh = false,
   }) async {
-    if (_isLoadingSchedules) return; // Prevent duplicate requests
+    if (_isLoadingSchedules) {
+      debugPrint('SKIP FETCH: Schedules already loading');
+      return;
+    }
+
+    // Jika data sudah ada dan sama, dan tidak diminta untuk force refresh, gunakan cache
+    bool sameSearch = _selectedDeparturePort == departurePort && 
+                      _selectedArrivalPort == arrivalPort && 
+                      _selectedDate?.day == departureDate.day &&
+                      _selectedDate?.month == departureDate.month &&
+                      _selectedDate?.year == departureDate.year;
+                      
+    if (!forceRefresh && sameSearch && _schedulesInitialized && _schedules.isNotEmpty) {
+      debugPrint('SKIP FETCH: Schedules already initialized with same search parameters');
+      return;
+    }
+    
+    // Throttling sederhana - minimal jeda 30 detik antara request
+    if (!forceRefresh && _lastSchedulesRequest != null && 
+        DateTime.now().difference(_lastSchedulesRequest!).inSeconds < 30) {
+      debugPrint('THROTTLED: Please wait before refreshing schedules again');
+      return;
+    }
 
     _isLoadingSchedules = true;
     _scheduleError = null;
@@ -159,9 +205,6 @@ class FerryProvider extends ChangeNotifier {
     _selectedArrivalPort = arrivalPort;
     _selectedDate = departureDate;
     notifyListeners();
-
-    final cancelToken = Completer();
-    _cancellationTokens.add(cancelToken);
 
     try {
       final result = await _ferryService.getSchedules(
@@ -172,81 +215,85 @@ class FerryProvider extends ChangeNotifier {
         includeFullyBooked: includeFullyBooked,
       );
 
-      if (!cancelToken.isCompleted) {
-        _schedules = result;
-        _sortSchedules();
-        _isLoadingSchedules = false;
-        notifyListeners();
+      _schedules = result;
+      _sortSchedules();
+      _isLoadingSchedules = false;
+      _schedulesInitialized = true;
+      _lastSchedulesRequest = DateTime.now();
+      notifyListeners();
 
-        // Save recent search to storage
-        _saveRecentSearch(departurePort, arrivalPort, departureDate);
-      }
+      // Save recent search to storage
+      _saveRecentSearch(departurePort, arrivalPort, departureDate);
     } catch (e) {
-      if (!cancelToken.isCompleted) {
-        _scheduleError = 'Failed to load schedules: ${e.toString()}';
-        _isLoadingSchedules = false;
-        notifyListeners();
-      }
-    } finally {
-      _cancellationTokens.remove(cancelToken);
+      _scheduleError = 'Failed to load schedules: ${e.toString()}';
+      _isLoadingSchedules = false;
+      notifyListeners();
     }
   }
 
   // Fetch schedule detail
-  Future<void> fetchScheduleDetail(int id) async {
-    if (_isLoadingScheduleDetail) return;
+  Future<void> fetchScheduleDetail(int id, {bool forceRefresh = false}) async {
+    if (_isLoadingScheduleDetail) {
+      debugPrint('SKIP FETCH: Schedule detail already loading');
+      return;
+    }
 
-    // First set loading state without notifying
+    // Skip fetch jika schedule detail sudah ada
+    if (!forceRefresh && _selectedSchedule?.id == id) {
+      debugPrint('SKIP FETCH: Selected schedule already loaded (id: $id)');
+      return;
+    }
+
     _isLoadingScheduleDetail = true;
-
-    // Create a variable to track if we need to notify afterward
-    bool shouldNotify = true;
-
-    final cancelToken = Completer();
-    _cancellationTokens.add(cancelToken);
+    notifyListeners();
 
     try {
-      // First notify AFTER the current build frame
-      await Future.microtask(() {
-        if (!cancelToken.isCompleted) {
-          notifyListeners();
-        } else {
-          shouldNotify = false;
-        }
-      });
-
       final schedule = await _ferryService.getScheduleDetail(id);
-
-      if (!cancelToken.isCompleted) {
-        _selectedSchedule = schedule;
-        _isLoadingScheduleDetail = false;
-        if (shouldNotify) notifyListeners();
-      }
+      _selectedSchedule = schedule;
+      _isLoadingScheduleDetail = false;
+      notifyListeners();
     } catch (e) {
-      if (!cancelToken.isCompleted) {
-        _scheduleError = 'Failed to load schedule details: ${e.toString()}';
-        _isLoadingScheduleDetail = false;
-        if (shouldNotify) notifyListeners();
-      }
-    } finally {
-      _cancellationTokens.remove(cancelToken);
+      _scheduleError = 'Failed to load schedule details: ${e.toString()}';
+      _isLoadingScheduleDetail = false;
+      notifyListeners();
     }
   }
 
   // Set selected schedule from the list
   void setSelectedSchedule(int scheduleId) {
-    final schedule = _schedules.firstWhere(
-      (schedule) => schedule.id == scheduleId,
-      orElse: () => throw Exception('Schedule not found'),
+    // Try to find in existing schedules first
+    ScheduleModel? schedule = _schedules.firstWhere(
+      (s) => s.id == scheduleId,
+      orElse: () => null as ScheduleModel,
     );
-
-    _selectedSchedule = schedule;
-    notifyListeners();
+    
+    if (schedule != null) {
+      _selectedSchedule = schedule;
+      notifyListeners();
+    } else {
+      // If not found in schedules list, fetch from API
+      fetchScheduleDetail(scheduleId);
+    }
   }
 
   // Clear selected schedule
   void clearSelectedSchedule() {
     _selectedSchedule = null;
+    notifyListeners();
+  }
+
+  // Reset state (usually called on logout)
+  void reset() {
+    _routes = [];
+    _ferries = [];
+    _schedules = [];
+    _selectedSchedule = null;
+    _routesInitialized = false;
+    _ferriesInitialized = false;
+    _schedulesInitialized = false;
+    _ferryError = null;
+    _routeError = null;
+    _scheduleError = null;
     notifyListeners();
   }
 
@@ -292,6 +339,7 @@ class FerryProvider extends ChangeNotifier {
   void clearSchedules() {
     _schedules = [];
     _selectedSchedule = null;
+    _schedulesInitialized = false;
     notifyListeners();
   }
 
@@ -301,7 +349,6 @@ class FerryProvider extends ChangeNotifier {
     String arrivalPort,
     DateTime departureDate,
   ) async {
-    // This would typically use the storage service, but we'll just notify listeners for now
-    // as this is handled in the StorageService implementation
+    // This would typically use the storage service
   }
 }

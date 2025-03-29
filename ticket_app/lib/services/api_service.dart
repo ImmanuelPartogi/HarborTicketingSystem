@@ -9,6 +9,10 @@ import 'storage_service.dart';
 class ApiService {
   final StorageService _storageService;
   final http.Client _client;
+  
+  // Track request time untuk throttling
+  final Map<String, DateTime> _lastRequestTime = {};
+  final int _minRequestIntervalSeconds = 30; // 30 detik
 
   ApiService(this._storageService) : _client = http.Client();
 
@@ -31,12 +35,35 @@ class ApiService {
     return headers;
   }
 
+  // Throttling sederhana
+  bool _canMakeRequest(String endpoint) {
+    if (_lastRequestTime.containsKey(endpoint)) {
+      final lastTime = _lastRequestTime[endpoint]!;
+      final difference = DateTime.now().difference(lastTime).inSeconds;
+      
+      if (difference < _minRequestIntervalSeconds) {
+        debugPrint('THROTTLING: Skipping request to $endpoint - last request was $difference seconds ago');
+        return false;
+      }
+    }
+    return true;
+  }
+
   Future<dynamic> get(
     String endpoint, {
     bool requireAuth = true,
     Map<String, dynamic>? queryParams,
+    bool bypassThrottling = false,
   }) async {
     try {
+      // Throttling check
+      if (!bypassThrottling && !_canMakeRequest(endpoint)) {
+        throw Exception('Request throttled. Please try again later.');
+      }
+      
+      // Record request time
+      _lastRequestTime[endpoint] = DateTime.now();
+      
       final headers = await _getHeaders(requireAuth: requireAuth);
 
       // Properly construct the URI with the endpoint
@@ -88,10 +115,18 @@ class ApiService {
     String endpoint, {
     dynamic body,
     bool requireAuth = true,
+    bool bypassThrottling = false,
   }) async {
     try {
+      // Throttling check
+      if (!bypassThrottling && !_canMakeRequest(endpoint)) {
+        throw Exception('Request throttled. Please try again later.');
+      }
+      
+      // Record request time
+      _lastRequestTime[endpoint] = DateTime.now();
+      
       final headers = await _getHeaders(requireAuth: requireAuth);
-
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
       debugPrint('POST Request: ${uri.toString()}');
@@ -119,10 +154,18 @@ class ApiService {
     String endpoint, {
     dynamic body,
     bool requireAuth = true,
+    bool bypassThrottling = false,
   }) async {
     try {
+      // Throttling check
+      if (!bypassThrottling && !_canMakeRequest(endpoint)) {
+        throw Exception('Request throttled. Please try again later.');
+      }
+      
+      // Record request time
+      _lastRequestTime[endpoint] = DateTime.now();
+      
       final headers = await _getHeaders(requireAuth: requireAuth);
-
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
       debugPrint('PUT Request: ${uri.toString()}');
@@ -150,10 +193,18 @@ class ApiService {
     String endpoint, {
     dynamic body,
     bool requireAuth = true,
+    bool bypassThrottling = false,
   }) async {
     try {
+      // Throttling check
+      if (!bypassThrottling && !_canMakeRequest(endpoint)) {
+        throw Exception('Request throttled. Please try again later.');
+      }
+      
+      // Record request time
+      _lastRequestTime[endpoint] = DateTime.now();
+      
       final headers = await _getHeaders(requireAuth: requireAuth);
-
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
       final response = await _client
@@ -172,10 +223,21 @@ class ApiService {
     }
   }
 
-  Future<dynamic> delete(String endpoint, {bool requireAuth = true}) async {
+  Future<dynamic> delete(
+    String endpoint, {
+    bool requireAuth = true,
+    bool bypassThrottling = false,
+  }) async {
     try {
+      // Throttling check
+      if (!bypassThrottling && !_canMakeRequest(endpoint)) {
+        throw Exception('Request throttled. Please try again later.');
+      }
+      
+      // Record request time
+      _lastRequestTime[endpoint] = DateTime.now();
+      
       final headers = await _getHeaders(requireAuth: requireAuth);
-
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
       final response = await _client
@@ -272,33 +334,23 @@ class ApiService {
     return result;
   }
 
-  // // OTP methods
-  // Future<dynamic> sendOtp(String phone) {
-  //   debugPrint('Sending OTP to: $phone');
-  //   return post(ApiConfig.sendOtp, body: {'phone': phone}, requireAuth: false);
-  // }
-
-  // Future<dynamic> resendOtp(String phone) {
-  //   debugPrint('Resending OTP to: $phone');
-  //   return post(
-  //     ApiConfig.resendOtp,
-  //     body: {'phone': phone},
-  //     requireAuth: false,
-  //   );
-  // }
-
-  // Existing API methods...
-
+  // Auth methods
   Future<dynamic> login(String email, String password) {
     return post(
       ApiConfig.login,
       body: {'email': email, 'password': password},
       requireAuth: false,
+      bypassThrottling: true, // Bypass throttling for login
     );
   }
 
   Future<dynamic> register(Map<String, dynamic> userData) {
-    return post(ApiConfig.register, body: userData, requireAuth: false);
+    return post(
+      ApiConfig.register, 
+      body: userData, 
+      requireAuth: false,
+      bypassThrottling: true, // Bypass throttling for registration
+    );
   }
 
   Future<dynamic> verifyOtp(String phone, String otp) {
@@ -306,6 +358,7 @@ class ApiService {
       ApiConfig.verifyOtp,
       body: {'phone': phone, 'otp': otp},
       requireAuth: false,
+      bypassThrottling: true, // Bypass throttling for OTP verification
     );
   }
 
@@ -314,11 +367,15 @@ class ApiService {
       ApiConfig.refreshToken,
       body: {'refresh_token': refreshToken},
       requireAuth: false,
+      bypassThrottling: true, // Bypass throttling for token refresh
     );
   }
 
   Future<dynamic> logout() {
-    return post(ApiConfig.logout);
+    return post(
+      ApiConfig.logout,
+      bypassThrottling: true, // Bypass throttling for logout
+    );
   }
 
   // Profile endpoints
@@ -327,7 +384,11 @@ class ApiService {
   }
 
   Future<dynamic> updateProfile(Map<String, dynamic> profileData) {
-    return put(ApiConfig.updateProfile, body: profileData);
+    return put(
+      ApiConfig.updateProfile, 
+      body: profileData,
+      bypassThrottling: true, // Bypass throttling for important user actions
+    );
   }
 
   Future<dynamic> changePassword(String currentPassword, String newPassword) {
@@ -338,6 +399,7 @@ class ApiService {
         'new_password': newPassword,
         'new_password_confirmation': newPassword,
       },
+      bypassThrottling: true, // Bypass throttling for important user actions
     );
   }
 
@@ -358,7 +420,11 @@ class ApiService {
 
   // Booking endpoints
   Future<dynamic> createBooking(Map<String, dynamic> bookingData) {
-    return post(ApiConfig.bookings, body: bookingData);
+    return post(
+      ApiConfig.bookings, 
+      body: bookingData,
+      bypassThrottling: true, // Bypass throttling for booking creation
+    );
   }
 
   Future<dynamic> getBookings({Map<String, dynamic>? queryParams}) {
@@ -373,6 +439,7 @@ class ApiService {
     return post(
       _replacePathParams(ApiConfig.cancelBooking, {'id': id}),
       body: reason != null ? {'reason': reason} : null,
+      bypassThrottling: true, // Bypass throttling for booking cancellation
     );
   }
 
@@ -380,6 +447,7 @@ class ApiService {
     return post(
       _replacePathParams(ApiConfig.rescheduleBooking, {'id': id}),
       body: {'schedule_id': newScheduleId},
+      bypassThrottling: true, // Bypass throttling for booking rescheduling
     );
   }
 
@@ -396,6 +464,7 @@ class ApiService {
         'payment_method': paymentMethod,
         'payment_type': paymentType,
       },
+      bypassThrottling: true, // Bypass throttling for payment creation
     );
   }
 
@@ -413,7 +482,10 @@ class ApiService {
   }
 
   Future<dynamic> validateTicket(int id) {
-    return post(_replacePathParams(ApiConfig.validateTicket, {'id': id}));
+    return post(
+      _replacePathParams(ApiConfig.validateTicket, {'id': id}),
+      bypassThrottling: true, // Bypass throttling for ticket validation
+    );
   }
 
   // Notification endpoints
@@ -422,9 +494,15 @@ class ApiService {
   }
 
   Future<dynamic> generateTicketsForBooking(int bookingId) {
-  return post(
-    _replacePathParams(ApiConfig.generateTickets, {'id': bookingId}),
-    body: {}
-  );
-}
+    return post(
+      _replacePathParams(ApiConfig.generateTickets, {'id': bookingId}),
+      body: {},
+      bypassThrottling: true, // Bypass throttling for ticket generation
+    );
+  }
+  
+  // Clear throttling data - call on logout
+  void clearThrottlingData() {
+    _lastRequestTime.clear();
+  }
 }

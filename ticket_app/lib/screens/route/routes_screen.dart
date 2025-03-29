@@ -22,7 +22,13 @@ class _RoutesScreenState extends State<RoutesScreen> {
   @override
   void initState() {
     super.initState();
-    _loadRoutes();
+    // PERBAIKAN: Gunakan Future.microtask untuk menunda pemanggilan loadRoutes
+    // hingga setelah build selesai
+    Future.microtask(() {
+      if (mounted) {
+        _loadRoutes();
+      }
+    });
   }
 
   @override
@@ -109,7 +115,10 @@ class _RoutesScreenState extends State<RoutesScreen> {
           Expanded(
             child: Consumer<FerryProvider>(
               builder: (context, ferryProvider, _) {
-                if (_isLoading || ferryProvider.isLoadingRoutes) {
+                // PERBAIKAN: Gabungkan status loading lokal dengan loading dari provider
+                final isLoadingData = _isLoading || ferryProvider.isLoadingRoutes;
+                
+                if (isLoadingData) {
                   return const Center(child: LoadingIndicator());
                 }
 
@@ -143,6 +152,12 @@ class _RoutesScreenState extends State<RoutesScreen> {
                             color: theme.textTheme.bodyLarge?.color,
                           ),
                         ),
+                        if (_searchQuery.isEmpty) const SizedBox(height: AppTheme.paddingMedium),
+                        if (_searchQuery.isEmpty) 
+                          ElevatedButton(
+                            onPressed: _loadRoutes,
+                            child: const Text('Refresh'),
+                          ),
                       ],
                     ),
                   );

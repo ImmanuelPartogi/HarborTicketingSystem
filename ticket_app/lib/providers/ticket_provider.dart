@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../models/ticket_model.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
@@ -19,6 +20,14 @@ class TicketProvider extends ChangeNotifier {
   bool _isGeneratingTickets = false;
 
   String? _ticketError;
+  
+  // Tracking waktu terakhir request untuk throttling sederhana
+  DateTime? _lastActiveTicketsRequest;
+  DateTime? _lastTicketHistoryRequest;
+  
+  // Flag untuk mencegah multiple fetch pada initState
+  bool _activeTicketsInitialized = false;
+  bool _ticketHistoryInitialized = false;
 
   // Getters
   List<Ticket> get activeTickets => _activeTickets;
@@ -32,7 +41,7 @@ class TicketProvider extends ChangeNotifier {
 
   String? get ticketError => _ticketError;
 
-  // Constructor yang menerima StorageService
+  // Constructor
   TicketProvider(StorageService storageService) {
     _storageService = storageService;
     _apiService = ApiService(storageService);
@@ -46,13 +55,30 @@ class TicketProvider extends ChangeNotifier {
     _ticketService = TicketService(_apiService);
   }
 
-  // Fetch active tickets dengan retry untuk mengatasi tiket yang belum muncul
-  Future<void> fetchActiveTickets({
-    bool forceReload = false,
-    int retry = 0,
-  }) async {
-    if (_isLoadingActiveTickets && !forceReload)
-      return; // Hindari multiple calls kecuali forceReload true
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  // Fetch active tickets dengan throttling sederhana
+  Future<void> fetchActiveTickets({bool forceReload = false}) async {
+    // Cek jika sudah di-initialized dan tidak diminta force refresh
+    if (!forceReload && _activeTicketsInitialized && _activeTickets.isNotEmpty) {
+      debugPrint('SKIP FETCH: Active tickets already initialized');
+      return;
+    }
+    
+    if (_isLoadingActiveTickets) {
+      debugPrint('SKIP FETCH: Active tickets already loading');
+      return;
+    }
+    
+    // Throttling sederhana - minimal jeda 30 detik antara request
+    if (!forceReload && _lastActiveTicketsRequest != null && 
+        DateTime.now().difference(_lastActiveTicketsRequest!).inSeconds < 30) {
+      debugPrint('THROTTLED: Please wait before refreshing active tickets again');
+      return;
+    }
 
     _isLoadingActiveTickets = true;
     _ticketError = null;
@@ -61,13 +87,9 @@ class TicketProvider extends ChangeNotifier {
     try {
       _activeTickets = await _ticketService.getActiveTickets();
       _isLoadingActiveTickets = false;
+      _activeTicketsInitialized = true;
+      _lastActiveTicketsRequest = DateTime.now();
       notifyListeners();
-
-      // Jika tidak ada tiket & kita masih belum mencapai batas retry, coba lagi
-      if (_activeTickets.isEmpty && retry < 3) {
-        await Future.delayed(const Duration(seconds: 2)); // Tunggu 2 detik
-        await fetchActiveTickets(forceReload: true, retry: retry + 1);
-      }
     } catch (e) {
       _ticketError = 'Failed to load active tickets: ${e.toString()}';
       _isLoadingActiveTickets = false;
@@ -75,13 +97,25 @@ class TicketProvider extends ChangeNotifier {
     }
   }
 
-  // Fetch ticket history dengan retry options
-  Future<void> fetchTicketHistory({
-    bool forceReload = false,
-    int retry = 0,
-  }) async {
-    if (_isLoadingTicketHistory && !forceReload)
-      return; // Hindari multiple calls kecuali forceReload true
+  // Fetch ticket history dengan throttling sederhana
+  Future<void> fetchTicketHistory({bool forceReload = false}) async {
+    // Cek jika sudah di-initialized dan tidak diminta force refresh
+    if (!forceReload && _ticketHistoryInitialized && _ticketHistory.isNotEmpty) {
+      debugPrint('SKIP FETCH: Ticket history already initialized');
+      return;
+    }
+    
+    if (_isLoadingTicketHistory) {
+      debugPrint('SKIP FETCH: Ticket history already loading');
+      return;
+    }
+    
+    // Throttling sederhana - minimal jeda 30 detik antara request
+    if (!forceReload && _lastTicketHistoryRequest != null && 
+        DateTime.now().difference(_lastTicketHistoryRequest!).inSeconds < 30) {
+      debugPrint('THROTTLED: Please wait before refreshing ticket history again');
+      return;
+    }
 
     _isLoadingTicketHistory = true;
     _ticketError = null;
@@ -90,13 +124,9 @@ class TicketProvider extends ChangeNotifier {
     try {
       _ticketHistory = await _ticketService.getTicketHistory();
       _isLoadingTicketHistory = false;
+      _ticketHistoryInitialized = true;
+      _lastTicketHistoryRequest = DateTime.now();
       notifyListeners();
-
-      // Jika tidak ada tiket sejarah & kita ingin retry
-      if (_ticketHistory.isEmpty && retry < 2) {
-        await Future.delayed(const Duration(seconds: 2)); // Tunggu 2 detik
-        await fetchTicketHistory(forceReload: true, retry: retry + 1);
-      }
     } catch (e) {
       _ticketError = 'Failed to load ticket history: ${e.toString()}';
       _isLoadingTicketHistory = false;
@@ -104,9 +134,15 @@ class TicketProvider extends ChangeNotifier {
     }
   }
 
-  // Fetch ticket detail (tidak berubah)
+  // Fetch ticket detail
   Future<void> fetchTicketDetail(int id) async {
-    if (_isLoadingTicketDetail) return; // Hindari multiple calls
+    if (_isLoadingTicketDetail) return;
+    
+    // Skip fetch jika ticket sudah ada
+    if (_selectedTicket != null && _selectedTicket!.id == id) {
+      debugPrint('SKIP FETCH: Selected ticket already loaded (id: $id)');
+      return;
+    }
 
     _isLoadingTicketDetail = true;
     _ticketError = null;
@@ -123,7 +159,7 @@ class TicketProvider extends ChangeNotifier {
     }
   }
 
-  // Fungsi untuk meminta pembuatan tiket - Implementasi ini perlu disesuaikan dengan API Anda
+  // Fungsi untuk meminta pembuatan tiket
   Future<bool> generateTickets(int bookingId) async {
     _isGeneratingTickets = true;
     _ticketError = null;
@@ -148,6 +184,12 @@ class TicketProvider extends ChangeNotifier {
   }
 
   Future<List<Ticket>> fetchTicketsByBookingId(int bookingId) async {
+    // Lihat jika sudah memiliki di cache
+    final existingTickets = getTicketsByBookingId(bookingId);
+    if (existingTickets.isNotEmpty) {
+      return existingTickets;
+    }
+    
     _isLoadingActiveTickets = true;
     _ticketError = null;
     notifyListeners();
@@ -180,7 +222,7 @@ class TicketProvider extends ChangeNotifier {
         .toList();
   }
 
-  // Set selected ticket (tidak berubah)
+  // Set selected ticket
   void setSelectedTicket(int id) {
     // Try to find in active tickets first
     Ticket? foundTicket;
@@ -211,23 +253,34 @@ class TicketProvider extends ChangeNotifier {
     }
   }
 
-  // Clear selected ticket (tidak berubah)
+  // Clear selected ticket
   void clearSelectedTicket() {
     _selectedTicket = null;
     notifyListeners();
   }
 
-  // Group tickets by schedule (tidak berubah)
+  // Reset state (usually called on logout)
+  void reset() {
+    _activeTickets = [];
+    _ticketHistory = [];
+    _selectedTicket = null;
+    _activeTicketsInitialized = false;
+    _ticketHistoryInitialized = false;
+    _ticketError = null;
+    notifyListeners();
+  }
+
+  // Group tickets by schedule
   Map<int, List<Ticket>> getTicketsGroupedBySchedule() {
     return _ticketService.groupTicketsBySchedule(_activeTickets);
   }
 
-  // Check if ticket is valid (tidak berubah)
+  // Check if ticket is valid
   bool isTicketValid(Ticket ticket) {
     return _ticketService.isTicketValid(ticket);
   }
 
-  // Generate QR code for selected ticket (tidak berubah)
+  // Generate QR code for selected ticket
   Widget generateTicketQR() {
     if (_selectedTicket == null) {
       return const SizedBox(
@@ -244,7 +297,7 @@ class TicketProvider extends ChangeNotifier {
     );
   }
 
-  // Generate watermark data for dynamic ticket (tidak berubah)
+  // Generate watermark data for dynamic ticket
   Map<String, dynamic> generateWatermarkData() {
     if (_selectedTicket == null || _selectedTicket!.schedule == null) {
       return {};
