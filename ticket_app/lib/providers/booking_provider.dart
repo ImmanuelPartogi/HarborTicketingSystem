@@ -12,10 +12,11 @@ import '../services/storage_service.dart';
 import 'dart:convert';
 
 class BookingProvider extends ChangeNotifier {
-  late ApiService _apiService;
-  late BookingService _bookingService;
-  late PaymentService _paymentService;
-  late StorageService _storageService;
+  // Mengubah dari late menjadi nullable
+  ApiService? _apiService;
+  BookingService? _bookingService;
+  PaymentService? _paymentService;
+  StorageService? _storageService;
 
   List<Booking> _bookings = [];
   Booking? _currentBooking;
@@ -32,6 +33,7 @@ class BookingProvider extends ChangeNotifier {
   bool _isReschedulingBooking = false;
   bool _isGeneratingTickets = false;
   bool _isCheckingPaymentStatus = false;
+  bool _isInitialized = false;
 
   String? _bookingError;
   String? _paymentError;
@@ -52,6 +54,7 @@ class BookingProvider extends ChangeNotifier {
   bool get isReschedulingBooking => _isReschedulingBooking;
   bool get isGeneratingTickets => _isGeneratingTickets;
   bool get isCheckingPaymentStatus => _isCheckingPaymentStatus;
+  bool get isInitialized => _isInitialized;
 
   String? get bookingError => _bookingError;
   String? get paymentError => _paymentError;
@@ -61,21 +64,45 @@ class BookingProvider extends ChangeNotifier {
     _initServices();
   }
 
-  // Initialize services
+  // Initialize services - menggunakan async/await lebih aman
   Future<void> _initServices() async {
-    final prefs = await SharedPreferences.getInstance();
-    _storageService = StorageService(prefs);
-    _apiService = ApiService(_storageService);
-    _bookingService = BookingService(_apiService);
-    _paymentService = PaymentService(_apiService);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _storageService = StorageService(prefs);
+      _apiService = ApiService(_storageService!);
+      _bookingService = BookingService(_apiService!);
+      _paymentService = PaymentService(_apiService!);
+      _isInitialized = true;
+      notifyListeners();
+    } catch (e) {
+      print('Error initializing services: $e');
+      _bookingError = 'Failed to initialize app services. Please restart.';
+      notifyListeners();
+    }
+  }
+
+  // Cek apakah provider sudah diinisialisasi
+  bool _checkInitialized() {
+    if (!_isInitialized ||
+        _apiService == null ||
+        _bookingService == null ||
+        _paymentService == null ||
+        _storageService == null) {
+      _bookingError = 'Services not initialized yet. Please try again.';
+      notifyListeners();
+      return false;
+    }
+    return true;
   }
 
   // External initialization
   void initialize(ApiService apiService, StorageService storageService) {
     _apiService = apiService;
     _storageService = storageService;
-    _bookingService = BookingService(_apiService);
-    _paymentService = PaymentService(_apiService);
+    _bookingService = BookingService(_apiService!);
+    _paymentService = PaymentService(_apiService!);
+    _isInitialized = true;
+    notifyListeners();
   }
 
   // Set schedule ID for booking
@@ -140,18 +167,38 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Load saved passengers from storage
+  // Load saved passengers from storage - dengan pengecekan inisialisasi
   Future<List<Map<String, dynamic>>> loadSavedPassengers() async {
-    return _storageService.getSavedPassengers();
+    if (!_checkInitialized()) {
+      return [];
+    }
+
+    try {
+      return await _storageService!.getSavedPassengers();
+    } catch (e) {
+      print('Error loading saved passengers: $e');
+      return [];
+    }
   }
 
-  // Load saved vehicles from storage
+  // Load saved vehicles from storage - dengan pengecekan inisialisasi
   Future<List<Map<String, dynamic>>> loadSavedVehicles() async {
-    return _storageService.getSavedVehicles();
+    if (!_checkInitialized()) {
+      return [];
+    }
+
+    try {
+      return await _storageService!.getSavedVehicles();
+    } catch (e) {
+      print('Error loading saved vehicles: $e');
+      return [];
+    }
   }
 
-  // Create a new booking
+  // Create a new booking - dengan pengecekan inisialisasi
   Future<bool> createBooking() async {
+    if (!_checkInitialized()) return false;
+
     if (_scheduleId <= 0 || _pendingPassengers.isEmpty) {
       _bookingError = 'Invalid booking data';
       notifyListeners();
@@ -163,61 +210,37 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _currentBooking = await _bookingService.createBooking(
+      _currentBooking = await _bookingService!.createBooking(
         scheduleId: _scheduleId,
         passengers: _pendingPassengers,
         vehicles: _pendingVehicles.isNotEmpty ? _pendingVehicles : null,
       );
 
-      // TAMBAH: Debug log yang lengkap
+      // Debug log
       print('Booking created successfully:');
       print('  ID: ${_currentBooking!.id}');
       print('  Code: ${_currentBooking!.bookingNumber}');
       print('  Status: ${_currentBooking!.status}');
 
-      // TAMBAH: Validasi ID booking
-      if (_currentBooking == null || _currentBooking!.id <= 0) {
-        print('WARNING: Created booking has invalid ID. Full booking data:');
-        print(jsonEncode(_currentBooking?.toJson()));
-
-        // Coba muat ulang detail booking jika booking code tersedia
-        if (_currentBooking != null &&
-            _currentBooking!.bookingNumber.isNotEmpty) {
-          try {
-            // Lakukan permintaan khusus ke API untuk mendapatkan ID dari booking_code
-            print(
-              'Trying to fetch booking details by booking code: ${_currentBooking!.bookingNumber}',
-            );
-
-            // Implementasi logika untuk mendapatkan ID berdasarkan booking_code
-            // Contoh:
-            // final bookingWithId = await _apiService.getBookingByCode(_currentBooking!.bookingNumber);
-            // _currentBooking = bookingWithId;
-          } catch (e) {
-            print('Failed to fetch booking by code: $e');
-          }
-        }
-      }
-
       // Simpan data penumpang dan kendaraan untuk penggunaan di masa mendatang
       for (var passenger in _pendingPassengers) {
         if (passenger.containsKey('save_info') &&
             passenger['save_info'] == true) {
-          await _storageService.savePassenger(passenger);
+          await _storageService!.savePassenger(passenger);
         }
       }
 
       for (var vehicle in _pendingVehicles) {
         if (vehicle.containsKey('save_info') && vehicle['save_info'] == true) {
-          await _storageService.saveVehicle(vehicle);
+          await _storageService!.saveVehicle(vehicle);
         }
       }
 
       _isCreatingBooking = false;
       notifyListeners();
 
-      // Tambahkan pengecekan apakah booking ID valid sebelum mengembalikan true
-      return _currentBooking != null && _currentBooking!.id > 0;
+      return _currentBooking != null &&
+          _currentBooking!.bookingNumber.isNotEmpty;
     } catch (e) {
       _bookingError = 'Failed to create booking: ${e.toString()}';
       _isCreatingBooking = false;
@@ -231,6 +254,8 @@ class BookingProvider extends ChangeNotifier {
     String paymentMethod,
     String paymentChannel,
   ) async {
+    if (!_checkInitialized()) return false;
+    
     if (_currentBooking == null) {
       _paymentError = 'No active booking found';
       notifyListeners();
@@ -246,18 +271,15 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // PERUBAHAN UTAMA: Gunakan booking_code, bukan ID
-      final paymentResponse = await _paymentService.createPayment(
-        bookingIdentifier:
-            _currentBooking!.bookingCode, // Gunakan booking_code, bukan ID
+      // Gunakan booking_code untuk pembayaran
+      final paymentResponse = await _paymentService!.createPayment(
+        bookingIdentifier: _currentBooking!.bookingCode,
         paymentMethod: paymentMethod,
         paymentChannel: paymentChannel,
       );
 
-      // Refresh data booking setelah pembayaran
-      await fetchBookingDetail(
-        _currentBooking!.bookingCode,
-      ); // Gunakan booking_code
+      // Refresh data booking setelah pembayaran menggunakan booking_code
+      await fetchBookingDetail(_currentBooking!.bookingCode);
 
       _isProcessingPayment = false;
       notifyListeners();
@@ -272,12 +294,14 @@ class BookingProvider extends ChangeNotifier {
 
   // Fetch all bookings
   Future<void> fetchBookings({String? status}) async {
+    if (!_checkInitialized()) return;
+    
     _isLoadingBookings = true;
     _bookingError = null;
     notifyListeners();
 
     try {
-      _bookings = await _bookingService.getBookings(status: status);
+      _bookings = await _bookingService!.getBookings(status: status);
       _isLoadingBookings = false;
       notifyListeners();
     } catch (e) {
@@ -289,15 +313,27 @@ class BookingProvider extends ChangeNotifier {
 
   // Fetch booking detail
   Future<void> fetchBookingDetail(dynamic bookingIdentifier) async {
+    if (!_checkInitialized()) return;
+    
     _isLoadingBookingDetail = true;
     _bookingError = null;
     notifyListeners();
 
     try {
+      print('Fetching booking details for identifier: $bookingIdentifier');
+
       // Ubah parameter dari ID menjadi booking_code atau ID
-      _currentBooking = await _bookingService.getBookingDetail(
+      _currentBooking = await _bookingService!.getBookingDetail(
         bookingIdentifier,
       );
+
+      // TAMBAHAN: Validasi hasil
+      if (_currentBooking == null) {
+        throw Exception('No booking found with identifier: $bookingIdentifier');
+      }
+
+      print('Successfully loaded booking: ${_currentBooking!.bookingNumber}');
+
       _isLoadingBookingDetail = false;
       notifyListeners();
     } catch (e) {
@@ -309,12 +345,14 @@ class BookingProvider extends ChangeNotifier {
 
   // Cancel booking
   Future<bool> cancelBooking(int id, {String? reason}) async {
+    if (!_checkInitialized()) return false;
+    
     _isCancellingBooking = true;
     _bookingError = null;
     notifyListeners();
 
     try {
-      final booking = await _bookingService.cancelBooking(id, reason: reason);
+      final booking = await _bookingService!.cancelBooking(id, reason: reason);
 
       // Update lists
       _updateBookingInList(booking);
@@ -333,12 +371,14 @@ class BookingProvider extends ChangeNotifier {
 
   // Reschedule booking
   Future<bool> rescheduleBooking(int id, int newScheduleId) async {
+    if (!_checkInitialized()) return false;
+    
     _isReschedulingBooking = true;
     _bookingError = null;
     notifyListeners();
 
     try {
-      final booking = await _bookingService.rescheduleBooking(
+      final booking = await _bookingService!.rescheduleBooking(
         id,
         newScheduleId,
       );
@@ -377,6 +417,7 @@ class BookingProvider extends ChangeNotifier {
 
   // Check payment status with Midtrans
   Future<bool> checkPaymentStatus() async {
+    if (!_checkInitialized()) return false;
     if (_currentBooking == null || _currentBooking!.payment == null) {
       return false;
     }
@@ -385,9 +426,9 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Call the API to check payment status
-      final response = await _apiService.get(
-        '/api/v1/bookings/${_currentBooking!.bookingCode}/payment-status',
+      // PERBAIKAN: Gunakan endpoint yang benar untuk payment-status
+      final response = await _apiService!.get(
+        '/api/v1/bookings/${_currentBooking!.id}/payment-status',
         bypassThrottling: true, // Important for real-time status checking
       );
 
@@ -408,43 +449,105 @@ class BookingProvider extends ChangeNotifier {
 
       return false;
     } catch (e) {
-      debugPrint('Error checking payment status: $e');
-      _isCheckingPaymentStatus = false;
-      notifyListeners();
-      return false;
+      // Try alternative endpoint if first one fails
+      try {
+        print('First endpoint failed, trying alternative endpoint...');
+        final response = await _apiService!.get(
+          '/api/v1/payments/status/${_currentBooking!.payment!.id}',
+          bypassThrottling: true,
+        );
+        
+        _isCheckingPaymentStatus = false;
+        notifyListeners();
+        
+        if (response['success'] == true && response['data'] != null) {
+          final status = response['data']['status'] ?? '';
+          final isCompleted = status.toString().toUpperCase() == 'SUCCESS';
+          
+          if (isCompleted) {
+            await fetchBookingDetail(_currentBooking!.id);
+          }
+          
+          return isCompleted;
+        }
+        
+        return false;
+      } catch (innerError) {
+        debugPrint('Error checking payment status: $e, second attempt: $innerError');
+        _isCheckingPaymentStatus = false;
+        notifyListeners();
+        return false;
+      }
     }
   }
 
-  // Generate tickets for a booking
+  // Generate tickets for a booking - dengan pendekatan yang lebih robust
   Future<bool> generateTickets(int bookingId) async {
-    if (_currentBooking == null || _currentBooking!.id != bookingId) {
-      await fetchBookingDetail(bookingId);
-    }
-
-    if (_currentBooking == null || !_currentBooking!.isConfirmed) {
-      _bookingError = 'Booking not found or not confirmed';
-      notifyListeners();
-      return false;
-    }
-
-    _isGeneratingTickets = true;
-    _bookingError = null;
-    notifyListeners();
-
+    if (!_checkInitialized()) return false;
+    
     try {
-      // Call the API to generate tickets
-      final response = await _apiService.post(
-        '/api/v1/bookings/${_currentBooking!.bookingCode}/generate-tickets',
-        body: {},
-        bypassThrottling: true,
-      );
+      if (_currentBooking == null || _currentBooking!.id != bookingId) {
+        await fetchBookingDetail(bookingId);
+      }
 
-      // Refresh booking to get the generated tickets
-      await fetchBookingDetail(bookingId);
+      if (_currentBooking == null) {
+        _bookingError = 'Booking not found';
+        notifyListeners();
+        return false;
+      }
+      
+      if (!_currentBooking!.isConfirmed) {
+        // Coba verifikasi status terlebih dahulu
+        bool statusChecked = await checkPaymentStatus();
+        if (!statusChecked || !_currentBooking!.isConfirmed) {
+          _bookingError = 'Booking not confirmed. Please complete payment first.';
+          notifyListeners();
+          return false;
+        }
+      }
 
-      _isGeneratingTickets = false;
+      _isGeneratingTickets = true;
+      _bookingError = null;
       notifyListeners();
-      return response['success'] == true;
+
+      // PERBAIKAN: Coba endpoint dengan ID numerik dahulu
+      try {
+        final response = await _apiService!.post(
+          '/api/v1/bookings/${_currentBooking!.id}/generate-tickets',
+          body: {},
+          bypassThrottling: true,
+        );
+        
+        // Refresh booking to get the generated tickets
+        await fetchBookingDetail(bookingId);
+        
+        _isGeneratingTickets = false;
+        notifyListeners();
+        return response['success'] == true;
+      } catch (e) {
+        print('First ticket generation attempt failed: $e');
+        
+        // Coba endpoint dengan booking_code jika endpoint dengan ID gagal
+        try {
+          final response = await _apiService!.post(
+            '/api/v1/bookings/${_currentBooking!.bookingCode}/generate-tickets',
+            body: {},
+            bypassThrottling: true,
+          );
+          
+          // Refresh booking to get the generated tickets
+          await fetchBookingDetail(bookingId);
+          
+          _isGeneratingTickets = false;
+          notifyListeners();
+          return response['success'] == true;
+        } catch (innerError) {
+          _bookingError = 'Failed to generate tickets: $innerError';
+          _isGeneratingTickets = false;
+          notifyListeners();
+          return false;
+        }
+      }
     } catch (e) {
       _bookingError = 'Failed to generate tickets: ${e.toString()}';
       _isGeneratingTickets = false;
@@ -462,12 +565,14 @@ class BookingProvider extends ChangeNotifier {
 
   // Get available payment methods
   List<Map<String, dynamic>> getAvailablePaymentMethods() {
-    return _paymentService.getAvailablePaymentMethods();
+    if (!_checkInitialized()) return [];
+    return _paymentService!.getAvailablePaymentMethods();
   }
 
   // Get payment methods by type
   List<Map<String, dynamic>> getPaymentMethodsByType(String type) {
-    return _paymentService.getPaymentMethodsByType(type);
+    if (!_checkInitialized()) return [];
+    return _paymentService!.getPaymentMethodsByType(type);
   }
 
   // Get payment instructions
@@ -475,7 +580,8 @@ class BookingProvider extends ChangeNotifier {
     String paymentMethod,
     String paymentType,
   ) {
-    return _paymentService.getPaymentInstructions(paymentMethod, paymentType);
+    if (!_checkInitialized()) return {'title': 'Error', 'steps': 'Service not initialized'};
+    return _paymentService!.getPaymentInstructions(paymentMethod, paymentType);
   }
 
   // Calculate total price for booking

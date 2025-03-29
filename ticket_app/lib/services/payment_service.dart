@@ -21,36 +21,77 @@ class PaymentService {
     try {
       print('Creating payment for booking: $bookingIdentifier');
 
+      // TAMBAHAN: Tambahkan delay dan validasi
+      if (bookingIdentifier == null ||
+          (bookingIdentifier is String && bookingIdentifier.isEmpty)) {
+        throw Exception('Invalid booking identifier provided');
+      }
+
       // Convert payment method to uppercase
       final upperPaymentMethod = paymentMethod.toUpperCase();
 
+      // TAMBAHAN: Tambahkan delay sebelum mencoba pembayaran
+      print('Menunggu sebelum mencoba memproses pembayaran...');
+      await Future.delayed(Duration(seconds: 1));
+
       final response = await _apiService.processPayment(
         bookingIdentifier,
-        upperPaymentMethod, // Pass uppercase version
+        upperPaymentMethod,
         paymentChannel,
       );
 
       // Proses respons seperti biasa
       Payment payment;
-      if (response.containsKey('data') &&
-          response['data'].containsKey('payment')) {
-        payment = Payment.fromJson(response['data']['payment']);
-      } else if (response.containsKey('data')) {
-        payment = Payment.fromJson(response['data']);
+
+      // Validasi respons dengan pemeriksaan lebih ketat
+      if (response == null) {
+        throw Exception('Payment response is null');
+      }
+
+      if (response.containsKey('data') && response['data'] != null) {
+        Map<String, dynamic> paymentData;
+        if (response['data'].containsKey('payment')) {
+          paymentData = response['data']['payment'];
+        } else {
+          paymentData = response['data'];
+        }
+
+        payment = Payment.fromJson(paymentData);
+      } else if (response.containsKey('payment') &&
+          response['payment'] != null) {
+        payment = Payment.fromJson(response['payment']);
       } else {
-        throw Exception('Invalid payment response format');
+        throw Exception(
+          'Invalid payment response format: ${json.encode(response)}',
+        );
       }
 
       // Check if payment URL exists in response
       final paymentUrl = response['data']?['payment_url'];
       if (paymentUrl != null && paymentUrl.toString().isNotEmpty) {
-        await openPaymentUrl(paymentUrl.toString());
+        try {
+          await openPaymentUrl(paymentUrl.toString());
+        } catch (e) {
+          print('Error opening payment URL: $e');
+          // Continue with payment process even if URL opening fails
+        }
       }
 
       return payment;
     } catch (e) {
       debugPrint('Error creating payment: $e');
-      throw Exception('Failed to create payment: ${e.toString()}');
+
+      // TAMBAHAN: Error yang lebih jelas
+      String errorMessage = e.toString();
+      if (errorMessage.contains('Resource not found')) {
+        errorMessage =
+            'Booking tidak ditemukan. Mungkin ID atau kode booking tidak valid.';
+      } else if (errorMessage.contains('throttled')) {
+        errorMessage =
+            'Terlalu banyak permintaan. Harap tunggu beberapa saat sebelum mencoba lagi.';
+      }
+
+      throw Exception('Gagal membuat pembayaran: $errorMessage');
     }
   }
 

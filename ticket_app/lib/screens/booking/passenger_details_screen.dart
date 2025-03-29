@@ -41,6 +41,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
   bool _isLoading = false;
   List<Map<String, dynamic>> _savedPassengers = [];
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -71,8 +72,10 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     // Load user data for the first passenger
     _loadUserData();
 
-    // Load saved passengers
-    _loadSavedPassengers();
+    // Bungkus dalam Future.microtask untuk menghindari setState() during build
+    Future.microtask(() {
+      _loadSavedPassengers();
+    });
   }
 
   @override
@@ -180,24 +183,53 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   }
 
   Future<void> _loadSavedPassengers() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
+      // Tambahkan pengecekan inisialisasi BookingProvider
       final bookingProvider = Provider.of<BookingProvider>(
         context,
         listen: false,
       );
-      final savedPassengers = await bookingProvider.loadSavedPassengers();
+      
+      // Tunggu provider terinisialisasi
+      if (!bookingProvider.isInitialized) {
+        print('Waiting for BookingProvider to initialize...');
+        await Future.delayed(Duration(milliseconds: 500));
+        
+        // Jika masih belum terinisialisasi setelah beberapa kali percobaan, abort
+        int retryCount = 0;
+        while (!bookingProvider.isInitialized && retryCount < 5) {
+          await Future.delayed(Duration(milliseconds: 500));
+          retryCount++;
+        }
+        
+        if (!bookingProvider.isInitialized) {
+          throw Exception('BookingProvider initialization timeout');
+        }
+      }
 
-      setState(() {
-        _savedPassengers = savedPassengers;
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      final savedPassengers = await bookingProvider.loadSavedPassengers();
+      print('Loaded ${savedPassengers.length} saved passengers');
+
+      if (mounted) {
+        setState(() {
+          _savedPassengers = savedPassengers;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading saved passengers: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to load saved passengers. Please try again.';
+        });
+      }
     }
   }
 
@@ -383,7 +415,25 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               'totalAmount': booking.totalAmount,
             },
           );
+        } else {
+          // Tampilkan pesan error jika bookingProvider memiliki error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                bookingProvider.bookingError ?? 'Failed to create booking. Please try again.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
+      } catch (e) {
+        // Tangani error tak terduga
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       } finally {
         if (mounted) {
           setState(() {
@@ -405,6 +455,38 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         loadingMessage: 'Processing booking...',
         child: Column(
           children: [
+            // Error message if any
+            if (_errorMessage != null)
+              Container(
+                padding: const EdgeInsets.all(AppTheme.paddingRegular),
+                margin: const EdgeInsets.all(AppTheme.paddingMedium),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red),
+                    SizedBox(width: AppTheme.paddingSmall),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, size: 16),
+                      onPressed: () {
+                        setState(() {
+                          _errorMessage = null;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              
             Expanded(
               child: DefaultTabController(
                 length: widget.passengerCount,
@@ -803,6 +885,58 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// LoadingOverlay widget untuk menampilkan indikator loading
+class LoadingOverlay extends StatelessWidget {
+  final bool isLoading;
+  final Widget child;
+  final String loadingMessage;
+  final Color color;
+
+  const LoadingOverlay({
+    Key? key,
+    required this.isLoading,
+    required this.child,
+    this.loadingMessage = 'Loading...',
+    this.color = Colors.white,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        if (isLoading)
+          Container(
+            color: Colors.black.withOpacity(0.3),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 20),
+                    Text(
+                      loadingMessage,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -150,36 +150,61 @@ class ApiService {
     bool requireAuth = true,
     bool bypassThrottling = false,
   }) async {
-    try {
-      // Throttling check
-      if (!bypassThrottling && !_canMakeRequest(endpoint)) {
-        throw Exception('Request throttled. Please try again later.');
+    int retryCount = 0;
+    const maxRetries = 3;
+    const initialDelay = 2000; // 2 seconds
+
+    while (true) {
+      try {
+        // Throttling check (skip if bypassThrottling is true or we're retrying)
+        if (!bypassThrottling &&
+            retryCount == 0 &&
+            !_canMakeRequest(endpoint)) {
+          throw Exception('Request throttled. Please try again later.');
+        }
+
+        // Record request time
+        _lastRequestTime[endpoint] = DateTime.now();
+
+        final headers = await _getHeaders(requireAuth: requireAuth);
+        final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
+
+        debugPrint('POST Request: ${uri.toString()}');
+        if (body != null) {
+          debugPrint('POST Body: ${json.encode(body)}');
+        }
+
+        final response = await _client
+            .post(uri, headers: headers, body: json.encode(body))
+            .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
+
+        return _handleResponse(response, endpoint: endpoint);
+      } on SocketException {
+        throw Exception('No Internet connection');
+      } on http.ClientException {
+        throw Exception('Connection error');
+      } on TimeoutException {
+        throw Exception('Connection timeout');
+      } catch (e) {
+        bool isThrottlingError = e.toString().contains("throttled");
+
+        // Handle throttling with retries
+        if (isThrottlingError && retryCount < maxRetries) {
+          retryCount++;
+          final delay = initialDelay * retryCount;
+          debugPrint(
+            'Request throttled, retrying in ${delay}ms... (Attempt ${retryCount} of ${maxRetries})',
+          );
+          await Future.delayed(Duration(milliseconds: delay));
+        } else {
+          // Either not a throttling error or max retries exceeded
+          if (isThrottlingError && retryCount >= maxRetries) {
+            throw Exception('Request throttled. Max retries exceeded.');
+          } else {
+            throw Exception('Unexpected error: $e');
+          }
+        }
       }
-
-      // Record request time
-      _lastRequestTime[endpoint] = DateTime.now();
-
-      final headers = await _getHeaders(requireAuth: requireAuth);
-      final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-
-      debugPrint('POST Request: ${uri.toString()}');
-      if (body != null) {
-        debugPrint('POST Body: ${json.encode(body)}');
-      }
-
-      final response = await _client
-          .post(uri, headers: headers, body: json.encode(body))
-          .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
-
-      return _handleResponse(response, endpoint: endpoint);
-    } on SocketException {
-      throw Exception('No Internet connection');
-    } on http.ClientException {
-      throw Exception('Connection error');
-    } on TimeoutException {
-      throw Exception('Connection timeout');
-    } catch (e) {
-      throw Exception('Unexpected error: $e');
     }
   }
 
@@ -472,14 +497,46 @@ class ApiService {
   }
 
   Future<dynamic> getBookingDetail(dynamic bookingIdentifier) async {
-    // Ubah dari id numerik menjadi booking_code
     try {
       print('Fetching booking details for: $bookingIdentifier');
 
-      // Gunakan identifier (bisa ID atau booking_code) dalam URL
-      final response = await get('/api/v1/bookings/$bookingIdentifier');
+      // Format URL yang benar tanpa prefix - perbaiki endpoint
+      String endpoint = '/api/v1/bookings/$bookingIdentifier';
 
-      return response;
+      // Tambahkan retry dengan backoff otomatis
+      int retryCount = 0;
+      const maxRetries = 3;
+      Duration delay = Duration(seconds: 2);
+
+      while (true) {
+        try {
+          // Tambah delay pada percobaan pertama
+          if (retryCount == 0) {
+            print('Delaying initial request to allow data synchronization...');
+            await Future.delayed(Duration(seconds: 1));
+          }
+
+          final response = await get(
+            endpoint,
+            bypassThrottling: retryCount > 0,
+          );
+          return response;
+        } catch (e) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            print('Max retries exceeded for booking detail request');
+            throw e; // Lempar error jika sudah mencapai batas retry
+          }
+
+          print(
+            'Error fetching booking, retrying in ${delay.inSeconds}s (${retryCount}/${maxRetries})',
+          );
+          await Future.delayed(delay);
+
+          // Exponential backoff: meningkatkan delay untuk retry berikutnya
+          delay = Duration(milliseconds: (delay.inMilliseconds * 1.5).round());
+        }
+      }
     } catch (e) {
       print('API error in getBookingDetail: $e');
       throw Exception('Failed to get booking details: $e');
@@ -529,19 +586,60 @@ class ApiService {
     try {
       print('Creating payment for booking: $bookingIdentifier');
 
-      // Konversi ke UPPERCASE untuk memenuhi validasi Laravel
-      final upperPaymentMethod = paymentMethod.toUpperCase();
+      // Format URL yang benar tanpa prefix /code/ - perbaiki endpoint
+      String endpoint = '/api/v1/bookings/$bookingIdentifier/pay';
 
-      final response = await post(
-        '/api/v1/bookings/$bookingIdentifier/pay',
-        body: {
-          'payment_method': upperPaymentMethod, // Gunakan UPPERCASE
-          'payment_channel':
-              paymentChannel, // Tetap gunakan lowercase/asli untuk channel
-        },
-      );
+      // Tambahkan delay sebelum memproses pembayaran
+      print('Menunggu sebelum memproses pembayaran...');
+      await Future.delayed(Duration(seconds: 2));
 
-      return response;
+      // Tambahkan retry mechanism dengan backoff
+      int retryCount = 0;
+      const maxRetries = 3;
+      Duration delay = Duration(seconds: 2);
+
+      while (true) {
+        try {
+          final response = await post(
+            endpoint,
+            body: {
+              'payment_method': paymentMethod.toUpperCase(),
+              'payment_channel': paymentChannel,
+            },
+            bypassThrottling: retryCount > 0, // Bypass throttling untuk retry
+          );
+          return response;
+        } catch (e) {
+          retryCount++;
+
+          // Cek jika error adalah 404 (Not Found)
+          bool isNotFound =
+              e.toString().contains("Resource not found") ||
+              e.toString().contains("404");
+
+          // Coba format URL alternatif jika endpoint pertama tidak ditemukan
+          // dan ini adalah percobaan pertama
+          if (isNotFound && retryCount == 1) {
+            // Coba format URL alternatif - tanpa /pay
+            endpoint = '/api/v1/payments/booking/$bookingIdentifier';
+            print('Trying alternative endpoint: $endpoint');
+            continue; // Skip delay dan langsung coba endpoint baru
+          }
+
+          if (retryCount >= maxRetries) {
+            print('Max retries exceeded for payment processing');
+            throw e; // Lempar error jika sudah mencapai batas retry
+          }
+
+          print(
+            'Error processing payment, retrying in ${delay.inSeconds}s (${retryCount}/${maxRetries})',
+          );
+          await Future.delayed(delay);
+
+          // Exponential backoff: meningkatkan delay untuk retry berikutnya
+          delay = Duration(milliseconds: (delay.inMilliseconds * 1.5).round());
+        }
+      }
     } catch (e) {
       print('API error in processPayment: $e');
       throw Exception('Failed to process payment: $e');

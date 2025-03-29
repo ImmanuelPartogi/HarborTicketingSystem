@@ -35,16 +35,18 @@ class BookingService {
 
       // Log response structure for debugging
       print('Bookings fetch response: ${response.keys.toList()}');
-      
+
       List<dynamic> bookingsData;
-      if (response.containsKey('data') && response['data'] is Map && response['data'].containsKey('bookings')) {
+      if (response.containsKey('data') &&
+          response['data'] is Map &&
+          response['data'].containsKey('bookings')) {
         bookingsData = response['data']['bookings'];
       } else if (response.containsKey('data') && response['data'] is List) {
         bookingsData = response['data'];
       } else {
         bookingsData = [];
       }
-      
+
       return bookingsData.map((json) => Booking.fromJson(json)).toList();
     } catch (e) {
       print('Error fetching bookings: ${e.toString()}');
@@ -52,13 +54,13 @@ class BookingService {
     }
   }
 
-  Future<Booking> getBookingDetail(int id) async {
+  Future<Booking> getBookingDetail(dynamic bookingIdentifier) async {
     try {
-      final response = await _apiService.getBookingDetail(id);
-      
+      final response = await _apiService.getBookingDetail(bookingIdentifier);
+
       // Log the complete response structure
       print('Booking detail response: ${jsonEncode(response)}');
-      
+
       // Extract the booking data from the response
       if (response.containsKey('data') && response['data'] is Map) {
         if (response['data'].containsKey('booking')) {
@@ -67,7 +69,7 @@ class BookingService {
           return Booking.fromJson(response['data']);
         }
       }
-      
+
       return Booking.fromJson(response);
     } catch (e) {
       print('Error fetching booking details: ${e.toString()}');
@@ -159,7 +161,7 @@ class BookingService {
             }).toList();
       }
 
-      // Create the request body
+      // PERBAIKAN: Definisikan bookingData dengan benar sebelum digunakan
       final Map<String, dynamic> bookingData = {
         'schedule_id': scheduleId,
         'booking_date': DateTime.now().toIso8601String().split('T')[0],
@@ -172,10 +174,10 @@ class BookingService {
 
       // Make API request
       final response = await _apiService.createBooking(bookingData);
-      
+
       // Log the full response for debugging
       print('Create booking full response: ${jsonEncode(response)}');
-      
+
       // Extract booking data from the nested structure
       Map<String, dynamic> extractedBookingData;
       if (response.containsKey('data')) {
@@ -189,24 +191,14 @@ class BookingService {
       } else {
         extractedBookingData = response;
       }
-      
-      // If ID field is missing or zero, try to extract from booking_code
-      if ((!extractedBookingData.containsKey('id') || extractedBookingData['id'] == 0) && 
-          extractedBookingData.containsKey('booking_code')) {
-        print('ID field missing or zero, trying to find ID by booking_code');
-        // Additional logic to find booking ID from booking_code if needed
-        // This might require an additional API call
-      }
-      
+
       // Create the booking object
       final booking = Booking.fromJson(extractedBookingData);
-      
-      // Validate ID
-      if (booking.id <= 0) {
-        print('WARNING: Created booking has invalid ID: ${booking.id}');
-        print('Booking data: $extractedBookingData');
-      }
-      
+
+      // TAMBAHAN: Tambahkan delay untuk memastikan data tersedia di server
+      print('Menunggu sinkronisasi data booking dengan server...');
+      await Future.delayed(Duration(seconds: 2));
+
       return booking;
     } catch (e) {
       print('Error creating booking: ${e.toString()}');
@@ -217,7 +209,7 @@ class BookingService {
   Future<Booking> cancelBooking(int id, {String? reason}) async {
     try {
       final response = await _apiService.cancelBooking(id, reason: reason);
-      
+
       // Extract booking data
       Map<String, dynamic> bookingData;
       if (response.containsKey('data') && response['data'] is Map) {
@@ -229,7 +221,7 @@ class BookingService {
       } else {
         bookingData = response;
       }
-      
+
       return Booking.fromJson(bookingData);
     } catch (e) {
       throw Exception('Failed to cancel booking: ${e.toString()}');
@@ -239,7 +231,7 @@ class BookingService {
   Future<Booking> rescheduleBooking(int id, int newScheduleId) async {
     try {
       final response = await _apiService.rescheduleBooking(id, newScheduleId);
-      
+
       // Extract booking data
       Map<String, dynamic> bookingData;
       if (response.containsKey('data') && response['data'] is Map) {
@@ -251,7 +243,7 @@ class BookingService {
       } else {
         bookingData = response;
       }
-      
+
       return Booking.fromJson(bookingData);
     } catch (e) {
       throw Exception('Failed to reschedule booking: ${e.toString()}');
