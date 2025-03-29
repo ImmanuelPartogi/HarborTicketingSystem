@@ -30,6 +30,7 @@ class BookingProvider extends ChangeNotifier {
   bool _isCancellingBooking = false;
   bool _isReschedulingBooking = false;
   bool _isGeneratingTickets = false;
+  bool _isCheckingPaymentStatus = false;
 
   String? _bookingError;
   String? _paymentError;
@@ -49,6 +50,7 @@ class BookingProvider extends ChangeNotifier {
   bool get isCancellingBooking => _isCancellingBooking;
   bool get isReschedulingBooking => _isReschedulingBooking;
   bool get isGeneratingTickets => _isGeneratingTickets;
+  bool get isCheckingPaymentStatus => _isCheckingPaymentStatus;
 
   String? get bookingError => _bookingError;
   String? get paymentError => _paymentError;
@@ -166,6 +168,10 @@ class BookingProvider extends ChangeNotifier {
         vehicles: _pendingVehicles.isNotEmpty ? _pendingVehicles : null,
       );
 
+      // TAMBAHKAN: Log dan validasi
+      print('Booking created successfully with ID: ${_currentBooking!.id}');
+      print('Booking code: ${_currentBooking!.bookingCode}');
+
       // Save passengers and vehicles for future use
       for (var passenger in _pendingPassengers) {
         if (passenger.containsKey('save_info') &&
@@ -191,8 +197,11 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  // Process payment for current booking
-  Future<bool> processPayment(String paymentMethod, String paymentType) async {
+  // Process payment for current booking with Midtrans
+  Future<bool> processPayment(
+    String paymentMethod,
+    String paymentChannel,
+  ) async {
     if (_currentBooking == null) {
       _paymentError = 'No active booking found';
       notifyListeners();
@@ -204,17 +213,16 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Memanggil createPayment tanpa menyimpan hasilnya dalam variabel
+      // Call the payment service to create a payment
       await _paymentService.createPayment(
         bookingId: _currentBooking!.id,
         paymentMethod: paymentMethod,
-        paymentType: paymentType,
+        paymentChannel: paymentChannel,
       );
 
       // Update current booking with payment info
       if (_currentBooking != null) {
-        // Since we can't modify the immutable Booking object directly,
-        // we'll need to fetch the updated booking
+        // Fetch the updated booking with payment details
         await fetchBookingDetail(_currentBooking!.id);
       }
 
@@ -331,29 +339,47 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Check payment status
+  // Check payment status with Midtrans
   Future<bool> checkPaymentStatus() async {
     if (_currentBooking == null || _currentBooking!.payment == null) {
       return false;
     }
 
+    _isCheckingPaymentStatus = true;
+    notifyListeners();
+
     try {
-      final isCompleted = await _paymentService.checkPaymentStatus(
-        _currentBooking!.payment!.id,
+      // Call the API to check payment status
+      final response = await _apiService.get(
+        '/api/v1/bookings/${_currentBooking!.bookingCode}/payment-status',
+        bypassThrottling: true, // Important for real-time status checking
       );
 
-      if (isCompleted) {
-        // Refresh booking details to get updated status
-        await fetchBookingDetail(_currentBooking!.id);
+      _isCheckingPaymentStatus = false;
+      notifyListeners();
+
+      if (response['success'] == true && response['data'] != null) {
+        final status = response['data']['status'] ?? '';
+        final isCompleted = status.toString().toUpperCase() == 'SUCCESS';
+
+        if (isCompleted) {
+          // Refresh booking details to get updated status
+          await fetchBookingDetail(_currentBooking!.id);
+        }
+
+        return isCompleted;
       }
 
-      return isCompleted;
+      return false;
     } catch (e) {
+      debugPrint('Error checking payment status: $e');
+      _isCheckingPaymentStatus = false;
+      notifyListeners();
       return false;
     }
   }
 
-  // Tambahkan fungsi untuk membuat tiket secara manual jika diperlukan
+  // Generate tickets for a booking
   Future<bool> generateTickets(int bookingId) async {
     if (_currentBooking == null || _currentBooking!.id != bookingId) {
       await fetchBookingDetail(bookingId);
@@ -370,15 +396,19 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Gunakan method helper khusus di ApiService
-      await _apiService.generateTicketsForBooking(bookingId);
+      // Call the API to generate tickets
+      final response = await _apiService.post(
+        '/api/v1/bookings/${_currentBooking!.bookingCode}/generate-tickets',
+        body: {},
+        bypassThrottling: true,
+      );
 
-      // Refresh booking untuk memastikan tiket telah dibuat
+      // Refresh booking to get the generated tickets
       await fetchBookingDetail(bookingId);
 
       _isGeneratingTickets = false;
       notifyListeners();
-      return true;
+      return response['success'] == true;
     } catch (e) {
       _bookingError = 'Failed to generate tickets: ${e.toString()}';
       _isGeneratingTickets = false;
@@ -387,16 +417,14 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  // Tambahkan fungsi untuk memeriksa apakah tiket sudah ada untuk booking ini
+  // Check if tickets exist for the current booking
   bool hasTickets() {
     if (_currentBooking == null) return false;
-
-    // Periksa apakah relasi tickets sudah dimuat dan memiliki data
     return _currentBooking!.tickets != null &&
         _currentBooking!.tickets!.isNotEmpty;
   }
 
-  // Get payment methods
+  // Get available payment methods
   List<Map<String, dynamic>> getAvailablePaymentMethods() {
     return _paymentService.getAvailablePaymentMethods();
   }
@@ -418,8 +446,7 @@ class BookingProvider extends ChangeNotifier {
   double calculateTotalPrice({
     required double basePrice,
     required int passengerCount,
-    List<Map<String, dynamic>>?
-    vehicles, // Ubah tipe dari List<Map<String, String>>? menjadi List<Map<String, dynamic>>?
+    List<Map<String, dynamic>>? vehicles,
     double? discountPercentage,
   }) {
     // Base price per passenger
@@ -428,21 +455,25 @@ class BookingProvider extends ChangeNotifier {
     // Add vehicle costs
     if (vehicles != null && vehicles.isNotEmpty) {
       for (var vehicle in vehicles) {
-        // Ambil tipe kendaraan - pastikan dikonversi ke String jika perlu
+        // Get vehicle type - ensure conversion to String if needed
         String vehicleType = vehicle['type'].toString().toLowerCase();
 
         switch (vehicleType) {
           case 'motor':
-            total += 50000; // Contoh harga
+          case 'motorcycle':
+            total += 50000; // Example price
             break;
           case 'car':
-            total += 150000; // Contoh harga
+            total += 150000; // Example price
             break;
           case 'truck':
-            total += 300000; // Contoh harga
+            total += 300000; // Example price
+            break;
+          case 'bus':
+            total += 400000; // Example price
             break;
           default:
-            total += 100000; // Harga default
+            total += 100000; // Default price
         }
       }
     }

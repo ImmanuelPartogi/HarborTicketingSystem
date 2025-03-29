@@ -1,74 +1,64 @@
 <?php
 
 return [
-
-    /*
-    |--------------------------------------------------------------------------
-    | Payment Configuration
-    |--------------------------------------------------------------------------
-    |
-    | This file contains configuration for payment gateways used in the
-    | ferry ticket booking system.
-    |
-    */
-
     'midtrans' => [
-        'server_key' => env('MIDTRANS_SERVER_KEY', ''),
-        'client_key' => env('MIDTRANS_CLIENT_KEY', ''),
         'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
-        'sanitize' => true,
+        'merchant_id' => env('MIDTRANS_MERCHANT_ID', 'G815000693'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY', 'SB-Mid-client-8csuXJ7DmFhqmkMX'),
+        'server_key' => env('MIDTRANS_SERVER_KEY', 'SB-Mid-server-jv_rZEY1OoQzsxdhc0GVb-uW'),
+        'sandbox_url' => env('MIDTRANS_SANDBOX_URL', 'https://api.sandbox.midtrans.com'),
+        'production_url' => env('MIDTRANS_PRODUCTION_URL', 'https://api.midtrans.com'),
+
+        // Define available payment methods
         'payment_methods' => [
             'virtual_account' => [
-                'bca' => true,
-                'bni' => true,
-                'bri' => true,
-                'mandiri' => true,
+                'bca' => true,      // BCA Virtual Account
+                'bni' => true,      // BNI Virtual Account
+                'bri' => true,      // BRI Virtual Account
+                'mandiri' => true,  // Mandiri Bill Payment
+                'permata' => true,  // Permata Virtual Account
             ],
             'e_wallet' => [
-                'gopay' => true,
-                'shopeepay' => true,
-                'dana' => false, // Not directly supported by Midtrans
-                'ovo' => false,  // Not directly supported by Midtrans
+                'gopay' => true,    // GoPay
+                'shopeepay' => true, // ShopeePay
+                'dana' => true,     // DANA
+                'ovo' => true,      // OVO
             ],
+            'credit_card' => true,  // Credit Card
         ],
+
+        // Notification URL for Midtrans to send callbacks
+        'notification_url' => env('MIDTRANS_NOTIFICATION_URL', '/api/v1/payments/notification'),
+
+        // Default payment expiry time in hours
+        'expiry_duration' => env('MIDTRANS_EXPIRY_DURATION', 24),
     ],
 
+    // Bank transfer accounts for manual transfers
     'bank_transfer' => [
-        'enabled' => true,
         'accounts' => [
-            [
+            'BCA' => [
                 'bank' => 'BCA',
-                'account_number' => env('BANK_BCA_ACCOUNT', '1234567890'),
-                'account_name' => env('BANK_BCA_NAME', 'PT Ferry Ticket'),
+                'account_number' => '1234567890',
+                'account_name' => 'PT Ferry Company',
             ],
-            [
+            'BNI' => [
                 'bank' => 'BNI',
-                'account_number' => env('BANK_BNI_ACCOUNT', '0987654321'),
-                'account_name' => env('BANK_BNI_NAME', 'PT Ferry Ticket'),
+                'account_number' => '0987654321',
+                'account_name' => 'PT Ferry Company',
             ],
-            [
-                'bank' => 'BRI',
-                'account_number' => env('BANK_BRI_ACCOUNT', '9876543210'),
-                'account_name' => env('BANK_BRI_NAME', 'PT Ferry Ticket'),
-            ],
-            [
-                'bank' => 'Mandiri',
-                'account_number' => env('BANK_MANDIRI_ACCOUNT', '0123456789'),
-                'account_name' => env('BANK_MANDIRI_NAME', 'PT Ferry Ticket'),
+            'MANDIRI' => [
+                'bank' => 'MANDIRI',
+                'account_number' => '1122334455',
+                'account_name' => 'PT Ferry Company',
             ],
         ],
     ],
 
-    'payment_expiry' => [
-        'bank_transfer' => env('PAYMENT_EXPIRY_BANK_TRANSFER', 24), // hours
-        'virtual_account' => env('PAYMENT_EXPIRY_VIRTUAL_ACCOUNT', 24), // hours
-        'e_wallet' => env('PAYMENT_EXPIRY_E_WALLET', 1), // hours
-    ],
-
+    // Cancellation policy
     'cancellation_policy' => [
-        'full_refund_hours_before' => env('FULL_REFUND_HOURS_BEFORE', 48),
-        'partial_refund_hours_before' => env('PARTIAL_REFUND_HOURS_BEFORE', 24),
-        'partial_refund_percentage' => env('PARTIAL_REFUND_PERCENTAGE', 50),
+        'full_refund_hours_before' => 48,
+        'partial_refund_hours_before' => 24,
+        'partial_refund_percentage' => 50,
     ],
-
 ];

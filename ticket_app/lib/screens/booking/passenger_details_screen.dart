@@ -31,6 +31,14 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   final List<Map<String, dynamic>> _passengerData = [];
   final List<bool> _savePassengerInfo = [];
 
+  // Controllers for text fields
+  final List<TextEditingController> _nameControllers = [];
+  final List<TextEditingController> _idNumberControllers = [];
+  final List<TextEditingController> _dobControllers = [];
+  final List<TextEditingController> _phoneControllers = [];
+  final List<TextEditingController> _emailControllers = [];
+  final List<TextEditingController> _addressControllers = [];
+
   bool _isLoading = false;
   List<Map<String, dynamic>> _savedPassengers = [];
 
@@ -43,6 +51,14 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       _formKeys.add(GlobalKey<FormState>());
       _passengerData.add({});
       _savePassengerInfo.add(i == 0); // Default to save for first passenger
+      
+      // Initialize controllers
+      _nameControllers.add(TextEditingController());
+      _idNumberControllers.add(TextEditingController());
+      _dobControllers.add(TextEditingController());
+      _phoneControllers.add(TextEditingController());
+      _emailControllers.add(TextEditingController());
+      _addressControllers.add(TextEditingController());
     }
 
     // Set schedule ID in the booking provider
@@ -52,8 +68,115 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     );
     bookingProvider.setScheduleId(widget.scheduleId);
 
+    // Load user data for the first passenger
+    _loadUserData();
+    
     // Load saved passengers
     _loadSavedPassengers();
+  }
+
+  @override
+  void dispose() {
+    // Dispose controllers
+    for (var controller in _nameControllers) {
+      controller.dispose();
+    }
+    for (var controller in _idNumberControllers) {
+      controller.dispose();
+    }
+    for (var controller in _dobControllers) {
+      controller.dispose();
+    }
+    for (var controller in _phoneControllers) {
+      controller.dispose();
+    }
+    for (var controller in _emailControllers) {
+      controller.dispose();
+    }
+    for (var controller in _addressControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  // Format ISO date to YYYY-MM-DD
+  String _formatDate(String? isoDate) {
+    if (isoDate == null || isoDate.isEmpty) {
+      return '';
+    }
+    
+    try {
+      // Parse the ISO date
+      final date = DateTime.parse(isoDate);
+      // Format to YYYY-MM-DD
+      return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    } catch (e) {
+      print('Error formatting date: $e');
+      return isoDate; // Return original string if parsing fails
+    }
+  }
+
+  // Load user data for the first passenger
+  void _loadUserData() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+    
+    if (user != null) {
+      // Format date of birth
+      final formattedDob = _formatDate(user.dateOfBirth);
+      
+      // Only fill the first passenger with user data
+      _nameControllers[0].text = user.name;
+      _idNumberControllers[0].text = user.identityNumber ?? '';
+      _dobControllers[0].text = formattedDob;
+      _phoneControllers[0].text = user.phone;
+      _emailControllers[0].text = user.email;
+      _addressControllers[0].text = user.address ?? '';
+      
+      // Set dropdown values
+      setState(() {
+        _passengerData[0]['identity_type'] = _convertIdType(user.identityType);
+        _passengerData[0]['gender'] = _convertGender(user.gender);
+        
+        // Also save the data to the passenger data map for form submission
+        _passengerData[0]['name'] = user.name;
+        _passengerData[0]['identity_number'] = user.identityNumber ?? '';
+        _passengerData[0]['date_of_birth'] = formattedDob;
+        _passengerData[0]['phone'] = user.phone;
+        _passengerData[0]['email'] = user.email;
+        _passengerData[0]['address'] = user.address ?? '';
+      });
+    }
+  }
+
+  // Convert ID type from backend format to form format
+  String _convertIdType(String? idType) {
+    if (idType == null) return 'ktp';
+
+    switch (idType.toUpperCase()) {
+      case 'KTP':
+        return 'ktp';
+      case 'SIM':
+        return 'sim';
+      case 'PASPOR':
+        return 'passport';
+      default:
+        return 'ktp';
+    }
+  }
+
+  // Convert gender from backend format to form format
+  String _convertGender(String? gender) {
+    if (gender == null) return 'm';
+
+    switch (gender.toUpperCase()) {
+      case 'MALE':
+        return 'm';
+      case 'FEMALE':
+        return 'f';
+      default:
+        return 'm';
+    }
   }
 
   Future<void> _loadSavedPassengers() async {
@@ -70,31 +193,6 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
       setState(() {
         _savedPassengers = savedPassengers;
-
-        // Pre-fill first passenger data with user information if available
-        if (savedPassengers.isNotEmpty && _passengerData.isNotEmpty) {
-          _passengerData[0] = {...savedPassengers[0]};
-        } else {
-          // Try to use current user data if available
-          final authProvider = Provider.of<AuthProvider>(
-            context,
-            listen: false,
-          );
-          final user = authProvider.user;
-
-          if (user != null && _passengerData.isNotEmpty) {
-            _passengerData[0] = {
-              'name': user.name,
-              'identity_number': user.identityNumber ?? '',
-              'identity_type': user.identityType ?? 'ktp',
-              'gender': user.gender ?? 'm',
-              'date_of_birth': user.dateOfBirth ?? '',
-              'phone': user.phone,
-              'email': user.email,
-              'address': user.address ?? '',
-            };
-          }
-        }
       });
     } finally {
       setState(() {
@@ -108,7 +206,23 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     Map<String, dynamic> savedPassenger,
   ) {
     setState(() {
-      _passengerData[passengerIndex] = {...savedPassenger};
+      // Format date of birth if needed
+      final formattedDob = _formatDate(savedPassenger['date_of_birth']);
+      
+      // Make a copy of savedPassenger to avoid modifying the original
+      final updatedPassenger = {...savedPassenger};
+      updatedPassenger['date_of_birth'] = formattedDob;
+      
+      // Update passenger data map
+      _passengerData[passengerIndex] = updatedPassenger;
+      
+      // Update the controllers to reflect the saved data
+      _nameControllers[passengerIndex].text = savedPassenger['name'] ?? '';
+      _idNumberControllers[passengerIndex].text = savedPassenger['identity_number'] ?? '';
+      _dobControllers[passengerIndex].text = formattedDob;
+      _phoneControllers[passengerIndex].text = savedPassenger['phone'] ?? '';
+      _emailControllers[passengerIndex].text = savedPassenger['email'] ?? '';
+      _addressControllers[passengerIndex].text = savedPassenger['address'] ?? '';
     });
 
     Navigator.pop(context); // Close the bottom sheet
@@ -205,9 +319,14 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       return;
     }
 
-    // Save form data for each passenger
-    for (int i = 0; i < _formKeys.length; i++) {
-      _formKeys[i].currentState?.save();
+    // Update passenger data with values from controllers
+    for (int i = 0; i < widget.passengerCount; i++) {
+      _passengerData[i]['name'] = _nameControllers[i].text;
+      _passengerData[i]['identity_number'] = _idNumberControllers[i].text;
+      _passengerData[i]['date_of_birth'] = _dobControllers[i].text;
+      _passengerData[i]['phone'] = _phoneControllers[i].text;
+      _passengerData[i]['email'] = _emailControllers[i].text;
+      _passengerData[i]['address'] = _addressControllers[i].text;
       _passengerData[i]['save_info'] = _savePassengerInfo[i];
     }
 
@@ -229,7 +348,6 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         AppRoutes.vehicleDetails,
         arguments: {
           'scheduleId': widget.scheduleId,
-          // Remove passengerIds or pass an empty list with the correct type
           'passengerIds': <int>[],
         },
       );
@@ -382,7 +500,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               label: 'Full Name',
               hintText: 'Enter full name as per ID',
               isRequired: true,
-              initialValue: _passengerData[passengerIndex]['name'],
+              controller: _nameControllers[passengerIndex],
               textCapitalization: TextCapitalization.words,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -479,8 +597,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                     label: 'ID Number',
                     hintText: 'Enter ID number',
                     isRequired: true,
-                    initialValue:
-                        _passengerData[passengerIndex]['identity_number'],
+                    controller: _idNumberControllers[passengerIndex],
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'ID number is required';
@@ -570,8 +687,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                     label: 'Date of Birth',
                     hintText: 'YYYY-MM-DD',
                     isRequired: true,
-                    initialValue:
-                        _passengerData[passengerIndex]['date_of_birth'],
+                    controller: _dobControllers[passengerIndex],
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Date of birth is required';
@@ -598,7 +714,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               label: 'Phone Number',
               hintText: 'Enter phone number',
               isRequired: true,
-              initialValue: _passengerData[passengerIndex]['phone'],
+              controller: _phoneControllers[passengerIndex],
               keyboardType: TextInputType.phone,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -617,7 +733,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
               label: 'Email',
               hintText: 'Enter email address',
               isRequired: true,
-              initialValue: _passengerData[passengerIndex]['email'],
+              controller: _emailControllers[passengerIndex],
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -639,7 +755,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
             CustomTextField(
               label: 'Address',
               hintText: 'Enter address',
-              initialValue: _passengerData[passengerIndex]['address'],
+              controller: _addressControllers[passengerIndex],
               maxLines: 3,
               onChanged: (value) {
                 _passengerData[passengerIndex]['address'] = value;

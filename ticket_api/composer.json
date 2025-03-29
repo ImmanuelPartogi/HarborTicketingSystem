@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "dompdf/dompdf": "^3.1",
         "illuminate/auth": "*",
         "intervention/image": "^3.11",
         "laravel/framework": "^11.31",

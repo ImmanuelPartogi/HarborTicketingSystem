@@ -38,6 +38,10 @@ class Booking {
     this.payment,
   });
 
+  // Tambahkan getter untuk bookingCode yang merujuk ke bookingNumber
+  // Ini akan membuat kode kompatibel dengan kedua konvensi penamaan
+  String get bookingCode => bookingNumber;
+
   factory Booking.fromJson(Map<String, dynamic> json) {
     try {
       // Helper functions untuk parsing data dengan aman

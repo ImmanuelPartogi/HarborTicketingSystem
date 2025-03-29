@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../providers/booking_provider.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../models/payment_model.dart'; // Import the payment model
 
 class PaymentScreen extends StatefulWidget {
   final int bookingId;
@@ -25,12 +29,15 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   String _selectedPaymentMethod = '';
-  String _selectedPaymentType = 'bank_transfer';
+  String _selectedPaymentType = 'virtual_account';
   
   bool _isLoading = false;
+  bool _isPaymentProcessed = false;
   Timer? _paymentCheckTimer;
   int _timeoutMinutes = 15;
   int _remainingSeconds = 0;
+  
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   
   @override
   void initState() {
@@ -76,8 +83,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         }
       });
       
-      // Check payment status every 30 seconds
-      if (_remainingSeconds % 30 == 0) {
+      // Check payment status every 15 seconds
+      if (_remainingSeconds % 15 == 0 && _isPaymentProcessed) {
         _checkPaymentStatus();
       }
     });
@@ -148,18 +155,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
     try {
       final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
       final success = await bookingProvider.processPayment(
-        _selectedPaymentMethod,
         _selectedPaymentType,
+        _selectedPaymentMethod,
       );
       
+      setState(() {
+        _isPaymentProcessed = success;
+      });
+      
+      // Refresh the booking data to get payment details
       if (success && mounted) {
-        // Show confirmation screen
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.bookingConfirmation,
-          (route) => false,
-          arguments: {'bookingId': widget.bookingId},
-        );
+        await bookingProvider.fetchBookingDetail(widget.bookingId);
+        
+        // Check if we need to navigate to another screen
+        final booking = bookingProvider.currentBooking;
+        final payment = booking?.payment;
+        
+        if (payment != null) {
+          if (payment.paymentUrl != null && payment.paymentUrl!.isNotEmpty) {
+            // Handle redirect URLs for e-wallets
+            if (_selectedPaymentType == 'e_wallet') {
+              final url = payment.paymentUrl!;
+              if (await canLaunch(url)) {
+                await launch(url);
+              }
+            }
+          }
+        }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -177,6 +199,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
+  // Copy text to clipboard
+  void _copyToClipboard(String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$label copied to clipboard'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -187,6 +221,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
     
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Payment'),
       ),
@@ -229,6 +264,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       child: Text('Booking information not available'),
                     );
                   }
+                  
+                  // Get payment data if available
+                  final payment = booking.payment;
+                  final isPaymentCreated = payment != null;
                   
                   return SingleChildScrollView(
                     padding: const EdgeInsets.all(AppTheme.paddingMedium),
@@ -394,60 +433,91 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         
                         const SizedBox(height: AppTheme.paddingLarge),
                         
-                        // Payment method
-                        Text(
-                          'Select Payment Method',
-                          style: TextStyle(
-                            fontSize: AppTheme.fontSizeMedium,
-                            fontWeight: FontWeight.bold,
-                            color: theme.textTheme.displaySmall?.color,
+                        // Show payment methods if payment not yet created
+                        if (!isPaymentCreated) ...[
+                          Text(
+                            'Select Payment Method',
+                            style: TextStyle(
+                              fontSize: AppTheme.fontSizeMedium,
+                              fontWeight: FontWeight.bold,
+                              color: theme.textTheme.displaySmall?.color,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: AppTheme.paddingMedium),
-                        
-                        // Payment type tabs
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.cardColor,
-                            borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                          const SizedBox(height: AppTheme.paddingMedium),
+                          
+                          // Payment type tabs
+                          Container(
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                // Payment type selection
+                                Row(
+                                  children: [
+                                    _buildPaymentTypeTab(
+                                      title: 'Virtual Account',
+                                      type: 'virtual_account',
+                                    ),
+                                    _buildPaymentTypeTab(
+                                      title: 'E-Wallet',
+                                      type: 'e_wallet',
+                                    ),
+                                  ],
+                                ),
+                                
+                                const Divider(height: 1),
+                                
+                                // Payment methods based on selected type
+                                ..._buildPaymentMethodOptions(bookingProvider),
+                              ],
+                            ),
+                          ),
+                          
+                          const SizedBox(height: AppTheme.paddingLarge),
+                          
+                          // Payment instructions
+                          if (_selectedPaymentMethod.isNotEmpty) ...[
+                            Text(
+                              'Payment Instructions',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeMedium,
+                                fontWeight: FontWeight.bold,
+                                color: theme.textTheme.displaySmall?.color,
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              // Payment type selection
-                              Row(
-                                children: [
-                                  _buildPaymentTypeTab(
-                                    title: 'Bank Transfer',
-                                    type: 'bank_transfer',
-                                  ),
-                                  _buildPaymentTypeTab(
-                                    title: 'E-Wallet',
-                                    type: 'e_wallet',
+                            ),
+                            const SizedBox(height: AppTheme.paddingMedium),
+                            
+                            Container(
+                              padding: const EdgeInsets.all(AppTheme.paddingMedium),
+                              decoration: BoxDecoration(
+                                color: theme.cardColor,
+                                borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
-                              
-                              const Divider(height: 1),
-                              
-                              // Payment methods based on selected type
-                              ..._buildPaymentMethodOptions(bookingProvider),
-                            ],
-                          ),
-                        ),
+                              child: _buildPaymentInstructions(bookingProvider),
+                            ),
+                          ],
+                        ],
                         
-                        const SizedBox(height: AppTheme.paddingLarge),
-                        
-                        // Payment instructions
-                        if (_selectedPaymentMethod.isNotEmpty) ...[
+                        // Show payment details if payment already created
+                        if (isPaymentCreated) ...[
                           Text(
-                            'Payment Instructions',
+                            'Payment Details',
                             style: TextStyle(
                               fontSize: AppTheme.fontSizeMedium,
                               fontWeight: FontWeight.bold,
@@ -469,11 +539,274 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                 ),
                               ],
                             ),
-                            child: _buildPaymentInstructions(bookingProvider),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Payment status
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Payment Status',
+                                            style: TextStyle(
+                                              fontSize: AppTheme.fontSizeRegular,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: AppTheme.paddingXSmall),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                width: 12,
+                                                height: 12,
+                                                decoration: BoxDecoration(
+                                                  color: payment!.statusColor,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              const SizedBox(width: AppTheme.paddingXSmall),
+                                              Text(
+                                                payment.statusText,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: payment.statusColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: _checkPaymentStatus,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: theme.primaryColor,
+                                        foregroundColor: Colors.white,
+                                        textStyle: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppTheme.paddingMedium,
+                                          vertical: AppTheme.paddingSmall,
+                                        ),
+                                      ),
+                                      child: const Text('Check Status'),
+                                    ),
+                                  ],
+                                ),
+                                
+                                const SizedBox(height: AppTheme.paddingMedium),
+                                const Divider(),
+                                const SizedBox(height: AppTheme.paddingMedium),
+                                
+                                // Payment method info
+                                const Text(
+                                  'Payment Method',
+                                  style: TextStyle(
+                                    fontSize: AppTheme.fontSizeRegular,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: AppTheme.paddingXSmall),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                                        image: DecorationImage(
+                                          image: AssetImage('assets/images/payment_methods/${payment.paymentChannel.toLowerCase()}.png'),
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppTheme.paddingSmall),
+                                    Text(
+                                      '${payment.paymentMethodText} - ${payment.paymentChannelText}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                
+                                const SizedBox(height: AppTheme.paddingMedium),
+                                
+                                // Virtual Account Number for bank transfers
+                                if (payment.paymentMethod.toUpperCase() == 'VIRTUAL_ACCOUNT' && payment.vaNumber != null) ...[
+                                  const Text(
+                                    'Virtual Account Number',
+                                    style: TextStyle(
+                                      fontSize: AppTheme.fontSizeRegular,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppTheme.paddingXSmall),
+                                  Container(
+                                    padding: const EdgeInsets.all(AppTheme.paddingRegular),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            payment.vaNumber!,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: AppTheme.fontSizeMedium,
+                                              letterSpacing: 1.5,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () => _copyToClipboard(payment.vaNumber!, 'VA Number'),
+                                          icon: const Icon(Icons.copy),
+                                          tooltip: 'Copy VA Number',
+                                          color: theme.primaryColor,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                
+                                // QR Code for e-wallets
+                                if (payment.paymentMethod.toUpperCase() == 'E_WALLET' && payment.qrCodeUrl != null) ...[
+                                  const SizedBox(height: AppTheme.paddingMedium),
+                                  const Text(
+                                    'Scan QR Code',
+                                    style: TextStyle(
+                                      fontSize: AppTheme.fontSizeRegular,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppTheme.paddingSmall),
+                                  Center(
+                                    child: Container(
+                                      width: 200,
+                                      height: 200,
+                                      padding: const EdgeInsets.all(AppTheme.paddingSmall),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: Image.network(
+                                        payment.qrCodeUrl!,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return const Center(
+                                            child: Text(
+                                              'Could not load QR Code',
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppTheme.paddingSmall),
+                                  Center(
+                                    child: Text(
+                                      'Scan with your ${payment.paymentChannelText} app',
+                                      style: TextStyle(
+                                        fontSize: AppTheme.fontSizeSmall,
+                                        color: theme.textTheme.bodyMedium?.color,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                
+                                // Deep link button for e-wallets
+                                if (payment.paymentMethod.toUpperCase() == 'E_WALLET' && payment.deepLinkUrl != null) ...[
+                                  const SizedBox(height: AppTheme.paddingMedium),
+                                  Center(
+                                    child: CustomButton(
+                                      text: 'Open ${payment.paymentChannelText} App',
+                                      onPressed: () async {
+                                        if (await canLaunch(payment.deepLinkUrl!)) {
+                                          await launch(payment.deepLinkUrl!);
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Could not open ${payment.paymentChannelText} app'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      type: ButtonType.primary,
+                                      icon: Icons.open_in_new,
+                                    ),
+                                  ),
+                                ],
+                                
+                                const SizedBox(height: AppTheme.paddingMedium),
+                                
+                                // Payment instructions
+                                const Text(
+                                  'Payment Instructions',
+                                  style: TextStyle(
+                                    fontSize: AppTheme.fontSizeRegular,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: AppTheme.paddingSmall),
+                                _buildPaymentInstructionsForExistingPayment(payment),
+                                
+                                const SizedBox(height: AppTheme.paddingMedium),
+                                
+                                // Expiry info
+                                Container(
+                                  padding: const EdgeInsets.all(AppTheme.paddingRegular),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade50,
+                                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                                    border: Border.all(color: Colors.amber.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.info_outline,
+                                        color: Colors.amber,
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: AppTheme.paddingRegular),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Important',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: AppTheme.paddingXSmall),
+                                            Text(
+                                              'Please complete your payment within $_formattedRemainingTime to secure your booking. Payment will expire at ${DateFormat('HH:mm').format(payment.expiredAt)}.',
+                                              style: const TextStyle(
+                                                fontSize: AppTheme.fontSizeRegular,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          
-                          const SizedBox(height: AppTheme.paddingLarge),
                         ],
+                        
+                        const SizedBox(height: AppTheme.paddingLarge),
                       ],
                     ),
                   );
@@ -481,25 +814,61 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
             ),
             
-            // Pay now button
-            Container(
-              padding: const EdgeInsets.all(AppTheme.paddingMedium),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
+            // Pay now button (only show if payment not yet created)
+            Consumer<BookingProvider>(
+              builder: (context, bookingProvider, _) {
+                final booking = bookingProvider.currentBooking;
+                final isPaymentCreated = booking?.payment != null;
+                
+                if (isPaymentCreated) {
+                  return Container(
+                    padding: const EdgeInsets.all(AppTheme.paddingMedium),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, -2),
+                        ),
+                      ],
+                    ),
+                    child: CustomButton(
+                      text: 'Check Booking Status',
+                      onPressed: () {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          AppRoutes.bookingConfirmation,
+                          (route) => false,
+                          arguments: {'bookingId': widget.bookingId},
+                        );
+                      },
+                      type: ButtonType.primary,
+                      isFullWidth: true,
+                    ),
+                  );
+                }
+                
+                return Container(
+                  padding: const EdgeInsets.all(AppTheme.paddingMedium),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: CustomButton(
-                text: 'Pay Now',
-                onPressed: _processPayment,
-                type: ButtonType.primary,
-                isFullWidth: true,
-              ),
+                  child: CustomButton(
+                    text: 'Pay Now',
+                    onPressed: _processPayment,
+                    type: ButtonType.primary,
+                    isFullWidth: true,
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -529,7 +898,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+                color: isSelected ? theme.primaryColor : Colors.transparent,
                 width: 2,
               ),
             ),
@@ -537,7 +906,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           child: Text(
             title,
             style: TextStyle(
-              color: isSelected ? AppTheme.primaryColor : theme.textTheme.bodyLarge?.color,
+              color: isSelected ? theme.primaryColor : theme.textTheme.bodyLarge?.color,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
             textAlign: TextAlign.center,
@@ -664,6 +1033,115 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ],
           ),
         ),
+      ],
+    );
+  }
+  
+  Widget _buildPaymentInstructionsForExistingPayment(Payment payment) {
+    String instructionsContent = '';
+    
+    // Determine which instructions to show based on payment method
+    if (payment.paymentMethod.toUpperCase() == 'VIRTUAL_ACCOUNT') {
+      instructionsContent = '''
+1. Login to your ${payment.paymentChannelText} Mobile Banking app or Internet Banking.
+2. Choose "Transfer" > "Virtual Account".
+3. Enter the Virtual Account number: ${payment.vaNumber ?? 'Not available'}.
+4. Confirm the payment details and amount: ${NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(payment.amount)}.
+5. Enter your PIN or password to authorize the payment.
+6. Save your payment receipt as proof of transaction.
+''';
+    } else if (payment.paymentMethod.toUpperCase() == 'E_WALLET') {
+      if (payment.qrCodeUrl != null) {
+        instructionsContent = '''
+1. Open your ${payment.paymentChannelText} app.
+2. Tap "Scan" or "Pay" in your app.
+3. Scan the QR code shown above.
+4. Confirm the payment details and amount: ${NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(payment.amount)}.
+5. Enter your PIN to authorize the payment.
+6. Wait for confirmation message.
+''';
+      } else if (payment.deepLinkUrl != null) {
+        instructionsContent = '''
+1. Tap the "Open ${payment.paymentChannelText} App" button above.
+2. You will be redirected to your ${payment.paymentChannelText} app.
+3. Confirm the payment details and amount: ${NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(payment.amount)}.
+4. Enter your PIN to authorize the payment.
+5. Wait for confirmation message.
+''';
+      } else {
+        instructionsContent = '''
+1. Open your ${payment.paymentChannelText} app.
+2. Choose "Pay" or "Scan".
+3. Enter the payment amount: ${NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(payment.amount)}.
+4. Confirm the payment details.
+5. Enter your PIN to authorize the payment.
+6. Wait for confirmation message.
+''';
+      }
+    } else {
+      instructionsContent = '''
+1. Follow the payment instructions for your selected payment method.
+2. Use the payment details provided above.
+3. Ensure you complete the payment before the expiry time.
+4. After payment, wait for confirmation message.
+''';
+    }
+    
+    return Text(
+      instructionsContent,
+      style: const TextStyle(
+        fontSize: AppTheme.fontSizeRegular,
+      ),
+    );
+  }
+}
+
+class LoadingOverlay extends StatelessWidget {
+  final bool isLoading;
+  final Widget child;
+  final String loadingMessage;
+  final Color color;
+
+  const LoadingOverlay({
+    Key? key,
+    required this.isLoading,
+    required this.child,
+    this.loadingMessage = 'Loading...',
+    this.color = Colors.white,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        if (isLoading)
+          Container(
+            color: Colors.black.withOpacity(0.3),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 20),
+                    Text(
+                      loadingMessage,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

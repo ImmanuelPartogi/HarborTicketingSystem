@@ -1,196 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Konfirmasi Pemesanan Tiket Ferry</title>
+    <title>Payment Successful - Ferry Ticket App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            padding: 20px;
-            margin: 0;
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .container {
+        .success-container {
             max-width: 600px;
-            margin: 0 auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            margin: 50px auto;
+            padding: 30px;
             background-color: #fff;
-            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
-        .header {
-            text-align: center;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #ddd;
-        }
-        .logo {
-            max-width: 150px;
-            margin-bottom: 20px;
-        }
-        .content {
-            padding: 20px 0;
+        .success-icon {
+            width: 100px;
+            height: 100px;
+            background-color: #28a745;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 50px;
         }
         .booking-details {
-            margin-bottom: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
         }
-        .booking-details h3 {
-            margin-top: 0;
-            color: #4a6fb3;
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
         }
-        .route-details {
-            background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+        .detail-label {
+            color: #6c757d;
+            font-weight: 500;
         }
-        .passenger-details {
-            margin-bottom: 20px;
+        .detail-value {
+            font-weight: 600;
+            text-align: right;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
+        .btn-primary {
+            background-color: #0066cc;
+            border-color: #0066cc;
         }
-        table th, table td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+        .btn-outline-secondary {
+            color: #0066cc;
+            border-color: #0066cc;
         }
-        table th {
-            background-color: #f2f2f2;
-        }
-        .vehicle-details {
-            margin-bottom: 20px;
-        }
-        .payment-details {
-            background-color: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
-        }
-        .footer {
-            text-align: center;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            font-size: 12px;
-            color: #777;
-        }
-        .button {
-            display: inline-block;
-            background-color: #4a6fb3;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-top: 15px;
-        }
-        .button:hover {
-            background-color: #3a5a99;
-        }
-        .important-note {
-            background-color: #fff8e1;
-            border-left: 4px solid #ffc107;
-            padding: 10px 15px;
+        .divider {
+            border-top: 1px solid #dee2e6;
             margin: 20px 0;
+        }
+        .mt-4 {
+            margin-top: 1.5rem !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <img src="{{ asset('images/logo.png') }}" alt="Ferry Ticket Logo" class="logo">
-            <h2>Konfirmasi Pemesanan Tiket Ferry</h2>
-        </div>
+        <div class="success-container">
+            <div class="success-icon">
+                <i class="bi bi-check-lg">✓</i>
+            </div>
 
-        <div class="content">
-            <p>Halo {{ $booking->user->name }},</p>
-            <p>Terima kasih telah melakukan pemesanan tiket ferry. Berikut adalah detail pemesanan Anda:</p>
+            <div class="text-center">
+                <h2 class="mb-3">Payment Successful!</h2>
+                <p class="lead mb-4">Your booking has been confirmed and is ready for your journey.</p>
+            </div>
 
             <div class="booking-details">
-                <h3>Informasi Pemesanan</h3>
-                <p><strong>Kode Booking:</strong> {{ $booking->booking_code }}</p>
-                <p><strong>Tanggal Pemesanan:</strong> {{ $booking->created_at->format('d M Y H:i') }}</p>
-                <p><strong>Status:</strong> {{ $booking->status }}</p>
+                <h5 class="mb-3">Booking Details</h5>
+
+                <div class="detail-row">
+                    <span class="detail-label">Booking Number:</span>
+                    <span class="detail-value">{{ $booking->booking_code }}</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Route:</span>
+                    <span class="detail-value">{{ $booking->schedule->route->name }}</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Departure:</span>
+                    <span class="detail-value">{{ \Carbon\Carbon::parse($booking->booking_date)->format('D, d M Y') }} {{ $booking->schedule->departure_time }}</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Passengers:</span>
+                    <span class="detail-value">{{ $booking->passengers->count() }}</span>
+                </div>
+
+                @if($booking->vehicles->count() > 0)
+                <div class="detail-row">
+                    <span class="detail-label">Vehicles:</span>
+                    <span class="detail-value">{{ $booking->vehicles->count() }}</span>
+                </div>
+                @endif
+
+                <div class="divider"></div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Amount Paid:</span>
+                    <span class="detail-value" style="color: #28a745; font-size: 1.1em;">Rp {{ number_format($payment->amount, 0, ',', '.') }}</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Payment Method:</span>
+                    <span class="detail-value">{{ $payment->payment_method }} ({{ $payment->payment_channel }})</span>
+                </div>
             </div>
 
-            <div class="route-details">
-                <h3>Detail Perjalanan</h3>
-                <p><strong>Rute:</strong> {{ $booking->schedule->route->origin }} - {{ $booking->schedule->route->destination }}</p>
-                <p><strong>Tanggal Keberangkatan:</strong> {{ $booking->booking_date->format('d M Y') }}</p>
-                <p><strong>Waktu Keberangkatan:</strong> {{ $booking->schedule->departure_time->format('H:i') }}</p>
-                <p><strong>Estimasi Waktu Kedatangan:</strong> {{ $booking->schedule->arrival_time->format('H:i') }}</p>
-                <p><strong>Kapal:</strong> {{ $booking->schedule->ferry->name }}</p>
+            <div class="mt-4 text-center">
+                <p>Tickets for your booking have been generated. You can access them through the app.</p>
+
+                <div class="mt-4">
+                    <a href="{{ url('/') }}" class="btn btn-primary me-2">Return to Home</a>
+                    <a href="{{ url('/bookings/'.$booking->booking_code) }}" class="btn btn-outline-secondary">View Booking Details</a>
+                </div>
             </div>
-
-            <div class="passenger-details">
-                <h3>Detail Penumpang</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nama</th>
-                            <th>Tipe ID</th>
-                            <th>Nomor ID</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($booking->passengers as $passenger)
-                        <tr>
-                            <td>{{ $passenger->name }}</td>
-                            <td>{{ $passenger->id_type }}</td>
-                            <td>{{ $passenger->id_number }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            @if($booking->vehicles->count() > 0)
-            <div class="vehicle-details">
-                <h3>Detail Kendaraan</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tipe</th>
-                            <th>Plat Nomor</th>
-                            <th>Berat</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($booking->vehicles as $vehicle)
-                        <tr>
-                            <td>{{ $vehicle->type_name }}</td>
-                            <td>{{ $vehicle->license_plate }}</td>
-                            <td>{{ $vehicle->weight ? $vehicle->weight . ' kg' : '-' }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @endif
-
-            <div class="payment-details">
-                <h3>Detail Pembayaran</h3>
-                <p><strong>Total Pembayaran:</strong> Rp {{ number_format($booking->total_amount, 0, ',', '.') }}</p>
-                <p><strong>Metode Pembayaran:</strong> {{ $booking->latestPayment() ? $booking->latestPayment()->payment_method_name : 'Belum dibayar' }}</p>
-                <p><strong>Status Pembayaran:</strong> {{ $booking->latestPayment() ? $booking->latestPayment()->status : 'PENDING' }}</p>
-            </div>
-
-            <div class="important-note">
-                <p><strong>Catatan Penting:</strong></p>
-                <p>Harap tiba di pelabuhan minimal 30 menit sebelum waktu keberangkatan. Jangan lupa untuk membawa bukti identitas yang sesuai untuk verifikasi.</p>
-            </div>
-
-            <p>Tiket elektronik Anda dapat dilihat dan diunduh melalui aplikasi atau dengan menekan tombol di bawah ini:</p>
-            <p style="text-align: center;">
-                <a href="{{ url('/tickets/' . $booking->booking_code) }}" class="button">Lihat Tiket</a>
-            </p>
-        </div>
-
-        <div class="footer">
-            <p>Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
-            <p>&copy; {{ date('Y') }} Ferry Ticket System. All rights reserved.</p>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

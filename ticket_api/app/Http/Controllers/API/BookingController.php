@@ -6,24 +6,32 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Services\BookingService;
 use App\Services\PaymentService;
+use App\Services\TicketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
     protected $bookingService;
     protected $paymentService;
+    protected $ticketService;
 
     /**
      * Create a new controller instance.
      *
      * @param BookingService $bookingService
      * @param PaymentService $paymentService
+     * @param TicketService $ticketService
      */
-    public function __construct(BookingService $bookingService, PaymentService $paymentService)
-    {
+    public function __construct(
+        BookingService $bookingService,
+        PaymentService $paymentService,
+        TicketService $ticketService
+    ) {
         $this->bookingService = $bookingService;
         $this->paymentService = $paymentService;
+        $this->ticketService = $ticketService;
     }
 
     /**
@@ -69,6 +77,12 @@ class BookingController extends Controller
                 ]
             ], 201);
         } catch (\Exception $e) {
+            Log::error('Booking creation failed', [
+                'user_id' => $request->user()->id,
+                'data' => $request->all(),
+                'error' => $e->getMessage()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Booking creation failed',
@@ -144,7 +158,7 @@ class BookingController extends Controller
     public function processPayment(Request $request, $bookingCode)
     {
         $validator = Validator::make($request->all(), [
-            'payment_method' => 'required|in:BANK_TRANSFER,VIRTUAL_ACCOUNT,E_WALLET,CREDIT_CARD',
+            'payment_method' => 'required|in:VIRTUAL_ACCOUNT,E_WALLET,BANK_TRANSFER,CREDIT_CARD',
             'payment_channel' => 'required|string|max:50',
         ]);
 
@@ -160,7 +174,7 @@ class BookingController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        if ($booking->status !== 'PENDING') {
+        if ($booking->status !== 'PENDING' && $booking->status !== 'DRAFT') {
             return response()->json([
                 'success' => false,
                 'message' => 'Booking is not in pending status'
@@ -168,6 +182,13 @@ class BookingController extends Controller
         }
 
         try {
+            Log::info('Processing payment for booking', [
+                'booking_id' => $booking->id,
+                'booking_code' => $bookingCode,
+                'payment_method' => $request->payment_method,
+                'payment_channel' => $request->payment_channel
+            ]);
+
             $payment = $this->paymentService->createPayment($booking, $request->all());
             $paymentUrl = $this->paymentService->getPaymentUrl($payment);
 
@@ -180,6 +201,12 @@ class BookingController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Payment processing failed', [
+                'booking_id' => $booking->id,
+                'booking_code' => $bookingCode,
+                'error' => $e->getMessage()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Payment processing failed',
@@ -236,6 +263,12 @@ class BookingController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Booking cancellation failed', [
+                'booking_id' => $booking->id,
+                'booking_code' => $bookingCode,
+                'error' => $e->getMessage()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Booking cancellation failed',
@@ -293,6 +326,12 @@ class BookingController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            Log::error('Booking reschedule failed', [
+                'booking_id' => $booking->id,
+                'booking_code' => $bookingCode,
+                'error' => $e->getMessage()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Booking reschedule failed',
@@ -336,6 +375,92 @@ class BookingController extends Controller
             'data' => [
                 'status' => $status,
                 'payment' => $latestPayment
+            ]
+        ]);
+    }
+
+    /**
+     * Generate tickets for a booking.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $bookingCode
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function generateTickets(Request $request, $bookingCode)
+    {
+        $booking = Booking::where('booking_code', $bookingCode)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        if ($booking->status !== 'CONFIRMED') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot generate tickets for unconfirmed booking'
+            ], 400);
+        }
+
+        try {
+            $result = $this->ticketService->generateTicketsForBooking($booking);
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $result['message'],
+                    'data' => [
+                        'tickets' => $result['tickets'] ?? []
+                    ]
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message']
+                ], 400);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error generating tickets', [
+                'booking_id' => $booking->id,
+                'booking_code' => $bookingCode,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate tickets',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get tickets for a booking.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $bookingCode
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTickets(Request $request, $bookingCode)
+    {
+        $booking = Booking::where('booking_code', $bookingCode)
+            ->where('user_id', $request->user()->id)
+            ->with(['tickets' => function ($query) {
+                $query->with(['passenger', 'vehicle']);
+            }])
+            ->firstOrFail();
+
+        if ($booking->tickets->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'tickets' => [],
+                    'message' => 'No tickets found for this booking'
+                ]
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'tickets' => $booking->tickets
             ]
         ]);
     }

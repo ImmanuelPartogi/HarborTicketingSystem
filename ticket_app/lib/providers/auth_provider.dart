@@ -52,16 +52,16 @@ class AuthProvider extends ChangeNotifier {
   // Load user and token from storage on app start
   Future<void> _loadUserFromStorage() async {
     if (_isLoading) return;
-    
+
     _setLoading(true);
     try {
       _user = await _storageService.getUser();
-      
+
       // Cache the user JSON string to avoid repeated conversion
       if (_user != null) {
         _lastUserJsonString = jsonEncode(_user!.toJson());
       }
-      
+
       _setLoading(false);
     } catch (e) {
       _setError('Failed to load user data');
@@ -85,30 +85,32 @@ class AuthProvider extends ChangeNotifier {
     if (DebugConfig.shouldSkipDataLoad('user profile')) {
       return false;
     }
-    
+
     if (_isRefreshingProfile) return false;
-    
+
     // Throttle requests
     if (lastProfileFetchTime != null) {
       final difference = DateTime.now().difference(lastProfileFetchTime!);
       if (difference.inSeconds < 60) {
-        debugPrint('Profile refresh throttled: ${60 - difference.inSeconds}s remaining');
+        debugPrint(
+          'Profile refresh throttled: ${60 - difference.inSeconds}s remaining',
+        );
         return false;
       }
     }
-    
+
     _isRefreshingProfile = true;
     _error = null;
-    
+
     try {
       final token = await _storageService.getAccessToken();
-      
+
       if (token == null) {
         _error = 'No authentication token';
         _isRefreshingProfile = false;
         return false;
       }
-      
+
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/profile');
       final response = await http.get(
         url,
@@ -121,14 +123,14 @@ class AuthProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        
+
         if (responseData['success'] == true) {
           final userJson = responseData['data']['user'];
           final newUserJsonString = json.encode(userJson);
-          
+
           // Only update if the data actually changed
           final shouldUpdate = _lastUserJsonString != newUserJsonString;
-          
+
           if (shouldUpdate) {
             final newUser = User.fromJson(userJson);
             setState(() {
@@ -136,7 +138,7 @@ class AuthProvider extends ChangeNotifier {
               _lastUserJsonString = newUserJsonString;
             });
           }
-          
+
           lastProfileFetchTime = DateTime.now();
           _isRefreshingProfile = false;
           return true;
@@ -165,15 +167,16 @@ class AuthProvider extends ChangeNotifier {
     try {
       // Pass 'email' instead of 'phone' to match the API expectation
       _user = await _authService.login(email, password);
-      
+
       // Cache the user JSON
       if (_user != null) {
         _lastUserJsonString = jsonEncode(_user!.toJson());
       }
-      
+
       // Update token after successful login
       _token = await _storageService.getAccessToken();
-      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful login
+      lastProfileFetchTime =
+          DateTime.now(); // Set fetch time after successful login
       _setLoading(false);
       notifyListeners();
       return true;
@@ -191,15 +194,16 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _user = await _authService.register(userData);
-      
+
       // Cache the user JSON
       if (_user != null) {
         _lastUserJsonString = jsonEncode(_user!.toJson());
       }
-      
+
       // Update token if available after registration
       _token = await _storageService.getAccessToken();
-      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful registration
+      lastProfileFetchTime =
+          DateTime.now(); // Set fetch time after successful registration
       _setLoading(false);
       notifyListeners();
       return true;
@@ -217,15 +221,16 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _user = await _authService.verifyOtp(phone, otp);
-      
+
       // Cache the user JSON
       if (_user != null) {
         _lastUserJsonString = jsonEncode(_user!.toJson());
       }
-      
+
       // Update token after verification
       _token = await _storageService.getAccessToken();
-      lastProfileFetchTime = DateTime.now(); // Set fetch time after successful verification
+      lastProfileFetchTime =
+          DateTime.now(); // Set fetch time after successful verification
       _setLoading(false);
       notifyListeners();
       return true;
@@ -260,20 +265,21 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> updateProfile(Map<String, dynamic> profileData) async {
     _error = null;
     _setLoading(true);
-    
+
     try {
       // Get token first
       final token = await _storageService.getAccessToken();
-      
+
       if (token == null) {
         _error = 'No authentication token';
         _setLoading(false);
         return false;
       }
-      
+
       // Ensure field names match what backend expects
       final convertedData = {
         'name': profileData['name'],
+        'email': profileData['email'], // Add this line
         'phone': profileData['phone'],
         'id_number': profileData['identity_number'],
         'id_type': profileData['identity_type'],
@@ -283,7 +289,7 @@ class AuthProvider extends ChangeNotifier {
       };
 
       debugPrint('Updating profile with data: ${json.encode(convertedData)}');
-      
+
       // Use POST method to match backend route definition
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/profile');
       final response = await http.post(
@@ -305,7 +311,7 @@ class AuthProvider extends ChangeNotifier {
           // Update the user object
           final userJson = responseData['data']['user'];
           final newUserJsonString = json.encode(userJson);
-          
+
           // Only update if data changed
           if (_lastUserJsonString != newUserJsonString) {
             final updatedUser = User.fromJson(userJson);
@@ -314,7 +320,7 @@ class AuthProvider extends ChangeNotifier {
               _lastUserJsonString = newUserJsonString;
             });
           }
-          
+
           return true;
         } else {
           _error = responseData['message'] ?? 'Failed to update profile';
@@ -328,7 +334,7 @@ class AuthProvider extends ChangeNotifier {
           if (errors is Map && errors.isNotEmpty) {
             final firstErrorField = errors.keys.first;
             final firstErrorMessages = errors[firstErrorField];
-            
+
             if (firstErrorMessages is List && firstErrorMessages.isNotEmpty) {
               _error = 'Validation error: ${firstErrorMessages.first}';
             } else {
@@ -378,14 +384,15 @@ class AuthProvider extends ChangeNotifier {
 
     if (isLoggedIn && _user == null) {
       _user = await _storageService.getUser();
-      
+
       // Cache the user JSON
       if (_user != null) {
         _lastUserJsonString = jsonEncode(_user!.toJson());
       }
-      
+
       _token = await _storageService.getAccessToken();
-      lastProfileFetchTime = DateTime.now(); // Set fetch time when retrieving user
+      lastProfileFetchTime =
+          DateTime.now(); // Set fetch time when retrieving user
       notifyListeners();
     }
 

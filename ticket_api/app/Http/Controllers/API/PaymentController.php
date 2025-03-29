@@ -6,21 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Booking;
 use App\Services\PaymentService;
+use App\Services\TicketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
     protected $paymentService;
+    protected $ticketService;
 
     /**
      * Create a new controller instance.
      *
      * @param PaymentService $paymentService
+     * @param TicketService $ticketService
      */
-    public function __construct(PaymentService $paymentService)
+    public function __construct(PaymentService $paymentService, TicketService $ticketService)
     {
         $this->paymentService = $paymentService;
+        $this->ticketService = $ticketService;
     }
 
     /**
@@ -34,9 +38,20 @@ class PaymentController extends Controller
         try {
             Log::info('Payment notification received', $request->all());
 
+            // Validate that the request came from Midtrans
+            $this->validateMidtransNotification($request);
+
             $result = $this->paymentService->handlePaymentNotification($request->all());
 
             if ($result['success']) {
+                // If payment is successful and booking is confirmed, generate tickets
+                if (isset($result['booking_status']) && $result['booking_status'] === 'CONFIRMED') {
+                    $booking = Booking::where('booking_code', $result['booking_code'] ?? '')->first();
+                    if ($booking) {
+                        $this->ticketService->generateTicketsForBooking($booking);
+                    }
+                }
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Notification processed successfully',
@@ -58,6 +73,24 @@ class PaymentController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Validate that the notification came from Midtrans.
+     *
+     * @param Request $request
+     * @return bool
+     * @throws \Exception
+     */
+    protected function validateMidtransNotification(Request $request)
+    {
+        // For production, you would validate the Midtrans signature
+        // This is just a simplified example
+        if (!$request->has('transaction_id') || !$request->has('order_id')) {
+            throw new \Exception('Invalid Midtrans notification: Missing required fields');
+        }
+
+        return true;
     }
 
     /**
@@ -122,6 +155,141 @@ class PaymentController extends Controller
                 'status' => $status,
                 'booking' => $booking,
             ],
+        ]);
+    }
+
+    /**
+     * Payment status page for redirect from payment gateways.
+     *
+     * @param Request $request
+     * @param string $paymentId
+     * @return \Illuminate\Http\Response
+     */
+    public function paymentStatusPage(Request $request, $paymentId)
+    {
+        $payment = Payment::findOrFail($paymentId);
+        $booking = $payment->booking;
+
+        // Refresh payment status from Midtrans
+        $status = $this->paymentService->checkPaymentStatus($payment);
+
+        return view('payment.status', [
+            'payment' => $payment,
+            'booking' => $booking,
+            'status' => $status
+        ]);
+    }
+
+    /**
+     * Finish redirect URL for Midtrans.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function finish(Request $request)
+    {
+        $orderId = $request->get('order_id');
+        $transactionStatus = $request->get('transaction_status');
+        $fraudStatus = $request->get('fraud_status');
+
+        Log::info('Midtrans finish redirect', $request->all());
+
+        // Extract booking code from order_id (ORDER-BOOKING123-123456)
+        $bookingCode = '';
+        if (preg_match('/ORDER-(.*)-\d+/', $orderId, $matches)) {
+            $bookingCode = $matches[1];
+        }
+
+        $booking = Booking::where('booking_code', $bookingCode)->first();
+
+        if (!$booking) {
+            return view('payment.error', [
+                'message' => 'Booking not found'
+            ]);
+        }
+
+        // Get the latest payment
+        $payment = $booking->payments()->latest()->first();
+
+        if (!$payment) {
+            return view('payment.error', [
+                'message' => 'Payment not found'
+            ]);
+        }
+
+        // Update payment status if needed
+        $status = $this->paymentService->checkPaymentStatus($payment);
+
+        if ($transactionStatus == 'capture' || $transactionStatus == 'settlement') {
+            // Successful payment
+            return view('payment.success', [
+                'booking' => $booking,
+                'payment' => $payment
+            ]);
+        } elseif ($transactionStatus == 'pending') {
+            // Pending payment
+            return view('payment.pending', [
+                'booking' => $booking,
+                'payment' => $payment
+            ]);
+        } else {
+            // Failed payment
+            return view('payment.failed', [
+                'booking' => $booking,
+                'payment' => $payment,
+                'status' => $transactionStatus
+            ]);
+        }
+    }
+
+    /**
+     * Unfinish redirect URL for Midtrans.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function unfinish(Request $request)
+    {
+        Log::info('Midtrans unfinish redirect', $request->all());
+
+        $orderId = $request->get('order_id');
+
+        // Extract booking code from order_id
+        $bookingCode = '';
+        if (preg_match('/ORDER-(.*)-\d+/', $orderId, $matches)) {
+            $bookingCode = $matches[1];
+        }
+
+        $booking = Booking::where('booking_code', $bookingCode)->first();
+
+        if (!$booking) {
+            return view('payment.error', [
+                'message' => 'Booking not found'
+            ]);
+        }
+
+        // Get the latest payment
+        $payment = $booking->payments()->latest()->first();
+
+        return view('payment.unfinished', [
+            'booking' => $booking,
+            'payment' => $payment
+        ]);
+    }
+
+    /**
+     * Error redirect URL for Midtrans.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function error(Request $request)
+    {
+        Log::info('Midtrans error redirect', $request->all());
+
+        return view('payment.error', [
+            'message' => 'Payment error',
+            'details' => $request->all()
         ]);
     }
 
@@ -200,6 +368,11 @@ class PaymentController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            Log::error('Refund request failed', [
+                'booking_id' => $booking->id,
+                'error' => $e->getMessage()
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to request refund',

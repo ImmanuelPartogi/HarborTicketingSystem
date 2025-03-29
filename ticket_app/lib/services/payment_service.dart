@@ -1,4 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+
 import '../models/payment_model.dart';
+import '../config/api_config.dart';
 import 'api_service.dart';
 
 class PaymentService {
@@ -9,62 +16,124 @@ class PaymentService {
   Future<Payment> createPayment({
     required int bookingId,
     required String paymentMethod,
-    required String paymentType,
+    required String paymentChannel,
   }) async {
     try {
-      final response = await _apiService.createPayment(
-        bookingId,
-        paymentMethod,
-        paymentType,
+      final response = await _apiService.post(
+        ApiConfig.bookings + '/$bookingId/pay',
+        body: {
+          'payment_method': paymentMethod.toUpperCase(),
+          'payment_channel': paymentChannel.toUpperCase(),
+        },
+        bypassThrottling: true, // Payment requests should not be throttled
       );
       
-      return Payment.fromJson(response['data']);
+      if (response['success'] == true && response['data'] != null) {
+        if (response['data']['payment'] != null) {
+          final payment = Payment.fromJson(response['data']['payment']);
+          
+          // Check if we need to open a payment URL
+          final paymentUrl = response['data']['payment_url'];
+          if (paymentUrl != null && paymentUrl.toString().isNotEmpty) {
+            await openPaymentUrl(paymentUrl.toString());
+          }
+          
+          return payment;
+        }
+      }
+      
+      throw Exception('Invalid payment response format');
     } catch (e) {
+      debugPrint('Error creating payment: $e');
       throw Exception('Failed to create payment: ${e.toString()}');
     }
   }
 
-  Future<Payment> getPaymentStatus(int id) async {
+  Future<bool> openPaymentUrl(String url) async {
     try {
-      final response = await _apiService.getPaymentStatus(id);
-      return Payment.fromJson(response['data']);
+      if (await canLaunch(url)) {
+        return await launch(
+          url,
+          forceSafariVC: true,
+          forceWebView: false,
+          enableJavaScript: true,
+        );
+      } else {
+        debugPrint('Could not launch URL: $url');
+        return false;
+      }
     } catch (e) {
-      throw Exception('Failed to get payment status: ${e.toString()}');
-    }
-  }
-
-  // Method to check if a payment needs follow-up
-  Future<bool> checkPaymentStatus(int id) async {
-    try {
-      final payment = await getPaymentStatus(id);
-      
-      // If payment is completed, return true
-      return payment.isCompleted;
-    } catch (e) {
+      debugPrint('Error launching payment URL: $e');
       return false;
     }
   }
 
-  // Get available payment methods
+  Future<bool> checkPaymentStatus(int paymentId) async {
+    try {
+      final response = await _apiService.get(
+        ApiConfig.bookings + '/payment-status',
+        queryParams: {'payment_id': paymentId.toString()},
+      );
+      
+      if (response['success'] == true && response['data'] != null) {
+        final status = response['data']['status'];
+        return status == 'SUCCESS'; // Return true if payment is successful
+      }
+      
+      return false;
+    } catch (e) {
+      debugPrint('Error checking payment status: $e');
+      return false;
+    }
+  }
+
+  // Get available payment methods with proper configuration for Midtrans
   List<Map<String, dynamic>> getAvailablePaymentMethods() {
     return [
+      // Virtual Account methods
+      {
+        'id': 'bca',
+        'name': 'BCA Virtual Account',
+        'type': 'virtual_account',
+        'icon': 'assets/images/payment_methods/bca.png',
+      },
       {
         'id': 'bni',
-        'name': 'BNI',
-        'type': 'bank_transfer',
+        'name': 'BNI Virtual Account',
+        'type': 'virtual_account',
         'icon': 'assets/images/payment_methods/bni.png',
       },
       {
         'id': 'bri',
-        'name': 'BRI',
-        'type': 'bank_transfer',
+        'name': 'BRI Virtual Account',
+        'type': 'virtual_account',
         'icon': 'assets/images/payment_methods/bri.png',
       },
       {
         'id': 'mandiri',
-        'name': 'Mandiri',
-        'type': 'bank_transfer',
+        'name': 'Mandiri Bill Payment',
+        'type': 'virtual_account',
         'icon': 'assets/images/payment_methods/mandiri.png',
+      },
+      {
+        'id': 'permata',
+        'name': 'Permata Virtual Account',
+        'type': 'virtual_account',
+        'icon': 'assets/images/payment_methods/permata.png',
+      },
+      
+      // E-Wallet methods
+      {
+        'id': 'gopay',
+        'name': 'GoPay',
+        'type': 'e_wallet',
+        'icon': 'assets/images/payment_methods/gopay.png',
+      },
+      {
+        'id': 'shopeepay',
+        'name': 'ShopeePay',
+        'type': 'e_wallet',
+        'icon': 'assets/images/payment_methods/shopeepay.png',
       },
       {
         'id': 'dana',
@@ -87,115 +156,155 @@ class PaymentService {
     return methods.where((method) => method['type'] == type).toList();
   }
 
-  // Get payment instructions based on method
+  // Get payment instructions based on method and channel
   Map<String, String> getPaymentInstructions(String paymentMethod, String paymentType) {
-    switch (paymentType) {
-      case 'bank_transfer':
-        return getBankTransferInstructions(paymentMethod);
-      case 'e_wallet':
-        return getEWalletInstructions(paymentMethod);
-      case 'virtual_account':
-        return getVirtualAccountInstructions(paymentMethod);
-      default:
-        return {'title': 'Payment Instructions', 'steps': 'Follow the instructions on the payment page.'};
+    if (paymentType == 'virtual_account') {
+      return getVirtualAccountInstructions(paymentMethod);
+    } else if (paymentType == 'e_wallet') {
+      return getEWalletInstructions(paymentMethod);
+    } else {
+      return {'title': 'Payment Instructions', 'steps': 'Follow the instructions on the payment page.'};
     }
   }
 
-  Map<String, String> getBankTransferInstructions(String paymentMethod) {
-    switch (paymentMethod.toLowerCase()) {
+  Map<String, String> getVirtualAccountInstructions(String bank) {
+    switch (bank.toLowerCase()) {
+      case 'bca':
+        return {
+          'title': 'BCA Virtual Account Payment Instructions',
+          'steps': '''
+1. Login to your BCA Mobile Banking app or Internet Banking.
+2. Choose "Transfer" > "Virtual Account".
+3. Enter BCA Virtual Account number as shown above.
+4. Confirm the payment details and total amount to be paid.
+5. Enter your PIN or password to authorize the payment.
+6. Save your payment receipt as proof of transaction.
+'''
+        };
       case 'bni':
         return {
-          'title': 'BNI Bank Transfer Instructions',
+          'title': 'BNI Virtual Account Payment Instructions',
           'steps': '''
-1. Log in to BNI Mobile Banking.
-2. Select "Transfer".
-3. Enter the account number provided.
-4. Enter the exact amount as shown.
-5. Confirm your payment.
+1. Login to your BNI Mobile Banking app or Internet Banking.
+2. Choose "Transfer" > "Virtual Account".
+3. Enter BNI Virtual Account number as shown above.
+4. Confirm the payment details and total amount to be paid.
+5. Enter your PIN or password to authorize the payment.
+6. Save your payment receipt as proof of transaction.
 '''
         };
       case 'bri':
         return {
-          'title': 'BRI Bank Transfer Instructions',
+          'title': 'BRI Virtual Account Payment Instructions',
           'steps': '''
-1. Log in to BRI Mobile Banking.
-2. Select "Transfer".
-3. Enter the account number provided.
-4. Enter the exact amount as shown.
-5. Confirm your payment.
+1. Login to your BRI Mobile Banking app or Internet Banking.
+2. Choose "Transfer" > "Virtual Account".
+3. Enter BRI Virtual Account number as shown above.
+4. Confirm the payment details and total amount to be paid.
+5. Enter your PIN or password to authorize the payment.
+6. Save your payment receipt as proof of transaction.
 '''
         };
       case 'mandiri':
         return {
-          'title': 'Mandiri Bank Transfer Instructions',
+          'title': 'Mandiri Bill Payment Instructions',
           'steps': '''
-1. Log in to Mandiri Mobile Banking.
-2. Select "Transfer".
-3. Enter the account number provided.
-4. Enter the exact amount as shown.
-5. Confirm your payment.
+1. Login to your Mandiri Mobile Banking app or Internet Banking.
+2. Choose "Bill Payment" > "Multi Payment".
+3. Select "Ferry Company" as the biller.
+4. Enter your payment code as shown above.
+5. Confirm the payment details and total amount to be paid.
+6. Enter your PIN or password to authorize the payment.
+7. Save your payment receipt as proof of transaction.
+'''
+        };
+      case 'permata':
+        return {
+          'title': 'Permata Virtual Account Payment Instructions',
+          'steps': '''
+1. Login to your Permata Mobile Banking app or Internet Banking.
+2. Choose "Transfer" > "Virtual Account".
+3. Enter Permata Virtual Account number as shown above.
+4. Confirm the payment details and total amount to be paid.
+5. Enter your PIN or password to authorize the payment.
+6. Save your payment receipt as proof of transaction.
 '''
         };
       default:
         return {
-          'title': 'Bank Transfer Instructions',
+          'title': 'Virtual Account Payment Instructions',
           'steps': '''
-1. Log in to your mobile banking app.
-2. Select "Transfer".
-3. Enter the account number provided.
-4. Enter the exact amount as shown.
-5. Confirm your payment.
+1. Login to your mobile banking app or internet banking.
+2. Choose "Transfer" > "Virtual Account" or similar option.
+3. Enter the Virtual Account number as shown above.
+4. Confirm the payment details and total amount to be paid.
+5. Complete the transaction by following your bank's security procedures.
+6. Save your payment receipt as proof of transaction.
 '''
         };
     }
   }
 
-  Map<String, String> getEWalletInstructions(String paymentMethod) {
-    switch (paymentMethod.toLowerCase()) {
+  Map<String, String> getEWalletInstructions(String wallet) {
+    switch (wallet.toLowerCase()) {
+      case 'gopay':
+        return {
+          'title': 'GoPay Payment Instructions',
+          'steps': '''
+1. Tap the "Pay Now" button below.
+2. You'll be redirected to the GoPay app or a QR code page.
+3. If using the app, confirm the payment details and complete the payment.
+4. If using QR code, open your GoPay app, tap "Pay", and scan the QR code.
+5. Enter your PIN to authorize the payment.
+6. Wait for confirmation, and you'll be redirected back to this app.
+'''
+        };
+      case 'shopeepay':
+        return {
+          'title': 'ShopeePay Payment Instructions',
+          'steps': '''
+1. Tap the "Pay Now" button below.
+2. You'll be redirected to the Shopee app.
+3. Confirm the payment details in the Shopee app.
+4. Enter your PIN to authorize the payment.
+5. Wait for confirmation, and you'll be redirected back to this app.
+'''
+        };
       case 'dana':
         return {
           'title': 'DANA Payment Instructions',
           'steps': '''
-1. Open your DANA app.
-2. Scan the QR code or click the payment link.
-3. Enter the exact amount as shown.
-4. Confirm your payment.
+1. Tap the "Pay Now" button below.
+2. You'll be redirected to the DANA app or website.
+3. Login to your DANA account if needed.
+4. Confirm the payment details and complete the payment.
+5. Enter your PIN to authorize the payment.
+6. Wait for confirmation, and you'll be redirected back to this app.
 '''
         };
       case 'ovo':
         return {
           'title': 'OVO Payment Instructions',
           'steps': '''
-1. Open your OVO app.
-2. Scan the QR code or click the payment link.
-3. Enter the exact amount as shown.
-4. Confirm your payment.
+1. Tap the "Pay Now" button below.
+2. You'll be redirected to the OVO app or a QR code page.
+3. If using the app, confirm the payment details and complete the payment.
+4. If using QR code, open your OVO app, tap "Scan", and scan the QR code.
+5. Enter your PIN to authorize the payment.
+6. Wait for confirmation, and you'll be redirected back to this app.
 '''
         };
       default:
         return {
-          'title': 'E-Wallet Instructions',
+          'title': 'E-Wallet Payment Instructions',
           'steps': '''
-1. Open your e-wallet app.
-2. Scan the QR code or click the payment link.
-3. Enter the exact amount as shown.
-4. Confirm your payment.
+1. Tap the "Pay Now" button below.
+2. You'll be redirected to your e-wallet app or website.
+3. Login to your account if needed.
+4. Confirm the payment details and complete the payment.
+5. Wait for confirmation, and you'll be redirected back to this app.
 '''
         };
     }
-  }
-
-  Map<String, String> getVirtualAccountInstructions(String paymentMethod) {
-    return {
-      'title': 'Virtual Account Instructions',
-      'steps': '''
-1. Note your Virtual Account number.
-2. Log in to your mobile banking app.
-3. Select "Virtual Account Payment" or similar option.
-4. Enter the Virtual Account number provided.
-5. Confirm the payment details.
-6. Complete the payment.
-'''
-    };
   }
 }
