@@ -176,6 +176,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'string|max:255',
+            'email' => 'email|max:255|unique:users,email,' . $request->user()->id,  // Added email field
             'phone' => 'string|max:20|unique:users,phone,' . $request->user()->id,
             'address' => 'nullable|string',
             'id_number' => 'nullable|string|max:30',

@@ -8,6 +8,7 @@ use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class ProfileController extends Controller
 {
@@ -30,50 +31,66 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update user profile.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function updateProfile(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            'phone' => 'sometimes|required|string|max:20|unique:users,phone,' . $request->user()->id,
-            'address' => 'nullable|string',
-            'id_number' => 'nullable|string|max:30',
-            'id_type' => 'nullable|in:KTP,SIM,PASPOR',
-            'dob' => 'nullable|date_format:Y-m-d',
-            'gender' => 'nullable|in:MALE,FEMALE',
-        ]);
+ * Update user profile.
+ *
+ * @param Request $request
+ * @return \Illuminate\Http\JsonResponse
+ */
+public function updateProfile(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'name' => 'sometimes|required|string|max:255',
+        'email' => 'sometimes|required|email|max:255|unique:users,email,' . $request->user()->id,  // Added email field
+        'phone' => 'sometimes|required|string|max:20|unique:users,phone,' . $request->user()->id,
+        'address' => 'nullable|string',
+        'id_number' => 'nullable|string|max:30',
+        'id_type' => 'nullable|in:KTP,SIM,PASPOR',
+        'dob' => 'nullable|date_format:Y-m-d',
+        'gender' => 'nullable|in:MALE,FEMALE',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $user = $request->user();
-            $user->update($request->all());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Profile updated successfully',
-                'data' => [
-                    'user' => $user,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update profile',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation error',
+            'errors' => $validator->errors()
+        ], 422);
     }
+
+    try {
+        $user = $request->user();
+
+        // Check if we need to handle email change specially
+        $emailChanged = isset($request->email) && $request->email !== $user->email;
+
+        // Update user data
+        $user->update($request->all());
+
+        // Optional: Log email change or trigger email verification if needed
+        if ($emailChanged) {
+            // Log change
+            Log::info("User {$user->id} changed email from {$user->getOriginal('email')} to {$user->email}");
+
+            // Here you could add email verification logic if needed
+            // For example: $user->email_verified_at = null; $user->save();
+            // And send verification email: Mail::to($user->email)->send(new VerifyEmail($user));
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'data' => [
+                'user' => $user,
+            ],
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update profile',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
     /**
      * Change user password.

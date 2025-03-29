@@ -9,7 +9,7 @@ import 'storage_service.dart';
 class ApiService {
   final StorageService _storageService;
   final http.Client _client;
-  
+
   // Track request time untuk throttling
   final Map<String, DateTime> _lastRequestTime = {};
   final int _minRequestIntervalSeconds = 30; // 30 detik
@@ -40,13 +40,40 @@ class ApiService {
     if (_lastRequestTime.containsKey(endpoint)) {
       final lastTime = _lastRequestTime[endpoint]!;
       final difference = DateTime.now().difference(lastTime).inSeconds;
-      
+
       if (difference < _minRequestIntervalSeconds) {
-        debugPrint('THROTTLING: Skipping request to $endpoint - last request was $difference seconds ago');
+        debugPrint(
+          'THROTTLING: Request to $endpoint - last request was $difference seconds ago',
+        );
         return false;
       }
     }
     return true;
+  }
+
+  Future<dynamic> _scheduleDelayedRequest(
+    String endpoint,
+    Future<dynamic> Function() requestFunc,
+  ) async {
+    if (!_canMakeRequest(endpoint)) {
+      final lastTime = _lastRequestTime[endpoint]!;
+      final difference = DateTime.now().difference(lastTime).inSeconds;
+      final delaySeconds =
+          _minRequestIntervalSeconds - difference + 1; // Add 1 second buffer
+
+      debugPrint(
+        'Scheduling delayed request to $endpoint in $delaySeconds seconds',
+      );
+
+      // Return a future that will complete after the delay
+      return Future.delayed(
+        Duration(seconds: delaySeconds),
+        () => requestFunc(), // Call the original request function after delay
+      );
+    }
+
+    // Execute request immediately if not throttled
+    return requestFunc();
   }
 
   Future<dynamic> get(
@@ -56,34 +83,39 @@ class ApiService {
     bool bypassThrottling = false,
   }) async {
     try {
-      // Throttling check
-      if (!bypassThrottling && !_canMakeRequest(endpoint)) {
-        throw Exception('Request throttled. Please try again later.');
+      if (!bypassThrottling) {
+        // Use the delayed request pattern
+        return _scheduleDelayedRequest(
+          endpoint,
+          () => _executeGetRequest(endpoint, requireAuth, queryParams),
+        );
       }
-      
-      // Record request time
-      _lastRequestTime[endpoint] = DateTime.now();
-      
-      final headers = await _getHeaders(requireAuth: requireAuth);
 
-      // Properly construct the URI with the endpoint
-      final uri = _buildUri(endpoint, queryParams);
-
-      debugPrint('GET Request: ${uri.toString()}');
-      final response = await _client
-          .get(uri, headers: headers)
-          .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
-
-      return _handleResponse(response, endpoint: endpoint);
-    } on SocketException {
-      throw Exception('No Internet connection');
-    } on http.ClientException {
-      throw Exception('Connection error');
-    } on TimeoutException {
-      throw Exception('Connection timeout');
+      // Bypass throttling
+      return _executeGetRequest(endpoint, requireAuth, queryParams);
     } catch (e) {
+      // Error handling remains the same
       throw Exception('Unexpected error: $e');
     }
+  }
+
+  Future<dynamic> _executeGetRequest(
+    String endpoint,
+    bool requireAuth,
+    Map<String, dynamic>? queryParams,
+  ) async {
+    // Record request time
+    _lastRequestTime[endpoint] = DateTime.now();
+
+    final headers = await _getHeaders(requireAuth: requireAuth);
+    final uri = _buildUri(endpoint, queryParams);
+
+    debugPrint('GET Request: ${uri.toString()}');
+    final response = await _client
+        .get(uri, headers: headers)
+        .timeout(Duration(milliseconds: ApiConfig.connectTimeout));
+
+    return _handleResponse(response, endpoint: endpoint);
   }
 
   // Add this helper method for URI construction
@@ -122,10 +154,10 @@ class ApiService {
       if (!bypassThrottling && !_canMakeRequest(endpoint)) {
         throw Exception('Request throttled. Please try again later.');
       }
-      
+
       // Record request time
       _lastRequestTime[endpoint] = DateTime.now();
-      
+
       final headers = await _getHeaders(requireAuth: requireAuth);
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
@@ -161,10 +193,10 @@ class ApiService {
       if (!bypassThrottling && !_canMakeRequest(endpoint)) {
         throw Exception('Request throttled. Please try again later.');
       }
-      
+
       // Record request time
       _lastRequestTime[endpoint] = DateTime.now();
-      
+
       final headers = await _getHeaders(requireAuth: requireAuth);
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
@@ -200,10 +232,10 @@ class ApiService {
       if (!bypassThrottling && !_canMakeRequest(endpoint)) {
         throw Exception('Request throttled. Please try again later.');
       }
-      
+
       // Record request time
       _lastRequestTime[endpoint] = DateTime.now();
-      
+
       final headers = await _getHeaders(requireAuth: requireAuth);
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
@@ -233,10 +265,10 @@ class ApiService {
       if (!bypassThrottling && !_canMakeRequest(endpoint)) {
         throw Exception('Request throttled. Please try again later.');
       }
-      
+
       // Record request time
       _lastRequestTime[endpoint] = DateTime.now();
-      
+
       final headers = await _getHeaders(requireAuth: requireAuth);
       final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
 
@@ -346,8 +378,8 @@ class ApiService {
 
   Future<dynamic> register(Map<String, dynamic> userData) {
     return post(
-      ApiConfig.register, 
-      body: userData, 
+      ApiConfig.register,
+      body: userData,
       requireAuth: false,
       bypassThrottling: true, // Bypass throttling for registration
     );
@@ -385,7 +417,7 @@ class ApiService {
 
   Future<dynamic> updateProfile(Map<String, dynamic> profileData) {
     return put(
-      ApiConfig.updateProfile, 
+      ApiConfig.updateProfile,
       body: profileData,
       bypassThrottling: true, // Bypass throttling for important user actions
     );
@@ -421,7 +453,7 @@ class ApiService {
   // Booking endpoints
   Future<dynamic> createBooking(Map<String, dynamic> bookingData) {
     return post(
-      ApiConfig.bookings, 
+      ApiConfig.bookings,
       body: bookingData,
       bypassThrottling: true, // Bypass throttling for booking creation
     );
@@ -500,7 +532,7 @@ class ApiService {
       bypassThrottling: true, // Bypass throttling for ticket generation
     );
   }
-  
+
   // Clear throttling data - call on logout
   void clearThrottlingData() {
     _lastRequestTime.clear();

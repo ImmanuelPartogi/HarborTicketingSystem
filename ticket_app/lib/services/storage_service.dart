@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import 'package:flutter/foundation.dart';
 
 class StorageService {
   final SharedPreferences _prefs;
@@ -55,11 +56,18 @@ class StorageService {
   }
 
   Future<User?> getUser() async {
-    final userJson = _prefs.getString(_userKey);
-    if (userJson == null) {
+    try {
+      final userString = _prefs.getString(_userKey);
+      if (userString == null) return null;
+      
+      // REMOVED: Debug printing of user JSON that caused loops
+      
+      final userJson = json.decode(userString);
+      return User.fromJson(userJson);
+    } catch (e) {
+      debugPrint('Error getting user from storage: $e');
       return null;
     }
-    return User.fromJson(jsonDecode(userJson));
   }
 
   // Temporary data for registration/verification flow

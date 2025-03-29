@@ -57,6 +57,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(functi
     // User Profile
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/profile/email', [ProfileController::class, 'updateEmail']);   
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
