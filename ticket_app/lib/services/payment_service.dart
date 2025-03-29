@@ -14,35 +14,40 @@ class PaymentService {
   PaymentService(this._apiService);
 
   Future<Payment> createPayment({
-    required int bookingId,
+    required dynamic bookingIdentifier,
     required String paymentMethod,
     required String paymentChannel,
   }) async {
     try {
-      final response = await _apiService.post(
-        ApiConfig.bookings + '/$bookingId/pay',
-        body: {
-          'payment_method': paymentMethod.toUpperCase(),
-          'payment_channel': paymentChannel.toUpperCase(),
-        },
-        bypassThrottling: true, // Payment requests should not be throttled
+      print('Creating payment for booking: $bookingIdentifier');
+
+      // Convert payment method to uppercase
+      final upperPaymentMethod = paymentMethod.toUpperCase();
+
+      final response = await _apiService.processPayment(
+        bookingIdentifier,
+        upperPaymentMethod, // Pass uppercase version
+        paymentChannel,
       );
-      
-      if (response['success'] == true && response['data'] != null) {
-        if (response['data']['payment'] != null) {
-          final payment = Payment.fromJson(response['data']['payment']);
-          
-          // Check if we need to open a payment URL
-          final paymentUrl = response['data']['payment_url'];
-          if (paymentUrl != null && paymentUrl.toString().isNotEmpty) {
-            await openPaymentUrl(paymentUrl.toString());
-          }
-          
-          return payment;
-        }
+
+      // Proses respons seperti biasa
+      Payment payment;
+      if (response.containsKey('data') &&
+          response['data'].containsKey('payment')) {
+        payment = Payment.fromJson(response['data']['payment']);
+      } else if (response.containsKey('data')) {
+        payment = Payment.fromJson(response['data']);
+      } else {
+        throw Exception('Invalid payment response format');
       }
-      
-      throw Exception('Invalid payment response format');
+
+      // Check if payment URL exists in response
+      final paymentUrl = response['data']?['payment_url'];
+      if (paymentUrl != null && paymentUrl.toString().isNotEmpty) {
+        await openPaymentUrl(paymentUrl.toString());
+      }
+
+      return payment;
     } catch (e) {
       debugPrint('Error creating payment: $e');
       throw Exception('Failed to create payment: ${e.toString()}');
@@ -74,12 +79,12 @@ class PaymentService {
         ApiConfig.bookings + '/payment-status',
         queryParams: {'payment_id': paymentId.toString()},
       );
-      
+
       if (response['success'] == true && response['data'] != null) {
         final status = response['data']['status'];
         return status == 'SUCCESS'; // Return true if payment is successful
       }
-      
+
       return false;
     } catch (e) {
       debugPrint('Error checking payment status: $e');
@@ -121,7 +126,7 @@ class PaymentService {
         'type': 'virtual_account',
         'icon': 'assets/images/payment_methods/permata.png',
       },
-      
+
       // E-Wallet methods
       {
         'id': 'gopay',
@@ -157,13 +162,19 @@ class PaymentService {
   }
 
   // Get payment instructions based on method and channel
-  Map<String, String> getPaymentInstructions(String paymentMethod, String paymentType) {
+  Map<String, String> getPaymentInstructions(
+    String paymentMethod,
+    String paymentType,
+  ) {
     if (paymentType == 'virtual_account') {
       return getVirtualAccountInstructions(paymentMethod);
     } else if (paymentType == 'e_wallet') {
       return getEWalletInstructions(paymentMethod);
     } else {
-      return {'title': 'Payment Instructions', 'steps': 'Follow the instructions on the payment page.'};
+      return {
+        'title': 'Payment Instructions',
+        'steps': 'Follow the instructions on the payment page.',
+      };
     }
   }
 
@@ -179,7 +190,7 @@ class PaymentService {
 4. Confirm the payment details and total amount to be paid.
 5. Enter your PIN or password to authorize the payment.
 6. Save your payment receipt as proof of transaction.
-'''
+''',
         };
       case 'bni':
         return {
@@ -191,7 +202,7 @@ class PaymentService {
 4. Confirm the payment details and total amount to be paid.
 5. Enter your PIN or password to authorize the payment.
 6. Save your payment receipt as proof of transaction.
-'''
+''',
         };
       case 'bri':
         return {
@@ -203,7 +214,7 @@ class PaymentService {
 4. Confirm the payment details and total amount to be paid.
 5. Enter your PIN or password to authorize the payment.
 6. Save your payment receipt as proof of transaction.
-'''
+''',
         };
       case 'mandiri':
         return {
@@ -216,7 +227,7 @@ class PaymentService {
 5. Confirm the payment details and total amount to be paid.
 6. Enter your PIN or password to authorize the payment.
 7. Save your payment receipt as proof of transaction.
-'''
+''',
         };
       case 'permata':
         return {
@@ -228,7 +239,7 @@ class PaymentService {
 4. Confirm the payment details and total amount to be paid.
 5. Enter your PIN or password to authorize the payment.
 6. Save your payment receipt as proof of transaction.
-'''
+''',
         };
       default:
         return {
@@ -240,7 +251,7 @@ class PaymentService {
 4. Confirm the payment details and total amount to be paid.
 5. Complete the transaction by following your bank's security procedures.
 6. Save your payment receipt as proof of transaction.
-'''
+''',
         };
     }
   }
@@ -257,7 +268,7 @@ class PaymentService {
 4. If using QR code, open your GoPay app, tap "Pay", and scan the QR code.
 5. Enter your PIN to authorize the payment.
 6. Wait for confirmation, and you'll be redirected back to this app.
-'''
+''',
         };
       case 'shopeepay':
         return {
@@ -268,7 +279,7 @@ class PaymentService {
 3. Confirm the payment details in the Shopee app.
 4. Enter your PIN to authorize the payment.
 5. Wait for confirmation, and you'll be redirected back to this app.
-'''
+''',
         };
       case 'dana':
         return {
@@ -280,7 +291,7 @@ class PaymentService {
 4. Confirm the payment details and complete the payment.
 5. Enter your PIN to authorize the payment.
 6. Wait for confirmation, and you'll be redirected back to this app.
-'''
+''',
         };
       case 'ovo':
         return {
@@ -292,7 +303,7 @@ class PaymentService {
 4. If using QR code, open your OVO app, tap "Scan", and scan the QR code.
 5. Enter your PIN to authorize the payment.
 6. Wait for confirmation, and you'll be redirected back to this app.
-'''
+''',
         };
       default:
         return {
@@ -303,7 +314,7 @@ class PaymentService {
 3. Login to your account if needed.
 4. Confirm the payment details and complete the payment.
 5. Wait for confirmation, and you'll be redirected back to this app.
-'''
+''',
         };
     }
   }

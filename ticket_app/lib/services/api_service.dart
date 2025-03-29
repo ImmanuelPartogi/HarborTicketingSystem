@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../config/api_config.dart';
 import 'storage_service.dart';
+import 'dart:convert';
 
 class ApiService {
   final StorageService _storageService;
@@ -451,20 +452,38 @@ class ApiService {
   }
 
   // Booking endpoints
-  Future<dynamic> createBooking(Map<String, dynamic> bookingData) {
-    return post(
-      ApiConfig.bookings,
-      body: bookingData,
-      bypassThrottling: true, // Bypass throttling for booking creation
-    );
+  Future<dynamic> createBooking(Map<String, dynamic> bookingData) async {
+    try {
+      final response = await post('/api/v1/bookings', body: bookingData);
+
+      // Log the full response for debugging
+      print('API response for createBooking:');
+      print(jsonEncode(response));
+
+      return response;
+    } catch (e) {
+      print('API error in createBooking: $e');
+      throw Exception('Failed to create booking: $e');
+    }
   }
 
   Future<dynamic> getBookings({Map<String, dynamic>? queryParams}) {
     return get(ApiConfig.bookings, queryParams: queryParams);
   }
 
-  Future<dynamic> getBookingDetail(int id) {
-    return get(_replacePathParams(ApiConfig.bookingDetail, {'id': id}));
+  Future<dynamic> getBookingDetail(dynamic bookingIdentifier) async {
+    // Ubah dari id numerik menjadi booking_code
+    try {
+      print('Fetching booking details for: $bookingIdentifier');
+
+      // Gunakan identifier (bisa ID atau booking_code) dalam URL
+      final response = await get('/api/v1/bookings/$bookingIdentifier');
+
+      return response;
+    } catch (e) {
+      print('API error in getBookingDetail: $e');
+      throw Exception('Failed to get booking details: $e');
+    }
   }
 
   Future<dynamic> cancelBooking(int id, {String? reason}) {
@@ -481,6 +500,52 @@ class ApiService {
       body: {'schedule_id': newScheduleId},
       bypassThrottling: true, // Bypass throttling for booking rescheduling
     );
+  }
+
+  Future<dynamic> getBookingByCode(String bookingCode) async {
+    if (bookingCode.isEmpty) {
+      throw Exception('Invalid booking code');
+    }
+
+    try {
+      final response = await get('/api/v1/bookings/code/$bookingCode');
+
+      // Log the full response for debugging
+      print('API response for getBookingByCode:');
+      print(jsonEncode(response));
+
+      return response;
+    } catch (e) {
+      print('API error in getBookingByCode: $e');
+      throw Exception('Failed to get booking by code: $e');
+    }
+  }
+
+  Future<dynamic> processPayment(
+    dynamic bookingIdentifier,
+    String paymentMethod,
+    String paymentChannel,
+  ) async {
+    try {
+      print('Creating payment for booking: $bookingIdentifier');
+
+      // Konversi ke UPPERCASE untuk memenuhi validasi Laravel
+      final upperPaymentMethod = paymentMethod.toUpperCase();
+
+      final response = await post(
+        '/api/v1/bookings/$bookingIdentifier/pay',
+        body: {
+          'payment_method': upperPaymentMethod, // Gunakan UPPERCASE
+          'payment_channel':
+              paymentChannel, // Tetap gunakan lowercase/asli untuk channel
+        },
+      );
+
+      return response;
+    } catch (e) {
+      print('API error in processPayment: $e');
+      throw Exception('Failed to process payment: $e');
+    }
   }
 
   // Payment endpoints

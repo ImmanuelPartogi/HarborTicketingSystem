@@ -38,13 +38,39 @@ class Booking {
     this.payment,
   });
 
-  // Tambahkan getter untuk bookingCode yang merujuk ke bookingNumber
-  // Ini akan membuat kode kompatibel dengan kedua konvensi penamaan
+  // Getter untuk kompatibilitas
   String get bookingCode => bookingNumber;
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     try {
-      // Helper functions untuk parsing data dengan aman
+      // Debug logs
+      print('Booking.fromJson received: ${json.keys.toList()}');
+      
+      // Normalize data structure based on API response format
+      Map<String, dynamic> bookingData = json;
+      
+      // Handle nested response from different API endpoints
+      if (json.containsKey('booking')) {
+        bookingData = json['booking'];
+        print('Found nested booking object');
+      } else if (json.containsKey('data') && json['data'] is Map) {
+        if (json['data'].containsKey('booking')) {
+          bookingData = json['data']['booking'];
+          print('Found deeply nested booking object in data');
+        } else {
+          bookingData = json['data'];
+          print('Using data object directly');
+        }
+      }
+      
+      // Log resolved booking data
+      print('Processing booking data with keys: ${bookingData.keys.toList()}');
+      print('ID field present: ${bookingData.containsKey('id')}');
+      if (bookingData.containsKey('id')) {
+        print('ID value: ${bookingData['id']} (${bookingData['id'].runtimeType})');
+      }
+      
+      // Helper functions for safe parsing
       int parseInt(dynamic value, {int defaultValue = 0}) {
         if (value == null) return defaultValue;
         if (value is int) return value;
@@ -94,27 +120,34 @@ class Booking {
         }
       }
       
-      return Booking(
-        id: parseInt(json['id']),
-        userId: parseInt(json['user_id']),
-        scheduleId: parseInt(json['schedule_id']),
-        bookingNumber: parseString(json['booking_number']),
-        status: parseString(json['status'], defaultValue: 'pending'),
-        passengerCount: parseInt(json['passenger_count']),
-        totalAmount: parseDouble(json['total_amount']),
-        bookedAt: parseDateTime(json['booked_at']),
-        cancelledAt: parseNullableDateTime(json['cancelled_at']),
-        createdAt: parseDateTime(json['created_at']),
-        updatedAt: parseDateTime(json['updated_at']),
-        schedule: json['schedule'] != null ? ScheduleModel.fromJson(json['schedule']) : null,
-        tickets: json['tickets'] != null
-            ? List<Ticket>.from(json['tickets'].map((x) => Ticket.fromJson(x)))
+      // Create booking object with the normalized data
+      final booking = Booking(
+        id: parseInt(bookingData['id']),
+        userId: parseInt(bookingData['user_id']),
+        scheduleId: parseInt(bookingData['schedule_id']),
+        bookingNumber: parseString(bookingData['booking_code']),
+        status: parseString(bookingData['status'], defaultValue: 'pending'),
+        passengerCount: parseInt(bookingData['passenger_count']),
+        totalAmount: parseDouble(bookingData['total_amount']),
+        bookedAt: parseDateTime(bookingData['booked_at']),
+        cancelledAt: parseNullableDateTime(bookingData['cancelled_at']),
+        createdAt: parseDateTime(bookingData['created_at']),
+        updatedAt: parseDateTime(bookingData['updated_at']),
+        schedule: bookingData['schedule'] != null ? ScheduleModel.fromJson(bookingData['schedule']) : null,
+        tickets: bookingData['tickets'] != null
+            ? List<Ticket>.from(bookingData['tickets'].map((x) => Ticket.fromJson(x)))
             : null,
-        vehicles: json['vehicles'] != null
-            ? List<Vehicle>.from(json['vehicles'].map((x) => Vehicle.fromJson(x)))
+        vehicles: bookingData['vehicles'] != null
+            ? List<Vehicle>.from(bookingData['vehicles'].map((x) => Vehicle.fromJson(x)))
             : null,
-        payment: json['payment'] != null ? Payment.fromJson(json['payment']) : null,
+        payment: bookingData['payment'] != null ? Payment.fromJson(bookingData['payment']) : null,
       );
+      
+      // Log created booking object
+      print('Booking created successfully with ID: ${booking.id}');
+      print('Booking code: ${booking.bookingNumber}');
+      
+      return booking;
     } catch (e) {
       print('Error parsing booking: $e');
       print('JSON data: $json');
@@ -128,6 +161,7 @@ class Booking {
       'user_id': userId,
       'schedule_id': scheduleId,
       'booking_number': bookingNumber,
+      'booking_code': bookingNumber, // Include both for compatibility
       'status': status,
       'passenger_count': passengerCount,
       'total_amount': totalAmount,
@@ -142,6 +176,7 @@ class Booking {
     };
   }
 
+  // Getters untuk status (sudah ada sebelumnya)
   String get statusText {
     switch (status) {
       case 'pending':

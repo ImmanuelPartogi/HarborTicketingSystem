@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../services/booking_service.dart';
 import '../services/payment_service.dart';
 import '../services/storage_service.dart';
+import 'dart:convert';
 
 class BookingProvider extends ChangeNotifier {
   late ApiService _apiService;
@@ -168,11 +169,37 @@ class BookingProvider extends ChangeNotifier {
         vehicles: _pendingVehicles.isNotEmpty ? _pendingVehicles : null,
       );
 
-      // TAMBAHKAN: Log dan validasi
-      print('Booking created successfully with ID: ${_currentBooking!.id}');
-      print('Booking code: ${_currentBooking!.bookingCode}');
+      // TAMBAH: Debug log yang lengkap
+      print('Booking created successfully:');
+      print('  ID: ${_currentBooking!.id}');
+      print('  Code: ${_currentBooking!.bookingNumber}');
+      print('  Status: ${_currentBooking!.status}');
 
-      // Save passengers and vehicles for future use
+      // TAMBAH: Validasi ID booking
+      if (_currentBooking == null || _currentBooking!.id <= 0) {
+        print('WARNING: Created booking has invalid ID. Full booking data:');
+        print(jsonEncode(_currentBooking?.toJson()));
+
+        // Coba muat ulang detail booking jika booking code tersedia
+        if (_currentBooking != null &&
+            _currentBooking!.bookingNumber.isNotEmpty) {
+          try {
+            // Lakukan permintaan khusus ke API untuk mendapatkan ID dari booking_code
+            print(
+              'Trying to fetch booking details by booking code: ${_currentBooking!.bookingNumber}',
+            );
+
+            // Implementasi logika untuk mendapatkan ID berdasarkan booking_code
+            // Contoh:
+            // final bookingWithId = await _apiService.getBookingByCode(_currentBooking!.bookingNumber);
+            // _currentBooking = bookingWithId;
+          } catch (e) {
+            print('Failed to fetch booking by code: $e');
+          }
+        }
+      }
+
+      // Simpan data penumpang dan kendaraan untuk penggunaan di masa mendatang
       for (var passenger in _pendingPassengers) {
         if (passenger.containsKey('save_info') &&
             passenger['save_info'] == true) {
@@ -188,7 +215,9 @@ class BookingProvider extends ChangeNotifier {
 
       _isCreatingBooking = false;
       notifyListeners();
-      return true;
+
+      // Tambahkan pengecekan apakah booking ID valid sebelum mengembalikan true
+      return _currentBooking != null && _currentBooking!.id > 0;
     } catch (e) {
       _bookingError = 'Failed to create booking: ${e.toString()}';
       _isCreatingBooking = false;
@@ -208,23 +237,27 @@ class BookingProvider extends ChangeNotifier {
       return false;
     }
 
+    print('Processing payment for booking:');
+    print('  ID: ${_currentBooking!.id}');
+    print('  Code: ${_currentBooking!.bookingCode}');
+
     _isProcessingPayment = true;
     _paymentError = null;
     notifyListeners();
 
     try {
-      // Call the payment service to create a payment
-      await _paymentService.createPayment(
-        bookingId: _currentBooking!.id,
+      // PERUBAHAN UTAMA: Gunakan booking_code, bukan ID
+      final paymentResponse = await _paymentService.createPayment(
+        bookingIdentifier:
+            _currentBooking!.bookingCode, // Gunakan booking_code, bukan ID
         paymentMethod: paymentMethod,
         paymentChannel: paymentChannel,
       );
 
-      // Update current booking with payment info
-      if (_currentBooking != null) {
-        // Fetch the updated booking with payment details
-        await fetchBookingDetail(_currentBooking!.id);
-      }
+      // Refresh data booking setelah pembayaran
+      await fetchBookingDetail(
+        _currentBooking!.bookingCode,
+      ); // Gunakan booking_code
 
       _isProcessingPayment = false;
       notifyListeners();
@@ -255,13 +288,16 @@ class BookingProvider extends ChangeNotifier {
   }
 
   // Fetch booking detail
-  Future<void> fetchBookingDetail(int id) async {
+  Future<void> fetchBookingDetail(dynamic bookingIdentifier) async {
     _isLoadingBookingDetail = true;
     _bookingError = null;
     notifyListeners();
 
     try {
-      _currentBooking = await _bookingService.getBookingDetail(id);
+      // Ubah parameter dari ID menjadi booking_code atau ID
+      _currentBooking = await _bookingService.getBookingDetail(
+        bookingIdentifier,
+      );
       _isLoadingBookingDetail = false;
       notifyListeners();
     } catch (e) {

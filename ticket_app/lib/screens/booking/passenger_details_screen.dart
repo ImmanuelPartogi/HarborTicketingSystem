@@ -51,7 +51,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       _formKeys.add(GlobalKey<FormState>());
       _passengerData.add({});
       _savePassengerInfo.add(i == 0); // Default to save for first passenger
-      
+
       // Initialize controllers
       _nameControllers.add(TextEditingController());
       _idNumberControllers.add(TextEditingController());
@@ -70,7 +70,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
     // Load user data for the first passenger
     _loadUserData();
-    
+
     // Load saved passengers
     _loadSavedPassengers();
   }
@@ -104,7 +104,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     if (isoDate == null || isoDate.isEmpty) {
       return '';
     }
-    
+
     try {
       // Parse the ISO date
       final date = DateTime.parse(isoDate);
@@ -120,11 +120,11 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
   void _loadUserData() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.user;
-    
+
     if (user != null) {
       // Format date of birth
       final formattedDob = _formatDate(user.dateOfBirth);
-      
+
       // Only fill the first passenger with user data
       _nameControllers[0].text = user.name;
       _idNumberControllers[0].text = user.identityNumber ?? '';
@@ -132,12 +132,12 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       _phoneControllers[0].text = user.phone;
       _emailControllers[0].text = user.email;
       _addressControllers[0].text = user.address ?? '';
-      
+
       // Set dropdown values
       setState(() {
         _passengerData[0]['identity_type'] = _convertIdType(user.identityType);
         _passengerData[0]['gender'] = _convertGender(user.gender);
-        
+
         // Also save the data to the passenger data map for form submission
         _passengerData[0]['name'] = user.name;
         _passengerData[0]['identity_number'] = user.identityNumber ?? '';
@@ -208,21 +208,23 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     setState(() {
       // Format date of birth if needed
       final formattedDob = _formatDate(savedPassenger['date_of_birth']);
-      
+
       // Make a copy of savedPassenger to avoid modifying the original
       final updatedPassenger = {...savedPassenger};
       updatedPassenger['date_of_birth'] = formattedDob;
-      
+
       // Update passenger data map
       _passengerData[passengerIndex] = updatedPassenger;
-      
+
       // Update the controllers to reflect the saved data
       _nameControllers[passengerIndex].text = savedPassenger['name'] ?? '';
-      _idNumberControllers[passengerIndex].text = savedPassenger['identity_number'] ?? '';
+      _idNumberControllers[passengerIndex].text =
+          savedPassenger['identity_number'] ?? '';
       _dobControllers[passengerIndex].text = formattedDob;
       _phoneControllers[passengerIndex].text = savedPassenger['phone'] ?? '';
       _emailControllers[passengerIndex].text = savedPassenger['email'] ?? '';
-      _addressControllers[passengerIndex].text = savedPassenger['address'] ?? '';
+      _addressControllers[passengerIndex].text =
+          savedPassenger['address'] ?? '';
     });
 
     Navigator.pop(context); // Close the bottom sheet
@@ -346,10 +348,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       Navigator.pushNamed(
         context,
         AppRoutes.vehicleDetails,
-        arguments: {
-          'scheduleId': widget.scheduleId,
-          'passengerIds': <int>[],
-        },
+        arguments: {'scheduleId': widget.scheduleId, 'passengerIds': <int>[]},
       );
     } else {
       // Create booking directly if no vehicle
@@ -359,26 +358,30 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         });
 
         final success = await bookingProvider.createBooking();
+        if (success) {
+          final booking = bookingProvider.currentBooking;
 
-        if (success && mounted) {
-          final currentBooking = bookingProvider.currentBooking;
+          // TAMBAHKAN: Validasi
+          if (booking == null || booking.id <= 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Booking created but ID is invalid. Please try again.',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
 
+          // Lanjut ke layar pembayaran dengan ID yang benar
           Navigator.pushNamed(
             context,
             AppRoutes.payment,
             arguments: {
-              'bookingId': currentBooking!.id,
-              'totalAmount': currentBooking.totalAmount,
+              'bookingId': booking.id,
+              'totalAmount': booking.totalAmount,
             },
-          );
-        } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                bookingProvider.bookingError ?? 'Failed to create booking',
-              ),
-              backgroundColor: Colors.red,
-            ),
           );
         }
       } finally {

@@ -2,6 +2,7 @@ import '../models/booking_model.dart';
 import '../models/ticket_model.dart';
 import '../models/vehicle_model.dart';
 import 'api_service.dart';
+import 'dart:convert';
 
 class BookingService {
   final ApiService _apiService;
@@ -32,9 +33,21 @@ class BookingService {
         queryParams: queryParams.isNotEmpty ? queryParams : null,
       );
 
-      final List<dynamic> bookingsData = response['data'];
+      // Log response structure for debugging
+      print('Bookings fetch response: ${response.keys.toList()}');
+      
+      List<dynamic> bookingsData;
+      if (response.containsKey('data') && response['data'] is Map && response['data'].containsKey('bookings')) {
+        bookingsData = response['data']['bookings'];
+      } else if (response.containsKey('data') && response['data'] is List) {
+        bookingsData = response['data'];
+      } else {
+        bookingsData = [];
+      }
+      
       return bookingsData.map((json) => Booking.fromJson(json)).toList();
     } catch (e) {
+      print('Error fetching bookings: ${e.toString()}');
       throw Exception('Failed to fetch bookings: ${e.toString()}');
     }
   }
@@ -42,8 +55,22 @@ class BookingService {
   Future<Booking> getBookingDetail(int id) async {
     try {
       final response = await _apiService.getBookingDetail(id);
-      return Booking.fromJson(response['data']);
+      
+      // Log the complete response structure
+      print('Booking detail response: ${jsonEncode(response)}');
+      
+      // Extract the booking data from the response
+      if (response.containsKey('data') && response['data'] is Map) {
+        if (response['data'].containsKey('booking')) {
+          return Booking.fromJson(response['data']['booking']);
+        } else {
+          return Booking.fromJson(response['data']);
+        }
+      }
+      
+      return Booking.fromJson(response);
     } catch (e) {
+      print('Error fetching booking details: ${e.toString()}');
       throw Exception('Failed to fetch booking details: ${e.toString()}');
     }
   }
@@ -54,7 +81,7 @@ class BookingService {
     List<Map<String, dynamic>>? vehicles,
   }) async {
     try {
-      // Prepare data by mapping the field names to what the server expects
+      // Format passengers data
       final List<Map<String, dynamic>> formattedPassengers =
           passengers.map((p) {
             // Convert id_type to uppercase
@@ -108,7 +135,7 @@ class BookingService {
               switch (v['type']) {
                 case 'car':
                   apiVehicleType = 'CAR';
-                  break; // Use uppercase or whatever API expects
+                  break;
                 case 'motorcycle':
                   apiVehicleType = 'MOTORCYCLE';
                   break;
@@ -128,7 +155,6 @@ class BookingService {
                 'brand': v['brand'],
                 'model': v['model'],
                 'weight': v['weight'],
-                // Include any other required fields
               };
             }).toList();
       }
@@ -144,9 +170,46 @@ class BookingService {
         bookingData['vehicles'] = formattedVehicles;
       }
 
+      // Make API request
       final response = await _apiService.createBooking(bookingData);
-      return Booking.fromJson(response['data']);
+      
+      // Log the full response for debugging
+      print('Create booking full response: ${jsonEncode(response)}');
+      
+      // Extract booking data from the nested structure
+      Map<String, dynamic> extractedBookingData;
+      if (response.containsKey('data')) {
+        if (response['data'].containsKey('booking')) {
+          extractedBookingData = response['data']['booking'];
+        } else {
+          extractedBookingData = response['data'];
+        }
+      } else if (response.containsKey('booking')) {
+        extractedBookingData = response['booking'];
+      } else {
+        extractedBookingData = response;
+      }
+      
+      // If ID field is missing or zero, try to extract from booking_code
+      if ((!extractedBookingData.containsKey('id') || extractedBookingData['id'] == 0) && 
+          extractedBookingData.containsKey('booking_code')) {
+        print('ID field missing or zero, trying to find ID by booking_code');
+        // Additional logic to find booking ID from booking_code if needed
+        // This might require an additional API call
+      }
+      
+      // Create the booking object
+      final booking = Booking.fromJson(extractedBookingData);
+      
+      // Validate ID
+      if (booking.id <= 0) {
+        print('WARNING: Created booking has invalid ID: ${booking.id}');
+        print('Booking data: $extractedBookingData');
+      }
+      
+      return booking;
     } catch (e) {
+      print('Error creating booking: ${e.toString()}');
       throw Exception('Failed to create booking: ${e.toString()}');
     }
   }
@@ -154,7 +217,20 @@ class BookingService {
   Future<Booking> cancelBooking(int id, {String? reason}) async {
     try {
       final response = await _apiService.cancelBooking(id, reason: reason);
-      return Booking.fromJson(response['data']);
+      
+      // Extract booking data
+      Map<String, dynamic> bookingData;
+      if (response.containsKey('data') && response['data'] is Map) {
+        if (response['data'].containsKey('booking')) {
+          bookingData = response['data']['booking'];
+        } else {
+          bookingData = response['data'];
+        }
+      } else {
+        bookingData = response;
+      }
+      
+      return Booking.fromJson(bookingData);
     } catch (e) {
       throw Exception('Failed to cancel booking: ${e.toString()}');
     }
@@ -163,7 +239,20 @@ class BookingService {
   Future<Booking> rescheduleBooking(int id, int newScheduleId) async {
     try {
       final response = await _apiService.rescheduleBooking(id, newScheduleId);
-      return Booking.fromJson(response['data']);
+      
+      // Extract booking data
+      Map<String, dynamic> bookingData;
+      if (response.containsKey('data') && response['data'] is Map) {
+        if (response['data'].containsKey('booking')) {
+          bookingData = response['data']['booking'];
+        } else {
+          bookingData = response['data'];
+        }
+      } else {
+        bookingData = response;
+      }
+      
+      return Booking.fromJson(bookingData);
     } catch (e) {
       throw Exception('Failed to reschedule booking: ${e.toString()}');
     }
@@ -202,28 +291,5 @@ class BookingService {
     } catch (e) {
       throw Exception('Failed to fetch ticket details: ${e.toString()}');
     }
-  }
-
-  // Calculate total price for booking
-  double calculateTotalPrice({
-    required double basePrice,
-    required int passengerCount,
-    List<Map<String, String>>? vehicles,
-    double? discountPercentage,
-  }) {
-    double total = basePrice * passengerCount;
-
-    if (vehicles != null) {
-      for (var vehicle in vehicles) {
-        final price = double.tryParse(vehicle['price'] ?? '0') ?? 0;
-        total += price;
-      }
-    }
-
-    if (discountPercentage != null && discountPercentage > 0) {
-      total = total - (total * discountPercentage / 100);
-    }
-
-    return total;
   }
 }
