@@ -83,100 +83,54 @@ class BookingService {
     List<Map<String, dynamic>>? vehicles,
   }) async {
     try {
-      // Format passengers data
-      final List<Map<String, dynamic>> formattedPassengers =
-          passengers.map((p) {
-            // Convert id_type to uppercase
-            String apiIdType;
-            switch (p['identity_type']?.toLowerCase()) {
-              case 'ktp':
-                apiIdType = 'KTP';
-                break;
-              case 'sim':
-                apiIdType = 'SIM';
-                break;
-              case 'passport':
-                apiIdType = 'PASPOR';
-                break;
-              default:
-                apiIdType = 'KTP'; // Default value
-            }
+      // Validasi data penumpang
+      for (var i = 0; i < passengers.length; i++) {
+        var passenger = passengers[i];
 
-            // Convert gender to correct API format
-            String apiGender;
-            switch (p['gender']?.toLowerCase()) {
-              case 'm':
-                apiGender = 'MALE';
-                break;
-              case 'f':
-                apiGender = 'FEMALE';
-                break;
-              default:
-                apiGender = 'MALE'; // Default value
-            }
+        // Validasi ID Number
+        if (passenger['id_number'] == null ||
+            passenger['id_number'].toString().trim().isEmpty) {
+          throw Exception('ID Number is required for passenger ${i + 1}');
+        }
 
-            return {
-              'id_number': p['identity_number'],
-              'id_type': apiIdType,
-              'dob': p['date_of_birth'],
-              'gender': apiGender,
-              'name': p['name'],
-              'phone': p['phone'],
-              'email': p['email'],
-              'address': p['address'],
-            };
-          }).toList();
+        // Validasi Date of Birth
+        if (passenger['dob'] == null ||
+            passenger['dob'].toString().trim().isEmpty) {
+          throw Exception('Date of Birth is required for passenger ${i + 1}');
+        }
 
-      // Format vehicle data if it exists
-      List<Map<String, dynamic>>? formattedVehicles;
-      if (vehicles != null && vehicles.isNotEmpty) {
-        formattedVehicles =
-            vehicles.map((v) {
-              // Check what valid vehicle types your API accepts
-              String apiVehicleType;
-              switch (v['type']) {
-                case 'car':
-                  apiVehicleType = 'CAR';
-                  break;
-                case 'motorcycle':
-                  apiVehicleType = 'MOTORCYCLE';
-                  break;
-                case 'bus':
-                  apiVehicleType = 'BUS';
-                  break;
-                case 'truck':
-                  apiVehicleType = 'TRUCK';
-                  break;
-                default:
-                  apiVehicleType = 'CAR'; // Default value
-              }
-
-              return {
-                'type': apiVehicleType,
-                'license_plate': v['license_plate'],
-                'brand': v['brand'],
-                'model': v['model'],
-                'weight': v['weight'],
-              };
-            }).toList();
+        // Lakukan cleaning data
+        passengers[i] = {
+          'name': passenger['name'] ?? '',
+          'id_number': passenger['id_number'].toString().trim(),
+          'id_type': passenger['id_type'] ?? 'KTP',
+          'dob': passenger['dob'].toString().trim(),
+          'gender': passenger['gender'] ?? 'MALE',
+          'email': passenger['email'] ?? '',
+          'phone': passenger['phone'] ?? '',
+          'address': passenger['address'] ?? '',
+        };
       }
 
-      // Create the request body
+      // Format request data
       final Map<String, dynamic> bookingData = {
         'schedule_id': scheduleId,
         'booking_date': DateTime.now().toIso8601String().split('T')[0],
-        'passengers': formattedPassengers,
+        'passengers': passengers,
       };
 
-      if (formattedVehicles != null && formattedVehicles.isNotEmpty) {
-        bookingData['vehicles'] = formattedVehicles;
+      // Debug log: print request data
+      print('Booking request data: ${json.encode(bookingData)}');
+
+      if (vehicles != null && vehicles.isNotEmpty) {
+        bookingData['vehicles'] = vehicles;
       }
 
       // Make API request
       final response = await _apiService.createBooking(bookingData);
 
       // Log the full response for debugging
-      print('Create booking full response: ${jsonEncode(response)}');
+      print('Create booking full response: ${json.encode(response)}');
 
       // Extract booking data from the nested structure
       Map<String, dynamic> extractedBookingData;

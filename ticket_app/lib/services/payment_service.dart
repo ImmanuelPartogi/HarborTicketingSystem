@@ -13,85 +13,65 @@ class PaymentService {
 
   PaymentService(this._apiService);
 
-  Future<Payment> createPayment({
-    required dynamic bookingIdentifier,
+  Future<Map<String, dynamic>> createPayment({
+    required String bookingIdentifier,
     required String paymentMethod,
     required String paymentChannel,
   }) async {
+    // PERBAIKAN: Pastikan endpoint menggunakan booking code
+    print('Creating payment for booking: $bookingIdentifier');
+    print('Menunggu sebelum mencoba memproses pembayaran...');
+    await Future.delayed(Duration(seconds: 2));
+
     try {
-      print('Creating payment for booking: $bookingIdentifier');
-
-      // TAMBAHAN: Tambahkan delay dan validasi
-      if (bookingIdentifier == null ||
-          (bookingIdentifier is String && bookingIdentifier.isEmpty)) {
-        throw Exception('Invalid booking identifier provided');
-      }
-
-      // Convert payment method to uppercase
-      final upperPaymentMethod = paymentMethod.toUpperCase();
-
-      // TAMBAHAN: Tambahkan delay sebelum mencoba pembayaran
-      print('Menunggu sebelum mencoba memproses pembayaran...');
-      await Future.delayed(Duration(seconds: 1));
-
-      final response = await _apiService.processPayment(
-        bookingIdentifier,
-        upperPaymentMethod,
-        paymentChannel,
+      final response = await _apiService.post(
+        '/api/v1/bookings/$bookingIdentifier/pay',
+        body: {
+          'payment_method': paymentMethod,
+          'payment_channel': paymentChannel,
+        },
       );
 
-      // Proses respons seperti biasa
-      Payment payment;
-
-      // Validasi respons dengan pemeriksaan lebih ketat
-      if (response == null) {
-        throw Exception('Payment response is null');
-      }
-
-      if (response.containsKey('data') && response['data'] != null) {
-        Map<String, dynamic> paymentData;
-        if (response['data'].containsKey('payment')) {
-          paymentData = response['data']['payment'];
-        } else {
-          paymentData = response['data'];
-        }
-
-        payment = Payment.fromJson(paymentData);
-      } else if (response.containsKey('payment') &&
-          response['payment'] != null) {
-        payment = Payment.fromJson(response['payment']);
-      } else {
-        throw Exception(
-          'Invalid payment response format: ${json.encode(response)}',
-        );
-      }
-
-      // Check if payment URL exists in response
-      final paymentUrl = response['data']?['payment_url'];
-      if (paymentUrl != null && paymentUrl.toString().isNotEmpty) {
-        try {
-          await openPaymentUrl(paymentUrl.toString());
-        } catch (e) {
-          print('Error opening payment URL: $e');
-          // Continue with payment process even if URL opening fails
-        }
-      }
-
-      return payment;
+      return response;
     } catch (e) {
-      debugPrint('Error creating payment: $e');
+      print('Error processing payment, retrying in 2s (1/3)');
+      await Future.delayed(Duration(seconds: 2));
 
-      // TAMBAHAN: Error yang lebih jelas
-      String errorMessage = e.toString();
-      if (errorMessage.contains('Resource not found')) {
-        errorMessage =
-            'Booking tidak ditemukan. Mungkin ID atau kode booking tidak valid.';
-      } else if (errorMessage.contains('throttled')) {
-        errorMessage =
-            'Terlalu banyak permintaan. Harap tunggu beberapa saat sebelum mencoba lagi.';
+      try {
+        // Coba alternatif endpoint jika yang pertama gagal
+        print(
+          'Trying alternative endpoint: /api/v1/payments/booking/$bookingIdentifier',
+        );
+        final response = await _apiService.post(
+          '/api/v1/payments/booking/$bookingIdentifier',
+          body: {
+            'payment_method': paymentMethod,
+            'payment_channel': paymentChannel,
+          },
+        );
+
+        return response;
+      } catch (innerError) {
+        print('Error processing payment, retrying in 2s (2/3)');
+        await Future.delayed(Duration(seconds: 2));
+
+        try {
+          // Coba sekali lagi dengan endpoint orisinal
+          final response = await _apiService.post(
+            '/api/v1/bookings/$bookingIdentifier/pay',
+            body: {
+              'payment_method': paymentMethod,
+              'payment_channel': paymentChannel,
+            },
+            bypassThrottling: true,
+          );
+
+          return response;
+        } catch (finalError) {
+          print('Max retries exceeded for payment processing');
+          throw Exception('Unexpected error: $finalError');
+        }
       }
-
-      throw Exception('Gagal membuat pembayaran: $errorMessage');
     }
   }
 

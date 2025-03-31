@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 
 import '../../config/theme.dart';
 import '../../config/routes.dart';
@@ -62,18 +63,17 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       _addressControllers.add(TextEditingController());
     }
 
-    // Set schedule ID in the booking provider
-    final bookingProvider = Provider.of<BookingProvider>(
-      context,
-      listen: false,
-    );
-    bookingProvider.setScheduleId(widget.scheduleId);
-
     // Load user data for the first passenger
     _loadUserData();
 
-    // Bungkus dalam Future.microtask untuk menghindari setState() during build
+    // PERBAIKAN: Memindahkan setScheduleId ke dalam Future.microtask
+    // untuk menghindari notifyListeners() during build
     Future.microtask(() {
+      final bookingProvider = Provider.of<BookingProvider>(
+        context,
+        listen: false,
+      );
+      bookingProvider.setScheduleId(widget.scheduleId);
       _loadSavedPassengers();
     });
   }
@@ -126,11 +126,32 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
     if (user != null) {
       // Format date of birth
-      final formattedDob = _formatDate(user.dateOfBirth);
+      String formattedDob = _formatDate(user.dateOfBirth);
+
+      // Pastikan tanggal lahir tidak kosong
+      if (formattedDob.isEmpty) {
+        // Gunakan tanggal default jika kosong
+        formattedDob = '2000-01-01';
+        print(
+          'WARNING: Using default date of birth because user data is empty',
+        );
+      }
+
+      // Pastikan ID number tidak kosong
+      String idNumber = '';
+      if (user.identityNumber != null && user.identityNumber!.isNotEmpty) {
+        idNumber = user.identityNumber!;
+      } else {
+        // Gunakan nomor ponsel atau nilai lain sebagai ID number default
+        idNumber = user.phone.replaceAll('+', '').replaceAll(' ', '');
+        print(
+          'WARNING: Using phone number as ID number because user identity is empty',
+        );
+      }
 
       // Only fill the first passenger with user data
       _nameControllers[0].text = user.name;
-      _idNumberControllers[0].text = user.identityNumber ?? '';
+      _idNumberControllers[0].text = idNumber;
       _dobControllers[0].text = formattedDob;
       _phoneControllers[0].text = user.phone;
       _emailControllers[0].text = user.email;
@@ -143,12 +164,18 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
 
         // Also save the data to the passenger data map for form submission
         _passengerData[0]['name'] = user.name;
-        _passengerData[0]['identity_number'] = user.identityNumber ?? '';
+        _passengerData[0]['identity_number'] = idNumber;
         _passengerData[0]['date_of_birth'] = formattedDob;
         _passengerData[0]['phone'] = user.phone;
         _passengerData[0]['email'] = user.email;
         _passengerData[0]['address'] = user.address ?? '';
       });
+
+      // Debug log
+      print('Loaded user data for passenger 1:');
+      print('  Name: ${user.name}');
+      print('  ID: $idNumber (${_convertIdType(user.identityType)})');
+      print('  DOB: $formattedDob');
     }
   }
 
@@ -195,19 +222,19 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         context,
         listen: false,
       );
-      
+
       // Tunggu provider terinisialisasi
       if (!bookingProvider.isInitialized) {
         print('Waiting for BookingProvider to initialize...');
         await Future.delayed(Duration(milliseconds: 500));
-        
+
         // Jika masih belum terinisialisasi setelah beberapa kali percobaan, abort
         int retryCount = 0;
         while (!bookingProvider.isInitialized && retryCount < 5) {
           await Future.delayed(Duration(milliseconds: 500));
           retryCount++;
         }
-        
+
         if (!bookingProvider.isInitialized) {
           throw Exception('BookingProvider initialization timeout');
         }
@@ -334,8 +361,50 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
     bool isValid = true;
 
     for (int i = 0; i < _formKeys.length; i++) {
-      if (!(_formKeys[i].currentState?.validate() ?? false)) {
+      final formValid = _formKeys[i].currentState?.validate() ?? false;
+
+      if (!formValid) {
         isValid = false;
+      }
+
+      // Ensure ID Number is not empty
+      final idNumber = _idNumberControllers[i].text.trim();
+      if (idNumber.isEmpty) {
+        isValid = false;
+
+        // Update error message in UI
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'ID Number is required for Passenger ${i + 1}';
+          });
+        }
+      }
+
+      // Ensure Date of Birth is not empty and valid
+      final dob = _dobControllers[i].text.trim();
+      if (dob.isEmpty) {
+        isValid = false;
+
+        // Update error message in UI
+        if (mounted && _errorMessage == null) {
+          setState(() {
+            _errorMessage = 'Date of Birth is required for Passenger ${i + 1}';
+          });
+        }
+      } else {
+        // Validate date format
+        final dateFormatRegex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+        if (!dateFormatRegex.hasMatch(dob)) {
+          isValid = false;
+
+          // Update error message in UI
+          if (mounted && _errorMessage == null) {
+            setState(() {
+              _errorMessage =
+                  'Invalid Date of Birth format for Passenger ${i + 1}. Use YYYY-MM-DD.';
+            });
+          }
+        }
       }
     }
 
@@ -353,16 +422,60 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
       return;
     }
 
+    // Tambahkan validasi tambahan untuk nilai penting
+    bool isDataComplete = true;
+    String errorMessage = '';
+
+    for (int i = 0; i < widget.passengerCount; i++) {
+      if (_idNumberControllers[i].text.trim().isEmpty) {
+        isDataComplete = false;
+        errorMessage = 'ID Number cannot be empty for Passenger ${i + 1}';
+        break;
+      }
+
+      if (_dobControllers[i].text.trim().isEmpty) {
+        isDataComplete = false;
+        errorMessage = 'Date of Birth cannot be empty for Passenger ${i + 1}';
+        break;
+      }
+
+      // Validasi format tanggal lahir
+      final dateFormatRegex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+      if (!dateFormatRegex.hasMatch(_dobControllers[i].text.trim())) {
+        isDataComplete = false;
+        errorMessage =
+            'Invalid date format for Passenger ${i + 1}. Use YYYY-MM-DD format';
+        break;
+      }
+    }
+
+    if (!isDataComplete) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = errorMessage;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
+
     // Update passenger data with values from controllers
     for (int i = 0; i < widget.passengerCount; i++) {
-      _passengerData[i]['name'] = _nameControllers[i].text;
-      _passengerData[i]['identity_number'] = _idNumberControllers[i].text;
-      _passengerData[i]['date_of_birth'] = _dobControllers[i].text;
-      _passengerData[i]['phone'] = _phoneControllers[i].text;
-      _passengerData[i]['email'] = _emailControllers[i].text;
-      _passengerData[i]['address'] = _addressControllers[i].text;
+      _passengerData[i]['name'] = _nameControllers[i].text.trim();
+      _passengerData[i]['identity_number'] =
+          _idNumberControllers[i].text.trim();
+      _passengerData[i]['date_of_birth'] = _dobControllers[i].text.trim();
+      _passengerData[i]['phone'] = _phoneControllers[i].text.trim();
+      _passengerData[i]['email'] = _emailControllers[i].text.trim();
+      _passengerData[i]['address'] = _addressControllers[i].text.trim();
       _passengerData[i]['save_info'] = _savePassengerInfo[i];
     }
+
+    // Debug: Print data untuk verifikasi
+    print('Passenger data untuk booking: ${json.encode(_passengerData)}');
 
     // Add passengers to booking provider
     final bookingProvider = Provider.of<BookingProvider>(
@@ -389,38 +502,69 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
           _isLoading = true;
         });
 
+        // PERBAIKAN: Gunakan async-await dengan proper error handling
         final success = await bookingProvider.createBooking();
-        if (success) {
+
+        // Hanya lanjutkan jika proses booking berhasil
+        if (success && mounted) {
           final booking = bookingProvider.currentBooking;
 
-          // TAMBAHKAN: Validasi
+          // Validasi booking
           if (booking == null || booking.id <= 0) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Booking created but ID is invalid. Please try again.',
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _errorMessage =
+                    'Booking created but ID is invalid. Please try again.';
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Booking created but ID is invalid. Please try again.',
+                  ),
+                  backgroundColor: Colors.red,
                 ),
-                backgroundColor: Colors.red,
-              ),
-            );
+              );
+            }
             return;
           }
 
-          // Lanjut ke layar pembayaran dengan ID yang benar
-          Navigator.pushNamed(
-            context,
-            AppRoutes.payment,
-            arguments: {
-              'bookingId': booking.id,
-              'totalAmount': booking.totalAmount,
-            },
-          );
-        } else {
-          // Tampilkan pesan error jika bookingProvider memiliki error
+          // Berikan waktu untuk sinkronisasi data
+          if (mounted) {
+            setState(() {
+              _errorMessage =
+                  'Menunggu sinkronisasi data booking dengan server...';
+            });
+          }
+          await Future.delayed(Duration(seconds: 2));
+
+          // Navigasi ke halaman pembayaran
+          if (mounted) {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.payment,
+              arguments: {
+                'bookingId': booking.id,
+                'bookingCode': booking.bookingCode,
+                'totalAmount': booking.totalAmount,
+              },
+            );
+          }
+        } else if (mounted) {
+          // Tampilkan pesan error jika gagal
+          setState(() {
+            _isLoading = false;
+            _errorMessage =
+                bookingProvider.bookingError ??
+                'Failed to create booking. Please try again.';
+          });
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                bookingProvider.bookingError ?? 'Failed to create booking. Please try again.',
+                bookingProvider.bookingError ??
+                    'Failed to create booking. Please try again.',
               ),
               backgroundColor: Colors.red,
             ),
@@ -428,17 +572,18 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
         }
       } catch (e) {
         // Tangani error tak terduga
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } finally {
         if (mounted) {
           setState(() {
             _isLoading = false;
+            _errorMessage = 'Error: ${e.toString()}';
           });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       }
     }
@@ -462,7 +607,9 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                 margin: const EdgeInsets.all(AppTheme.paddingMedium),
                 decoration: BoxDecoration(
                   color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                  borderRadius: BorderRadius.circular(
+                    AppTheme.borderRadiusRegular,
+                  ),
                   border: Border.all(color: Colors.red.shade200),
                 ),
                 child: Row(
@@ -486,7 +633,7 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                   ],
                 ),
               ),
-              
+
             Expanded(
               child: DefaultTabController(
                 length: widget.passengerCount,
@@ -687,10 +834,16 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                       if (value == null || value.isEmpty) {
                         return 'ID number is required';
                       }
+
+                      if (value.trim().length < 3) {
+                        return 'ID number is too short';
+                      }
+
                       return null;
                     },
                     onChanged: (value) {
-                      _passengerData[passengerIndex]['identity_number'] = value;
+                      _passengerData[passengerIndex]['identity_number'] =
+                          value.trim();
                     },
                   ),
                 ),
@@ -785,7 +938,8 @@ class _PassengerDetailsScreenState extends State<PassengerDetailsScreen> {
                       return null;
                     },
                     onChanged: (value) {
-                      _passengerData[passengerIndex]['date_of_birth'] = value;
+                      _passengerData[passengerIndex]['date_of_birth'] =
+                          value.trim();
                     },
                   ),
                 ),

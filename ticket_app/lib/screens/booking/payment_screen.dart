@@ -42,8 +42,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   void initState() {
     super.initState();
-    _loadBookingDetails();
-    _startPaymentTimer();
+
+    // Gunakan Future.microtask untuk memastikan build selesai terlebih dahulu
+    Future.microtask(() {
+      _loadBookingDetails();
+      _startPaymentTimer();
+    });
   }
 
   @override
@@ -58,7 +62,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     });
 
     try {
-      // TAMBAHKAN: Validasi
+      // Validasi ID
       if (widget.bookingId <= 0) {
         throw Exception('Invalid booking ID: ${widget.bookingId}');
       }
@@ -67,21 +71,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
         context,
         listen: false,
       );
-      await bookingProvider.fetchBookingDetail(widget.bookingId);
 
-      // TAMBAHKAN: Double-check
+      // Pastikan booking provider sudah diinisialisasi
+      if (!bookingProvider.isInitialized) {
+        await Future.delayed(Duration(seconds: 1));
+      }
+
+      // Gunakan current booking jika sudah ada
+      if (bookingProvider.currentBooking?.id == widget.bookingId) {
+        print('Using existing booking data, skipping fetch');
+      } else {
+        await bookingProvider.fetchBookingDetail(widget.bookingId);
+      }
+
+      // Double-check
       if (bookingProvider.currentBooking == null) {
         throw Exception('Failed to load booking details');
       }
     } catch (e) {
-      // Handle error - tampilkan pesan dan kembali ke layar sebelumnya
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pop(context);
+      }
     } finally {
       if (mounted) {
         setState(() {
