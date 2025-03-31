@@ -16,6 +16,7 @@ class FerryProvider extends ChangeNotifier {
   List<ScheduleModel> _schedules = [];
   ScheduleModel? _selectedSchedule;
 
+  bool _isInitialized = false;
   bool _isLoadingFerries = false;
   bool _isLoadingRoutes = false;
   bool _isLoadingSchedules = false;
@@ -35,7 +36,7 @@ class FerryProvider extends ChangeNotifier {
   DateTime? _lastRoutesRequest;
   DateTime? _lastFerriesRequest;
   DateTime? _lastSchedulesRequest;
-  
+
   // Flag untuk mencegah multiple fetch
   bool _routesInitialized = false;
   bool _ferriesInitialized = false;
@@ -67,30 +68,35 @@ class FerryProvider extends ChangeNotifier {
     _ferryService = FerryService(_apiService);
   }
 
+  FerryService getFerryService() {
+    return _ferryService;
+  }
+
   @override
   void dispose() {
     super.dispose();
   }
 
-  // Fetch ferries dengan throttling sederhana
+  // Fetch ferries with throttling
   Future<void> fetchFerries({
-    bool activeOnly = true, 
-    String? type, 
-    bool forceRefresh = false
+    bool activeOnly = true,
+    String? type,
+    bool forceRefresh = false,
   }) async {
-    // Cek jika sudah di-initialized dan tidak diminta force refresh
+    // Skip if already initialized and no force refresh
     if (!forceRefresh && _ferriesInitialized && _ferries.isNotEmpty) {
       debugPrint('SKIP FETCH: Ferries already initialized');
       return;
     }
-    
+
     if (_isLoadingFerries) {
       debugPrint('SKIP FETCH: Ferries already loading');
       return;
     }
-    
-    // Throttling sederhana - minimal jeda 30 detik antara request
-    if (!forceRefresh && _lastFerriesRequest != null && 
+
+    // Throttling - minimum 30 second interval between requests
+    if (!forceRefresh &&
+        _lastFerriesRequest != null &&
         DateTime.now().difference(_lastFerriesRequest!).inSeconds < 30) {
       debugPrint('THROTTLED: Please wait before refreshing ferries again');
       return;
@@ -118,26 +124,27 @@ class FerryProvider extends ChangeNotifier {
     }
   }
 
-  // Fetch routes dengan throttling sederhana
+  // Fetch routes with throttling
   Future<void> fetchRoutes({
     bool activeOnly = true,
     String? departurePort,
     String? arrivalPort,
     bool forceRefresh = false,
   }) async {
-    // Cek jika sudah di-initialized dan tidak diminta force refresh
+    // Skip if already initialized and no force refresh
     if (!forceRefresh && _routesInitialized && _routes.isNotEmpty) {
       debugPrint('SKIP FETCH: Routes already initialized');
       return;
     }
-    
+
     if (_isLoadingRoutes) {
       debugPrint('SKIP FETCH: Routes already loading');
       return;
     }
-    
-    // Throttling sederhana - minimal jeda 30 detik antara request
-    if (!forceRefresh && _lastRoutesRequest != null && 
+
+    // Throttling - minimum 30 second interval between requests
+    if (!forceRefresh &&
+        _lastRoutesRequest != null &&
         DateTime.now().difference(_lastRoutesRequest!).inSeconds < 30) {
       debugPrint('THROTTLED: Please wait before refreshing routes again');
       return;
@@ -154,6 +161,16 @@ class FerryProvider extends ChangeNotifier {
         arrivalPort: arrivalPort,
       );
 
+      // Log for debugging
+      print('Fetched ${result.length} routes');
+      if (result.isNotEmpty) {
+        print(
+          'Sample route: origin=${result[0].origin}, destination=${result[0].destination}',
+        );
+      } else {
+        print('No routes fetched from API');
+      }
+
       _routes = result;
       _isLoadingRoutes = false;
       _routesInitialized = true;
@@ -166,7 +183,7 @@ class FerryProvider extends ChangeNotifier {
     }
   }
 
-  // Fetch schedules dengan throttling sederhana
+  // Fetch schedules with throttling
   Future<void> fetchSchedules({
     required String departurePort,
     required String arrivalPort,
@@ -180,20 +197,27 @@ class FerryProvider extends ChangeNotifier {
       return;
     }
 
-    // Jika data sudah ada dan sama, dan tidak diminta untuk force refresh, gunakan cache
-    bool sameSearch = _selectedDeparturePort == departurePort && 
-                      _selectedArrivalPort == arrivalPort && 
-                      _selectedDate?.day == departureDate.day &&
-                      _selectedDate?.month == departureDate.month &&
-                      _selectedDate?.year == departureDate.year;
-                      
-    if (!forceRefresh && sameSearch && _schedulesInitialized && _schedules.isNotEmpty) {
-      debugPrint('SKIP FETCH: Schedules already initialized with same search parameters');
+    // If data exists and is the same, use cache unless force refresh
+    bool sameSearch =
+        _selectedDeparturePort == departurePort &&
+        _selectedArrivalPort == arrivalPort &&
+        _selectedDate?.day == departureDate.day &&
+        _selectedDate?.month == departureDate.month &&
+        _selectedDate?.year == departureDate.year;
+
+    if (!forceRefresh &&
+        sameSearch &&
+        _schedulesInitialized &&
+        _schedules.isNotEmpty) {
+      debugPrint(
+        'SKIP FETCH: Schedules already initialized with same search parameters',
+      );
       return;
     }
-    
-    // Throttling sederhana - minimal jeda 30 detik antara request
-    if (!forceRefresh && _lastSchedulesRequest != null && 
+
+    // Throttling - minimum 30 second interval between requests
+    if (!forceRefresh &&
+        _lastSchedulesRequest != null &&
         DateTime.now().difference(_lastSchedulesRequest!).inSeconds < 30) {
       debugPrint('THROTTLED: Please wait before refreshing schedules again');
       return;
@@ -231,14 +255,166 @@ class FerryProvider extends ChangeNotifier {
     }
   }
 
-  // Fetch schedule detail
+  // NEW: Fetch popular schedules for the home screen
+  Future<void> fetchPopularSchedules({bool forceRefresh = false}) async {
+    if (_isLoadingSchedules && !forceRefresh) {
+      debugPrint('SKIP FETCH: Popular schedules already loading');
+      return;
+    }
+
+    // If schedules exist and not forced, use cache
+    if (!forceRefresh && _schedulesInitialized && _schedules.isNotEmpty) {
+      debugPrint('SKIP FETCH: Using cached schedules');
+      return;
+    }
+
+    // Reset state jika forceRefresh = true
+    if (forceRefresh) {
+      _schedulesInitialized = false;
+      _schedules =
+          []; // Hapus data sebelumnya untuk memastikan data baru dimuat
+    }
+
+    _isLoadingSchedules = true;
+    _scheduleError = null;
+    notifyListeners();
+
+    try {
+      // Pastikan routes berhasil dimuat
+      if (!_routesInitialized || _routes.isEmpty) {
+        await fetchRoutes(activeOnly: true);
+      }
+
+      // Get all active routes
+      final availableRoutes =
+          _routes
+              .where((route) => route.status.toUpperCase() == 'ACTIVE')
+              .toList();
+
+      if (availableRoutes.isEmpty) {
+        _scheduleError = 'No routes available to search for schedules';
+        _isLoadingSchedules = false;
+        notifyListeners();
+        return;
+      }
+
+      // Variabel untuk menyimpan jadwal yang ditemukan
+      List<ScheduleModel> result = [];
+
+      // PRIORITAS RUTE: Cari rute Ajibata → Ambarita terlebih dahulu
+      // Berdasarkan logs, ini rute yang diketahui memiliki jadwal
+      final today = DateTime.now();
+
+      try {
+        debugPrint('PRIORITY: Trying Ajibata to Ambarita route first');
+
+        // Cari rute Ajibata → Ambarita yang diketahui memiliki jadwal
+        final ambaritaRoute = availableRoutes.firstWhere(
+          (route) =>
+              route.origin == 'Ajibata' && route.destination == 'Ambarita',
+          orElse: () => null as RouteModel, // Fallback jika tidak ditemukan
+        );
+
+        if (ambaritaRoute != null) {
+          result = await _ferryService.getSchedules(
+            departurePort: 'Ajibata',
+            arrivalPort: 'Ambarita',
+            departureDate: today,
+            includeFullyBooked: false,
+          );
+
+          debugPrint(
+            'PRIORITY CHECK: Found ${result.length} schedules for Ajibata to Ambarita',
+          );
+        }
+      } catch (e) {
+        debugPrint('Error in priority route: ${e.toString()}');
+      }
+
+      // Jika tidak ditemukan, coba rute lain
+      if (result.isEmpty) {
+        // Coba rute populer lainnya
+        final popularRoutes = [
+          {'origin': 'Ambarita', 'destination': 'Ajibata'},
+          {'origin': 'Tomok', 'destination': 'Ajibata'},
+          {'origin': 'Ajibata', 'destination': 'Tomok'},
+        ];
+
+        for (var routeData in popularRoutes) {
+          try {
+            debugPrint(
+              'Trying route ${routeData['origin']} to ${routeData['destination']}',
+            );
+
+            final schedules = await _ferryService.getSchedules(
+              departurePort: routeData['origin']!,
+              arrivalPort: routeData['destination']!,
+              departureDate: today,
+              includeFullyBooked: false,
+            );
+
+            if (schedules.isNotEmpty) {
+              debugPrint('Found ${schedules.length} schedules!');
+              result = schedules;
+              break;
+            }
+          } catch (e) {
+            debugPrint('Error trying route: ${e.toString()}');
+            continue;
+          }
+        }
+      }
+
+      // Jika masih tidak ditemukan, coba semua rute yang tersedia
+      if (result.isEmpty) {
+        debugPrint('Trying all available routes as last resort');
+
+        for (var route in availableRoutes) {
+          try {
+            final schedules = await _ferryService.getSchedules(
+              departurePort: route.origin,
+              arrivalPort: route.destination,
+              departureDate: today,
+              includeFullyBooked: true, // Include fully booked as last resort
+            );
+
+            if (schedules.isNotEmpty) {
+              debugPrint(
+                'Found ${schedules.length} schedules for ${route.routeName}',
+              );
+              result = schedules;
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+
+      // Update state dengan jadwal yang ditemukan
+      _schedules = result;
+      _sortSchedules();
+      _isLoadingSchedules = false;
+      _schedulesInitialized = true;
+      _lastSchedulesRequest = DateTime.now();
+
+      debugPrint('FINAL: Found ${_schedules.length} schedules');
+      notifyListeners();
+    } catch (e) {
+      _scheduleError = 'Failed to load popular schedules: ${e.toString()}';
+      _isLoadingSchedules = false;
+      notifyListeners();
+    }
+  }
+
+  // Get schedule detail
   Future<void> fetchScheduleDetail(int id, {bool forceRefresh = false}) async {
     if (_isLoadingScheduleDetail) {
       debugPrint('SKIP FETCH: Schedule detail already loading');
       return;
     }
 
-    // Skip fetch jika schedule detail sudah ada
+    // Skip fetch if schedule detail already exists
     if (!forceRefresh && _selectedSchedule?.id == id) {
       debugPrint('SKIP FETCH: Selected schedule already loaded (id: $id)');
       return;
@@ -262,17 +438,26 @@ class FerryProvider extends ChangeNotifier {
   // Set selected schedule from the list
   void setSelectedSchedule(int scheduleId) {
     // Try to find in existing schedules first
-    ScheduleModel? schedule = _schedules.firstWhere(
+    final schedule = _schedules.firstWhere(
       (s) => s.id == scheduleId,
-      orElse: () => null as ScheduleModel,
+      orElse: () => throw Exception('Schedule not found'),
     );
-    
-    if (schedule != null) {
-      _selectedSchedule = schedule;
+
+    _selectedSchedule = schedule;
+    notifyListeners();
+
+    // Also fetch full details to ensure we have complete data
+    fetchScheduleDetail(scheduleId);
+  }
+
+  void updateSchedulesDirectly(List<ScheduleModel> schedules) {
+    if (schedules.isNotEmpty) {
+      _schedules = schedules;
+      _sortSchedules();
+      _schedulesInitialized = true;
+      _lastSchedulesRequest = DateTime.now();
+      debugPrint('Direct update: ${_schedules.length} schedules added');
       notifyListeners();
-    } else {
-      // If not found in schedules list, fetch from API
-      fetchScheduleDetail(scheduleId);
     }
   }
 
@@ -350,5 +535,6 @@ class FerryProvider extends ChangeNotifier {
     DateTime departureDate,
   ) async {
     // This would typically use the storage service
+    // Implement if needed
   }
 }

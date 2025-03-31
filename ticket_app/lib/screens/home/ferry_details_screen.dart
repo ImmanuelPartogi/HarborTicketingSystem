@@ -21,6 +21,7 @@ class FerryDetailsScreen extends StatefulWidget {
 class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
   int _passengerCount = 1;
   bool _hasVehicle = false;
+  
 
   @override
   void initState() {

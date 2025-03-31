@@ -4,15 +4,19 @@
     <div class="bg-white shadow-lg rounded-xl overflow-hidden">
         <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 p-6 text-white relative">
             <div class="absolute inset-0 overflow-hidden">
-                <svg class="absolute right-0 bottom-0 opacity-10 h-64 w-64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="white" d="M46.5,-75.3C58.9,-68.9,67.3,-53.9,74.4,-38.7C81.6,-23.5,87.6,-8.1,85.8,6.3C84,20.7,74.2,34,63,44.4C51.8,54.8,39.2,62.3,25.2,68.2C11.1,74,-4.4,78.2,-19.6,76.1C-34.8,74,-49.6,65.7,-59.5,53.6C-69.4,41.5,-74.3,25.5,-77.6,8.5C-80.9,-8.5,-82.5,-26.5,-75.8,-40C-69.1,-53.5,-54.1,-62.4,-39.3,-67.4C-24.6,-72.5,-10.1,-73.7,4.4,-80.8C18.9,-87.9,34.1,-81.8,46.5,-75.3Z" transform="translate(100 100)" />
+                <svg class="absolute right-0 bottom-0 opacity-10 h-64 w-64" viewBox="0 0 200 200"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path fill="white"
+                        d="M46.5,-75.3C58.9,-68.9,67.3,-53.9,74.4,-38.7C81.6,-23.5,87.6,-8.1,85.8,6.3C84,20.7,74.2,34,63,44.4C51.8,54.8,39.2,62.3,25.2,68.2C11.1,74,-4.4,78.2,-19.6,76.1C-34.8,74,-49.6,65.7,-59.5,53.6C-69.4,41.5,-74.3,25.5,-77.6,8.5C-80.9,-8.5,-82.5,-26.5,-75.8,-40C-69.1,-53.5,-54.1,-62.4,-39.3,-67.4C-24.6,-72.5,-10.1,-73.7,4.4,-80.8C18.9,-87.9,34.1,-81.8,46.5,-75.3Z"
+                        transform="translate(100 100)" />
                 </svg>
             </div>
             <div class="flex justify-between items-center relative z-10">
                 <h1 class="text-2xl font-bold flex items-center">
                     <i class="fas fa-edit mr-3 text-blue-200"></i> Edit Jadwal
                 </h1>
-                <a href="{{ route('admin.schedules.index') }}" class="bg-white/20 hover:bg-white/30 text-white py-2 px-4 rounded-lg transition-colors shadow-sm backdrop-blur-sm">
+                <a href="{{ route('admin.schedules.index') }}"
+                    class="bg-white/20 hover:bg-white/30 text-white py-2 px-4 rounded-lg transition-colors shadow-sm backdrop-blur-sm">
                     <i class="fas fa-arrow-left mr-2"></i> Kembali
                 </a>
             </div>
@@ -33,7 +37,8 @@
             @endif
 
             @if (session('success'))
-                <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg shadow-sm" role="alert">
+                <div class="bg-green-50 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg shadow-sm"
+                    role="alert">
                     <div class="flex">
                         <div class="flex-shrink-0 text-green-500 text-xl">
                             <i class="fas fa-check-circle"></i>
@@ -56,8 +61,9 @@
                             @if (isset($schedule->route) && is_object($schedule->route))
                                 <i class="fas fa-route mr-2 text-blue-600"></i>
                                 {{ $schedule->route->origin }} - {{ $schedule->route->destination }}
-                                @if($schedule->route->status != 'ACTIVE')
-                                    <span class="ml-2 px-2 py-1 rounded-full text-xs {{ $schedule->route->status == 'WEATHER_ISSUE' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800' }} shadow-sm">
+                                @if ($schedule->route->status != 'ACTIVE')
+                                    <span
+                                        class="ml-2 px-2 py-1 rounded-full text-xs {{ $schedule->route->status == 'WEATHER_ISSUE' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800' }} shadow-sm">
                                         {{ $schedule->route->status == 'WEATHER_ISSUE' ? 'Masalah Cuaca' : 'Tidak Aktif' }}
                                     </span>
                                 @endif
@@ -129,7 +135,6 @@
                                     '4' => 'Kamis',
                                     '5' => 'Jumat',
                                     '6' => 'Sabtu',
-                                    '7' => 'Minggu',
                                     '0' => 'Minggu',
                                 ];
                                 $dayLabels = [];
@@ -139,13 +144,14 @@
                                     }
                                 }
                             @endphp
-                            <div class="flex flex-wrap gap-1">
-                                @foreach ($dayLabels as $day)
-                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-medium rounded-md bg-blue-100 text-blue-800 shadow-sm">
-                                        {{ $day }}
-                                    </span>
-                                @endforeach
-                            </div>
+                        <div class="flex flex-wrap gap-1">
+                            @foreach ($dayLabels as $day)
+                                <span
+                                    class="px-2 py-1 inline-flex text-xs leading-5 font-medium rounded-md bg-blue-100 text-blue-800 shadow-sm">
+                                    {{ $day }}
+                                </span>
+                            @endforeach
+                        </div>
                         </p>
                     </div>
                 </div>
@@ -155,7 +161,7 @@
                 $isStatusFinal = in_array($schedule->status, ['FULL', 'DEPARTED']);
             @endphp
 
-            @if($isStatusFinal)
+            @if ($isStatusFinal)
                 <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg shadow-sm">
                     <div class="flex">
                         <div class="flex-shrink-0 text-yellow-500 text-xl">
@@ -163,7 +169,9 @@
                         </div>
                         <div class="ml-3">
                             <p class="text-sm text-yellow-700">
-                                Jadwal ini memiliki status <strong>{{ $schedule->status == 'FULL' ? 'Penuh' : 'Selesai' }}</strong> yang merupakan status final.
+                                Jadwal ini memiliki status
+                                <strong>{{ $schedule->status == 'FULL' ? 'Penuh' : 'Selesai' }}</strong> yang merupakan
+                                status final.
                                 Status tidak dapat diubah, namun Anda tetap dapat mengedit detail jadwal lainnya.
                             </p>
                         </div>
@@ -177,8 +185,10 @@
                         </div>
                         <div class="ml-3">
                             <p class="text-sm text-blue-700">
-                                <strong>Informasi Status:</strong> Perubahan status jadwal bersifat independen dari status rute.
-                                Jika status diubah menjadi <strong>Tidak Aktif</strong>, tanggal jadwal terkait yang belum berstatus final
+                                <strong>Informasi Status:</strong> Perubahan status jadwal bersifat independen dari status
+                                rute.
+                                Jika status diubah menjadi <strong>Tidak Aktif</strong>, tanggal jadwal terkait yang belum
+                                berstatus final
                                 akan otomatis diubah menjadi <strong>Tidak Tersedia</strong>.
                             </p>
                         </div>
@@ -186,7 +196,8 @@
                 </div>
             @endif
 
-            <form action="{{ route('admin.schedules.update', $schedule) }}" method="POST" class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <form action="{{ route('admin.schedules.update', $schedule) }}" method="POST"
+                class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                 @csrf
                 @method('PUT')
 
@@ -205,7 +216,7 @@
                                         <option value="{{ $route->id }}"
                                             {{ old('route_id', (string) $schedule->route_id) == (string) $route->id ? 'selected' : '' }}>
                                             {{ $route->origin }} - {{ $route->destination }}
-                                            @if($route->status != 'ACTIVE')
+                                            @if ($route->status != 'ACTIVE')
                                                 ({{ $route->status == 'WEATHER_ISSUE' ? 'Masalah Cuaca' : 'Tidak Aktif' }})
                                             @endif
                                         </option>
@@ -283,15 +294,19 @@
                             @foreach (['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'] as $index => $day)
                                 @php
                                     $dayNumber = $index + 1;
-                                    if ($dayNumber == 7) {
-                                        $dayNumber = 0;
-                                    } // Sunday is 0 in Carbon but we're storing as 7
+                                    if ($index === 6) {
+                                        // Ini adalah Minggu
+                                        $dayNumber = 7;
+                                    }
                                     $isChecked = in_array((string) $dayNumber, $scheduleDays);
                                 @endphp
-                                <div class="flex items-center p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm hover:bg-blue-50 transition-colors cursor-pointer">
+                                <div
+                                    class="flex items-center p-3 bg-gray-50 border border-gray-200 rounded-lg shadow-sm hover:bg-blue-50 transition-colors cursor-pointer">
                                     <input type="checkbox" id="day{{ $dayNumber }}" name="days[]"
-                                        value="{{ $dayNumber }}" {{ $isChecked ? 'checked' : '' }} class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                                    <label for="day{{ $dayNumber }}" class="ml-2 text-sm font-medium text-gray-900 cursor-pointer select-none">{{ $day }}</label>
+                                        value="{{ $dayNumber }}" {{ $isChecked ? 'checked' : '' }}
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="day{{ $dayNumber }}"
+                                        class="ml-2 text-sm font-medium text-gray-900 cursor-pointer select-none">{{ $day }}</label>
                                 </div>
                             @endforeach
                         </div>
@@ -302,12 +317,13 @@
 
                     <div class="mb-4">
                         <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                        @if($isStatusFinal)
+                        @if ($isStatusFinal)
                             <input type="hidden" name="status" value="{{ $schedule->status }}">
                             <div class="flex items-center p-3 bg-gray-100 rounded-lg">
-                                <span class="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 w-full flex items-center shadow-inner">
+                                <span
+                                    class="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 w-full flex items-center shadow-inner">
                                     <i class="fas fa-lock-alt mr-2 text-gray-500"></i>
-                                    @if($schedule->status == 'FULL')
+                                    @if ($schedule->status == 'FULL')
                                         Penuh (Status Final)
                                     @else
                                         Selesai (Status Final)
@@ -349,7 +365,8 @@
                 </div>
 
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-5 rounded-lg transition shadow-sm flex items-center">
+                    <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-5 rounded-lg transition shadow-sm flex items-center">
                         <i class="fas fa-save mr-2"></i> Simpan Perubahan
                     </button>
                 </div>

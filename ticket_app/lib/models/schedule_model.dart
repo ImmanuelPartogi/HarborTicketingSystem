@@ -91,13 +91,39 @@ class ScheduleModel {
         }
       }
 
+      // Parse departure time
+      DateTime parseDepartureTime() {
+        if (json['departure_time'] == null) return DateTime.now();
+        
+        try {
+          // Try parsing as full ISO date
+          return DateTime.parse(json['departure_time']);
+        } catch (e) {
+          try {
+            // Try parsing as time only (HH:MM format)
+            final timeStr = json['departure_time'].toString();
+            final parts = timeStr.split(':');
+            final now = DateTime.now();
+            
+            return DateTime(
+              now.year,
+              now.month,
+              now.day,
+              int.parse(parts[0]),
+              parts.length > 1 ? int.parse(parts[1]) : 0,
+            );
+          } catch (e) {
+            print('Error parsing departure time: ${json['departure_time']}');
+            return DateTime.now();
+          }
+        }
+      }
+
       return ScheduleModel(
         id: parseInt(json['id']),
         routeId: parseInt(json['route_id']),
         ferryId: parseInt(json['ferry_id']),
-        departureTime: json['departure_time'] != null 
-            ? DateTime.parse(json['departure_time']) 
-            : DateTime.now(),
+        departureTime: parseDepartureTime(),
         arrivalTime: json['arrival_time'] != null 
             ? DateTime.parse(json['arrival_time']) 
             : null,

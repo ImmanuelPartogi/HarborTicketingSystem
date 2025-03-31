@@ -128,7 +128,6 @@
                                         '4' => 'Kamis',
                                         '5' => 'Jumat',
                                         '6' => 'Sabtu',
-                                        '7' => 'Minggu',
                                         '0' => 'Minggu',
                                     ];
                                     $dayLabels = [];

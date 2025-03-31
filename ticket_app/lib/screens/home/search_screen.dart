@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../providers/ferry_provider.dart';
 import '../../models/schedule_model.dart';
-import '../../widgets/common/ferry_card.dart';
 import '../../widgets/common/loading_indicator.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -25,47 +23,46 @@ class SearchScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State createState() => _SearchScreenState();
+  State<SearchScreen> createState() => _SearchScreenState(); // Fixed generic type
 }
 
-class _SearchScreenState extends State<SearchScreen>
-    with SingleTickerProviderStateMixin {
+class _SearchScreenState extends State<SearchScreen> {
   String _sortBy = 'departure_time_asc';
   bool _isSearching = false;
   DateTime? _selectedDate;
   String? _selectedDeparturePort;
   String? _selectedArrivalPort;
   int _passengerCount = 1;
-  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.departureDate ?? DateTime.now();
+    
+    // Initialize with passed parameters
     _selectedDeparturePort = widget.departurePort;
     _selectedArrivalPort = widget.arrivalPort;
+    _selectedDate = widget.departureDate ?? DateTime.now();
     _passengerCount = widget.passengerCount ?? 1;
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-
-    _searchSchedules();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
+    
+    // Search on first load if we have the required parameters
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_selectedDeparturePort != null && 
+          _selectedArrivalPort != null && 
+          _selectedDate != null) {
+        _searchSchedules();
+      }
+    });
   }
 
   Future<void> _searchSchedules() async {
     if (_selectedDeparturePort == null || _selectedArrivalPort == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select departure and arrival ports'),
+        ),
+      );
       return;
     }
-
-    if (!mounted) return; // Add this check
 
     setState(() {
       _isSearching = true;
@@ -80,14 +77,15 @@ class _SearchScreenState extends State<SearchScreen>
         departureDate: _selectedDate ?? DateTime.now(),
       );
 
-      if (!mounted) return; // Add this check
-
-      // Reset animation controller and forward to trigger animations
-      _animationController.reset();
-      _animationController.forward();
+    } catch (e) {
+      // Added error handling
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error searching schedules: $e')),
+        );
+      }
     } finally {
       if (mounted) {
-        // Add this check
         setState(() {
           _isSearching = false;
         });
@@ -380,7 +378,7 @@ class _SearchScreenState extends State<SearchScreen>
           ],
         ),
         actions: [
-          // Filter button with animation
+          // Filter button
           Container(
             margin: const EdgeInsets.only(right: AppTheme.paddingSmall),
             decoration: BoxDecoration(
@@ -397,129 +395,107 @@ class _SearchScreenState extends State<SearchScreen>
           ),
         ],
       ),
-      body:
-          _isSearching
-              ? Center(
-                child: LoadingIndicator(
-                  message: 'Searching for the best routes...',
-                  color: theme.primaryColor,
-                ),
-              )
-              : Consumer<FerryProvider>(
-                builder: (context, ferryProvider, _) {
-                  if (ferryProvider.isLoadingSchedules) {
-                    return Center(
-                      child: LoadingIndicator(
-                        message: 'Loading available schedules...',
-                        color: theme.primaryColor,
+      body: _isSearching
+          ? Center(
+              child: LoadingIndicator(
+                message: 'Searching for the best routes...',
+                color: theme.primaryColor,
+              ),
+            )
+          : Consumer<FerryProvider>(
+              builder: (context, ferryProvider, _) {
+                if (ferryProvider.isLoadingSchedules) {
+                  return Center(
+                    child: LoadingIndicator(
+                      message: 'Loading available schedules...',
+                      color: theme.primaryColor,
+                    ),
+                  );
+                }
+
+                if (ferryProvider.scheduleError != null) {
+                  return _buildErrorState(
+                    ferryProvider.scheduleError!,
+                    theme,
+                  );
+                }
+
+                if (ferryProvider.schedules.isEmpty) {
+                  return _buildEmptyState(theme);
+                }
+
+                // Show list of schedules
+                return Column(
+                  children: [
+                    // Search result info card
+                    Container(
+                      margin: const EdgeInsets.all(
+                        AppTheme.paddingMedium,
                       ),
-                    );
-                  }
-
-                  if (ferryProvider.scheduleError != null) {
-                    return _buildErrorState(
-                      ferryProvider.scheduleError!,
-                      theme,
-                    );
-                  }
-
-                  if (ferryProvider.schedules.isEmpty) {
-                    return _buildEmptyState(theme);
-                  }
-
-                  // Show list of schedules with staggered animation
-                  return Column(
-                    children: [
-                      // Search result info card
-                      Container(
-                            margin: const EdgeInsets.all(
-                              AppTheme.paddingMedium,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppTheme.paddingMedium,
-                              vertical: AppTheme.paddingSmall,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(
-                                AppTheme.borderRadiusRegular,
-                              ),
-                              border: Border.all(
-                                color: theme.primaryColor.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  color: theme.primaryColor,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '${ferryProvider.schedules.length} ${ferryProvider.schedules.length == 1 ? 'Schedule' : 'Schedules'} Found',
-                                  style: TextStyle(
-                                    fontSize: AppTheme.fontSizeRegular,
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.primaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                          .animate(controller: _animationController)
-                          .fadeIn(duration: 500.ms)
-                          .slideY(
-                            begin: -0.2,
-                            end: 0,
-                            duration: 500.ms,
-                            curve: Curves.easeOutQuad,
-                          ),
-
-                      // Schedule list
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: ferryProvider.schedules.length,
-                          padding: const EdgeInsets.fromLTRB(
-                            AppTheme.paddingMedium,
-                            0,
-                            AppTheme.paddingMedium,
-                            AppTheme.paddingMedium,
-                          ),
-                          itemBuilder: (context, index) {
-                            final schedule = ferryProvider.schedules[index];
-
-                            // Enhanced Ferry Card with staggered animation
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppTheme.paddingMedium,
-                              ),
-                              child: FerryCard(
-                                    schedule: schedule,
-                                    onTap: () => _selectSchedule(schedule),
-                                  )
-                                  .animate(controller: _animationController)
-                                  .fadeIn(
-                                    duration: 400.ms,
-                                    delay: (index * 100).ms,
-                                    curve: Curves.easeOut,
-                                  )
-                                  .slideX(
-                                    begin: 0.1,
-                                    end: 0,
-                                    duration: 400.ms,
-                                    delay: (index * 100).ms,
-                                    curve: Curves.easeOutQuad,
-                                  ),
-                            );
-                          },
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.paddingMedium,
+                        vertical: AppTheme.paddingSmall,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusRegular,
+                        ),
+                        border: Border.all(
+                          color: theme.primaryColor.withOpacity(0.3),
+                          width: 1,
                         ),
                       ),
-                    ],
-                  );
-                },
-              ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: theme.primaryColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${ferryProvider.schedules.length} ${ferryProvider.schedules.length == 1 ? 'Schedule' : 'Schedules'} Found',
+                            style: TextStyle(
+                              fontSize: AppTheme.fontSizeRegular,
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Schedule list
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: ferryProvider.schedules.length,
+                        padding: const EdgeInsets.fromLTRB(
+                          AppTheme.paddingMedium,
+                          0,
+                          AppTheme.paddingMedium,
+                          AppTheme.paddingMedium,
+                        ),
+                        itemBuilder: (context, index) {
+                          final schedule = ferryProvider.schedules[index];
+
+                          // Schedule Card
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppTheme.paddingMedium,
+                            ),
+                            child: ScheduleListCard(
+                              schedule: schedule,
+                              onTap: () => _selectSchedule(schedule),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
     );
   }
 
@@ -648,8 +624,8 @@ class _SearchScreenState extends State<SearchScreen>
                 const SizedBox(width: AppTheme.paddingMedium),
                 ElevatedButton.icon(
                   onPressed: () {
-                    if (!mounted) return; // Add this check
-                    // Set date to tomorrow and search again
+                    if (!mounted) return; 
+                    // Try tomorrow
                     setState(() {
                       _selectedDate = DateTime.now().add(
                         const Duration(days: 1),
@@ -683,7 +659,6 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   void _selectSchedule(ScheduleModel schedule) {
-    // Changed type from Schedule to ScheduleModel
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
     ferryProvider.setSelectedSchedule(schedule.id);
 
@@ -691,6 +666,319 @@ class _SearchScreenState extends State<SearchScreen>
       context,
       AppRoutes.ferryDetails,
       arguments: {'scheduleId': schedule.id},
+    );
+  }
+}
+
+// Schedule List Card for Search Results
+class ScheduleListCard extends StatelessWidget {
+  final ScheduleModel schedule;
+  final VoidCallback onTap;
+
+  const ScheduleListCard({
+    Key? key,
+    required this.schedule,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final currencyFormat = NumberFormat.currency(
+      locale: 'id',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    
+    // Check if we have route data
+    final hasRouteData = schedule.route != null;
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header with route info
+            Container(
+              padding: const EdgeInsets.all(AppTheme.paddingMedium),
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(AppTheme.borderRadiusMedium),
+                  topRight: Radius.circular(AppTheme.borderRadiusMedium),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.directions_boat,
+                    color: theme.primaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      hasRouteData 
+                        ? schedule.route!.routeName
+                        : 'Unknown Route',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppTheme.fontSizeRegular,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.paddingRegular,
+                      vertical: AppTheme.paddingXSmall,
+                    ),
+                    decoration: BoxDecoration(
+                      color: schedule.isAvailable
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusRound),
+                    ),
+                    child: Text(
+                      schedule.statusText,
+                      style: TextStyle(
+                        color: schedule.isAvailable ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.w600,
+                        fontSize: AppTheme.fontSizeSmall,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Body with schedule details
+            Padding(
+              padding: const EdgeInsets.all(AppTheme.paddingMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Date and time
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Departure',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeSmall,
+                                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.access_time,
+                                  size: 16,
+                                  color: theme.primaryColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  schedule.formattedDepartureTime,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: AppTheme.fontSizeMedium,
+                                    color: theme.primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              DateFormat('EEE, dd MMM yyyy').format(schedule.departureTime),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Duration and arrow
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 4),
+                            const Icon(
+                              Icons.arrow_forward,
+                              size: 20,
+                            ),
+                            if (hasRouteData)
+                              Text(
+                                schedule.route!.formattedDuration,
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeXSmall,
+                                  color: theme.textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      // Arrival time
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Arrival',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeSmall,
+                                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                              ),
+                            ),
+                            if (schedule.arrivalTime != null)
+                              Text(
+                                DateFormat('HH:mm').format(schedule.arrivalTime!),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: AppTheme.fontSizeMedium,
+                                ),
+                              )
+                            else
+                              Text(
+                                'Estimated',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: theme.hintColor,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: AppTheme.paddingMedium),
+                  
+                  // Ferry and capacity info
+                  Row(
+                    children: [
+                      // Ferry info
+                      if (schedule.ferry != null)
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Ferry',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeSmall,
+                                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                                ),
+                              ),
+                              Text(
+                                schedule.ferry!.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      
+                      // Available seats
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Available Seats',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeSmall,
+                                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                              ),
+                            ),
+                            Text(
+                              '${schedule.remainingPassengerCapacity}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: schedule.remainingPassengerCapacity > 10 
+                                    ? Colors.green 
+                                    : Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Price
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Price',
+                            style: TextStyle(
+                              fontSize: AppTheme.fontSizeSmall,
+                              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                            ),
+                          ),
+                          Text(
+                            currencyFormat.format(schedule.finalPrice),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: AppTheme.fontSizeRegular,
+                              color: theme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: AppTheme.paddingMedium),
+                  
+                  // Book now button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: schedule.isAvailable ? onTap : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: theme.disabledColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppTheme.paddingRegular,
+                        ),
+                      ),
+                      child: const Text(
+                        'Book Now',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

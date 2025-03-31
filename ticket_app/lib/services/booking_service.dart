@@ -161,7 +161,7 @@ class BookingService {
             }).toList();
       }
 
-      // PERBAIKAN: Definisikan bookingData dengan benar sebelum digunakan
+      // Create the request body
       final Map<String, dynamic> bookingData = {
         'schedule_id': scheduleId,
         'booking_date': DateTime.now().toIso8601String().split('T')[0],

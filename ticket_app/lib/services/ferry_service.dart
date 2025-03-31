@@ -20,15 +20,15 @@ class FerryService {
       // Build query parameters
       final Map<String, dynamic> queryParams = {};
       if (activeOnly) {
-        queryParams['active_only'] = '1';
+        queryParams['status'] = 'ACTIVE';
       }
       if (type != null && type.isNotEmpty) {
         queryParams['type'] = type;
       }
 
-      // Use the correct endpoint path from ApiConfig
+      // Make the API request
       final response = await _apiService.get(
-        ApiConfig.ferries,
+        '/api/v1/ferries',
         queryParams: queryParams,
       );
 
@@ -57,7 +57,7 @@ class FerryService {
       // Build query parameters
       final Map<String, dynamic> queryParams = {};
       if (activeOnly) {
-        queryParams['active_only'] = '1';
+        queryParams['status'] = 'ACTIVE';
       }
       if (departurePort != null && departurePort.isNotEmpty) {
         queryParams['origin'] = departurePort;
@@ -66,15 +66,28 @@ class FerryService {
         queryParams['destination'] = arrivalPort;
       }
 
-      // Use the correct endpoint path from ApiConfig
+      // Make the API request
       final response = await _apiService.get(
-        ApiConfig.routes,
+        '/api/v1/routes',
         queryParams: queryParams,
       );
 
-      // Parse response
+      // Parse response - debug log response structure
+      print('Routes API response structure: ${response.keys.toList()}');
+
       if (response.containsKey('success') && response['success'] == true) {
-        final List<dynamic> routesJson = response['data']['routes'];
+        List<dynamic> routesJson;
+        
+        // Handle different API response structures
+        if (response['data'] is Map && response['data'].containsKey('routes')) {
+          routesJson = response['data']['routes'];
+        } else if (response['data'] is List) {
+          routesJson = response['data'];
+        } else {
+          routesJson = [];
+        }
+        
+        print('Extracted routes data: ${routesJson.length} items');
         return routesJson.map((json) => RouteModel.fromJson(json)).toList();
       } else {
         throw Exception(
@@ -104,41 +117,54 @@ class FerryService {
         'departure_port': departurePort,
         'arrival_port': arrivalPort,
         'departure_date': formattedDate,
+        'status': 'ACTIVE',
       };
 
       if (ferryId != null) {
         queryParams['ferry_id'] = ferryId.toString();
       }
 
-      if (includeFullyBooked) {
-        queryParams['include_fully_booked'] = '1';
-      }
-
-      // Use the correct endpoint path from ApiConfig
+      // Make the API request
       final response = await _apiService.get(
-        ApiConfig.schedules,
+        '/api/v1/schedules',
         queryParams: queryParams,
       );
 
+      // Debug logging
+      print('Schedules API response: ${response.keys.toList()}');
+
       // Parse response
       if (response.containsKey('success') && response['success'] == true) {
-        final List<dynamic> schedulesJson = response['data']['schedules'];
-        print('Parsed schedules JSON: $schedulesJson');
+        List<dynamic> schedulesJson;
+        
+        // Handle different API response structures
+        if (response['data'] is Map && response['data'].containsKey('schedules')) {
+          schedulesJson = response['data']['schedules'];
+        } else if (response['data'] is List) {
+          schedulesJson = response['data'];
+        } else {
+          schedulesJson = [];
+        }
+        
+        print('Extracted schedules data: ${schedulesJson.length} items');
 
         final schedules = <ScheduleModel>[];
         for (var json in schedulesJson) {
           try {
+            // Skip schedules that are not available if includeFullyBooked is false
+            if (!includeFullyBooked && 
+                json.containsKey('is_available') && 
+                json['is_available'] == false) {
+              continue;
+            }
+            
             schedules.add(ScheduleModel.fromJson(json));
           } catch (e) {
-            print(
-              'Error parsing schedule at index ${schedulesJson.indexOf(json)}: $e',
-            );
+            print('Error parsing schedule: $e');
           }
         }
 
-        print(
-          'Successfully parsed ${schedules.length} schedules out of ${schedulesJson.length}',
-        );
+        print('Successfully parsed ${schedules.length} schedules');
         return schedules;
       } else {
         throw Exception(
@@ -146,26 +172,28 @@ class FerryService {
         );
       }
     } catch (e) {
-      print('Error in getSchedules: Exception: $e');
-      throw Exception('Unexpected error: $e');
+      print('Error in getSchedules: $e');
+      rethrow;
     }
   }
 
   // Get detailed information for a specific schedule
   Future<ScheduleModel> getScheduleDetail(int id) async {
     try {
-      // Use the correct path for getting a specific schedule
-      // Don't build the endpoint manually - use the correct string format with interpolation
-      // Also ensure we're using the API endpoint, not the web admin endpoint
-      final endpoint =
-          '${ApiConfig.schedules.substring(0, ApiConfig.schedules.length)}/$id';
-
-      // Make API request
-      final response = await _apiService.get(endpoint);
+      // Make the API request
+      final response = await _apiService.get('/api/v1/schedules/$id');
 
       // Parse response
       if (response.containsKey('success') && response['success'] == true) {
-        final Map<String, dynamic> scheduleJson = response['data']['schedule'];
+        Map<String, dynamic> scheduleJson;
+        
+        // Handle different API response structures
+        if (response['data'] is Map && response['data'].containsKey('schedule')) {
+          scheduleJson = response['data']['schedule'];
+        } else {
+          scheduleJson = response['data'];
+        }
+        
         return ScheduleModel.fromJson(scheduleJson);
       } else {
         throw Exception(
@@ -262,8 +290,7 @@ class FerryService {
     final Set<String> uniquePorts = {};
 
     for (var route in routes) {
-      // Use correct property to match RouteModel
-      uniquePorts.add(route.departure);
+      uniquePorts.add(route.origin);
     }
 
     final List<String> sortedPorts = uniquePorts.toList()..sort();
@@ -278,9 +305,8 @@ class FerryService {
     final Set<String> uniquePorts = {};
 
     for (var route in routes) {
-      // Use correct properties to match RouteModel
-      if (route.departure == departurePort) {
-        uniquePorts.add(route.arrival);
+      if (route.origin == departurePort) {
+        uniquePorts.add(route.destination);
       }
     }
 

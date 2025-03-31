@@ -3,9 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/theme.dart';
-import '../../providers/ferry_provider.dart';
 import '../../config/routes.dart';
-import '../common/custom_button.dart';
+import '../../providers/ferry_provider.dart';
 
 class SearchForm extends StatefulWidget {
   const SearchForm({Key? key}) : super(key: key);
@@ -15,128 +14,134 @@ class SearchForm extends StatefulWidget {
 }
 
 class _SearchFormState extends State<SearchForm> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
   String? _selectedDeparturePort;
   String? _selectedArrivalPort;
   DateTime _selectedDate = DateTime.now();
   int _passengerCount = 1;
-  bool _isLoadingDeparturePorts = false; // Loading state for departure ports
-  bool _isLoadingArrivalPorts =
-      false; // Loading state for arrival ports when departure port is selected
-  bool _isDisposed = false;
+  bool _isSearchEnabled = false;
+  bool _isLoading = false;
+  bool _portsInitialized = false;
+
+  List<String> _departurePorts = [];
+  List<String> _arrivalPorts = [];
 
   @override
   void initState() {
     super.initState();
-    // Gunakan Future.microtask untuk menunggu build pertama selesai
-    Future.microtask(() {
-      if (!mounted) return;
-      _loadRoutes();
+
+    // Pindahkan loading ke postFrameCallback untuk menghindari setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadPorts();
+      }
     });
   }
 
-  @override
-  void dispose() {
-    _isDisposed = true;
-    super.dispose();
-  }
+  Future<void> _loadPorts() async {
+    if (!mounted || _isLoading || _portsInitialized) return;
 
-  Future<void> _loadRoutes() async {
-    if (!mounted) return;
-
-    final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
-
-    // Update state hanya jika widget masih terpasang
-    if (mounted) {
-      setState(() {
-        _isLoadingDeparturePorts = true;
-      });
-    }
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      // Load all routes without filtering
-      await ferryProvider.fetchRoutes(activeOnly: true);
+      // Load routes untuk mendapatkan port data
+      final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
+
+      // Periksa apakah routes sudah di-load
+      if (ferryProvider.routes.isEmpty) {
+        await ferryProvider.fetchRoutes();
+      }
+
+      // Set departure ports dari ferryProvider
+      final departurePorts = ferryProvider.getUniqueDeparturePorts();
+
+      if (departurePorts.isNotEmpty) {
+        setState(() {
+          _departurePorts = departurePorts;
+          _selectedDeparturePort = departurePorts.first;
+
+          // Update arrival ports berdasarkan departure port yang dipilih
+          _updateArrivalPorts();
+          _portsInitialized = true;
+        });
+      }
     } catch (e) {
-      print('Error loading routes: $e');
-    }
-
-    // Cek lagi apakah widget masih terpasang sebelum update state
-    if (mounted) {
-      setState(() {
-        _isLoadingDeparturePorts = false;
-      });
+      debugPrint('Error loading ports: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  // Method to load arrival ports when departure port is selected
-  Future<void> _loadArrivalPorts(String departurePort) async {
-    if (!mounted) return;
-
-    final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
-
-    // Show loading indicator for arrival ports
-    if (mounted) {
-      setState(() {
-        _isLoadingArrivalPorts = true;
-      });
-    }
-
-    try {
-      // Call the fetchRoutes with the departurePort filter to get specific arrival ports
-      // This leverages the existing fetchRoutes method in the FerryProvider
-      await ferryProvider.fetchRoutes(
-        activeOnly: true,
-        departurePort: departurePort,
+  void _updateArrivalPorts() {
+    if (_selectedDeparturePort != null) {
+      final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
+      final arrivalPorts = ferryProvider.getUniqueArrivalPorts(
+        _selectedDeparturePort!,
       );
-    } catch (e) {
-      print('Error loading arrival ports: $e');
-    }
 
-    // Hide loading indicator
-    if (mounted) {
       setState(() {
-        _isLoadingArrivalPorts = false;
+        _arrivalPorts = arrivalPorts;
+        _selectedArrivalPort =
+            arrivalPorts.isNotEmpty ? arrivalPorts.first : null;
       });
     }
   }
 
-  List<String> _getDeparturePorts() {
-    final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
-    return ferryProvider.getUniqueDeparturePorts();
+  void _checkSearchEnabled() {
+    setState(() {
+      _isSearchEnabled =
+          _selectedDeparturePort != null &&
+          _selectedArrivalPort != null &&
+          _selectedDate != null;
+    });
   }
 
-  List<String> _getArrivalPorts() {
-    final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
-    if (_selectedDeparturePort == null) {
-      return [];
-    }
+  void _onDeparturePortChanged(String? port) {
+    setState(() {
+      _selectedDeparturePort = port;
+      _selectedArrivalPort = null; // Reset arrival port when departure changes
 
-    // This uses the existing method in FerryProvider to get arrival ports for the selected departure port
-    List<String> arrivalPorts = ferryProvider.getUniqueArrivalPorts(
-      _selectedDeparturePort!,
-    );
+      // Update available arrival ports
+      if (port != null) {
+        final ferryProvider = Provider.of<FerryProvider>(
+          context,
+          listen: false,
+        );
+        _arrivalPorts = ferryProvider.getUniqueArrivalPorts(port);
+      } else {
+        _arrivalPorts = [];
+      }
+    });
 
-    // Sort the ports alphabetically for better user experience
-    arrivalPorts.sort();
-    return arrivalPorts;
+    _checkSearchEnabled();
+  }
+
+  void _onArrivalPortChanged(String? port) {
+    setState(() {
+      _selectedArrivalPort = port;
+    });
+
+    _checkSearchEnabled();
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
+    final pickedDate = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: now,
-      lastDate: DateTime(now.year + 1, now.month, now.day),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
               primary: AppTheme.primaryColor,
               onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
+              onSurface: Theme.of(context).textTheme.bodyLarge!.color!,
             ),
           ),
           child: child!,
@@ -144,15 +149,17 @@ class _SearchFormState extends State<SearchForm> {
       },
     );
 
-    if (picked != null && picked != _selectedDate && mounted) {
+    if (pickedDate != null && pickedDate != _selectedDate) {
       setState(() {
-        _selectedDate = picked;
+        _selectedDate = pickedDate;
       });
+
+      _checkSearchEnabled();
     }
   }
 
   void _updatePassengerCount(int count) {
-    if (count >= 1 && count <= 50 && mounted) {
+    if (count >= 1 && count <= 50) {
       setState(() {
         _passengerCount = count;
       });
@@ -160,417 +167,300 @@ class _SearchFormState extends State<SearchForm> {
   }
 
   void _search() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.pushNamed(
-        context,
-        AppRoutes.search,
-        arguments: {
-          'departurePort': _selectedDeparturePort,
-          'arrivalPort': _selectedArrivalPort,
-          'departureDate': _selectedDate,
-          'passengerCount': _passengerCount,
-        },
-      );
-    }
+    if (!_isSearchEnabled) return;
+
+    Navigator.pushNamed(
+      context,
+      AppRoutes.search,
+      arguments: {
+        'departurePort': _selectedDeparturePort,
+        'arrivalPort': _selectedArrivalPort,
+        'departureDate': _selectedDate,
+        'passengerCount': _passengerCount,
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final departurePorts = _getDeparturePorts();
-    final arrivalPorts = _getArrivalPorts();
 
     return Container(
-      margin: const EdgeInsets.all(AppTheme.paddingMedium),
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.paddingMedium),
       padding: const EdgeInsets.all(AppTheme.paddingMedium),
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Find Ferry Tickets',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeLarge,
-                fontWeight: FontWeight.bold,
-                color: theme.textTheme.displaySmall?.color,
-              ),
-            ),
-            const SizedBox(height: AppTheme.paddingMedium),
-
-            // Departure Port Dropdown
-            _buildDropdownField(
-              label: 'Departure Port',
-              hint: 'Select departure port',
-              icon: Icons.location_on,
-              value: _selectedDeparturePort,
-              items:
-                  departurePorts.map((port) {
-                    return DropdownMenuItem<String>(
-                      value: port,
-                      child: Text(port),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                if (mounted) {
-                  setState(() {
-                    _selectedDeparturePort = value as String?;
-                    _selectedArrivalPort =
-                        null; // Reset arrival port when departure changes
-                  });
-
-                  // Load arrival ports when departure port changes
-                  if (value != null) {
-                    _loadArrivalPorts(value as String);
-                  }
-                }
-              },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select departure port';
-                }
-                return null;
-              },
-              isLoading: _isLoadingDeparturePorts,
-            ),
-
-            const SizedBox(height: AppTheme.paddingMedium),
-
-            // Arrival Port Dropdown
-            _buildDropdownField(
-              label: 'Arrival Port',
-              hint:
-                  _selectedDeparturePort == null
-                      ? 'Select departure port first'
-                      : 'Select arrival port',
-              icon: Icons.location_on,
-              value: _selectedArrivalPort,
-              items:
-                  arrivalPorts.map((port) {
-                    return DropdownMenuItem<String>(
-                      value: port,
-                      child: Text(port),
-                    );
-                  }).toList(),
-              onChanged:
-                  _selectedDeparturePort == null
-                      ? null
-                      : (value) {
-                        if (mounted) {
-                          setState(() {
-                            _selectedArrivalPort = value as String?;
-                          });
-                        }
-                      },
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select arrival port';
-                }
-                return null;
-              },
-              isLoading: _isLoadingArrivalPorts,
-            ),
-
-            const SizedBox(height: AppTheme.paddingMedium),
-
-            // Date Picker
-            _buildDateField(
-              label: 'Departure Date',
-              value: DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
-              icon: Icons.calendar_today,
-              onTap: () => _selectDate(context),
-            ),
-
-            const SizedBox(height: AppTheme.paddingMedium),
-
-            // Passenger Count
-            _buildPassengerCountField(
-              label: 'Passengers',
-              value: _passengerCount,
-              onDecrease: () => _updatePassengerCount(_passengerCount - 1),
-              onIncrease: () => _updatePassengerCount(_passengerCount + 1),
-            ),
-
-            const SizedBox(height: AppTheme.paddingLarge),
-
-            // Search Button
-            CustomButton(
-              text: 'Search Tickets',
-              onPressed: _search,
-              icon: Icons.search,
-              type: ButtonType.primary,
-              isFullWidth: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Modified to better handle the disabled state for arrival port
-  Widget _buildDropdownField({
-    required String label,
-    required String hint,
-    required IconData icon,
-    required String? value,
-    required List<DropdownMenuItem<String>> items,
-    required void Function(dynamic)? onChanged,
-    required String? Function(String?)? validator,
-    bool isLoading = false,
-  }) {
-    final theme = Theme.of(context);
-    final bool isDisabled = onChanged == null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: theme.textTheme.bodyLarge?.color,
-            fontSize: AppTheme.fontSizeRegular,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: value,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: isDisabled ? theme.disabledColor : theme.hintColor,
-            ),
-            prefixIcon: Icon(
-              icon,
-              color: isDisabled ? theme.disabledColor : null,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.paddingMedium,
-              vertical: AppTheme.paddingRegular,
-            ),
-            filled: true,
-            fillColor:
-                isDisabled
-                    ? theme.disabledColor.withOpacity(0.1)
-                    : theme.cardColor,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
-              borderSide: BorderSide(
-                color: isDisabled ? theme.disabledColor : theme.dividerColor,
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
-              borderSide: BorderSide(
-                color: isDisabled ? theme.disabledColor : theme.dividerColor,
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Find Your Ferry',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeMedium,
+              fontWeight: FontWeight.bold,
+              color: theme.textTheme.displaySmall?.color,
             ),
           ),
-          items: isLoading ? [] : items,
-          onChanged: isLoading ? null : onChanged,
-          validator: validator,
-          isExpanded: true,
-          icon:
-              isLoading
-                  ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.primaryColor,
-                      ),
-                    ),
-                  )
-                  : Icon(
-                    Icons.arrow_drop_down,
-                    color: isDisabled ? theme.disabledColor : null,
-                  ),
-          dropdownColor: theme.cardColor,
-          style: TextStyle(
-            color:
-                isDisabled
-                    ? theme.disabledColor
-                    : theme.textTheme.bodyLarge?.color,
-          ),
-        ),
-      ],
-    );
-  }
+          const SizedBox(height: AppTheme.paddingRegular),
 
-  Widget _buildDateField({
-    required String label,
-    required String value,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: theme.textTheme.bodyLarge?.color,
-            fontSize: AppTheme.fontSizeRegular,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.paddingMedium,
-              vertical: AppTheme.paddingRegular,
-            ),
-            decoration: BoxDecoration(
-              border: Border.all(color: theme.dividerColor),
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
-              color: theme.cardColor,
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: theme.hintColor),
-                const SizedBox(width: AppTheme.paddingRegular),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: theme.textTheme.bodyLarge?.color,
-                    fontSize: AppTheme.fontSizeRegular,
-                  ),
-                ),
-                const Spacer(),
-                Icon(Icons.arrow_drop_down, color: theme.hintColor),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPassengerCountField({
-    required String label,
-    required int value,
-    required VoidCallback onDecrease,
-    required VoidCallback onIncrease,
-  }) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: theme.textTheme.bodyLarge?.color,
-            fontSize: AppTheme.fontSizeRegular,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppTheme.paddingMedium,
-            vertical: AppTheme.paddingRegular,
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.dividerColor),
-            borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
-            color: theme.cardColor,
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.people, color: theme.hintColor),
-              const SizedBox(width: AppTheme.paddingRegular),
-              Text(
-                '$value ${value == 1 ? 'Passenger' : 'Passengers'}',
-                style: TextStyle(
-                  color: theme.textTheme.bodyLarge?.color,
-                  fontSize: AppTheme.fontSizeRegular,
+          // Departure Port dropdown
+          DropdownButtonFormField<String>(
+            value: _selectedDeparturePort,
+            decoration: InputDecoration(
+              labelText: 'Departure Port',
+              prefixIcon: Icon(Icons.location_on, color: theme.primaryColor),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  AppTheme.borderRadiusRegular,
                 ),
               ),
-              const Spacer(),
-              Row(
-                children: [
-                  InkWell(
-                    onTap: value > 1 ? onDecrease : null,
-                    borderRadius: BorderRadius.circular(
-                      AppTheme.borderRadiusSmall,
-                    ),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color:
-                            value > 1
-                                ? AppTheme.primaryColor
-                                : theme.disabledColor,
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.borderRadiusSmall,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.remove,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 40,
-                    alignment: Alignment.center,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.paddingRegular,
+                vertical: AppTheme.paddingRegular,
+              ),
+            ),
+            hint: const Text('Select Departure Port'),
+            isExpanded: true,
+            items:
+                _departurePorts.map((port) {
+                  return DropdownMenuItem<String>(
+                    value: port,
                     child: Text(
-                      '$value',
+                      port,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: AppTheme.fontSizeMedium,
+                        fontSize: AppTheme.fontSizeRegular,
                       ),
                     ),
-                  ),
-                  InkWell(
-                    onTap: value < 50 ? onIncrease : null,
-                    borderRadius: BorderRadius.circular(
-                      AppTheme.borderRadiusSmall,
+                  );
+                }).toList(),
+            onChanged: _isLoading ? null : _onDeparturePortChanged,
+          ),
+
+          const SizedBox(height: AppTheme.paddingMedium),
+
+          // Arrival Port dropdown
+          DropdownButtonFormField<String>(
+            value: _selectedArrivalPort,
+            decoration: InputDecoration(
+              labelText: 'Arrival Port',
+              prefixIcon: Icon(Icons.location_on, color: theme.primaryColor),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(
+                  AppTheme.borderRadiusRegular,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.paddingRegular,
+                vertical: AppTheme.paddingRegular,
+              ),
+            ),
+            hint: const Text('Select Arrival Port'),
+            isExpanded: true,
+            items:
+                _arrivalPorts.map((port) {
+                  return DropdownMenuItem<String>(
+                    value: port,
+                    child: Text(
+                      port,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeRegular,
+                      ),
                     ),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color:
-                            value < 50
-                                ? AppTheme.primaryColor
-                                : theme.disabledColor,
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.borderRadiusSmall,
+                  );
+                }).toList(),
+            onChanged:
+                _selectedDeparturePort == null || _isLoading
+                    ? null
+                    : _onArrivalPortChanged,
+          ),
+
+          const SizedBox(height: AppTheme.paddingMedium),
+
+          // Date and passenger count in a row
+          Row(
+            children: [
+              // Date selector
+              Expanded(
+                flex: 3,
+                child: InkWell(
+                  onTap: () => _selectDate(context),
+                  borderRadius: BorderRadius.circular(
+                    AppTheme.borderRadiusRegular,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.paddingRegular,
+                      vertical: AppTheme.paddingSmall + 2,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: theme.dividerColor),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusRegular,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          color: theme.primaryColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: AppTheme.paddingSmall),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Departure Date',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeSmall,
+                                  color: theme.textTheme.bodyMedium?.color
+                                      ?.withOpacity(0.7),
+                                ),
+                              ),
+                              Text(
+                                DateFormat(
+                                  'EEE, dd MMM yyyy',
+                                ).format(_selectedDate),
+                                style: const TextStyle(
+                                  fontSize: AppTheme.fontSizeRegular,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: AppTheme.paddingMedium),
+
+              // Passenger count
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.paddingRegular,
+                    vertical: AppTheme.paddingSmall,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.dividerColor),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusRegular,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Passengers',
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeSmall,
+                          color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                            0.7,
+                          ),
                         ),
                       ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 18,
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap:
+                                () =>
+                                    _updatePassengerCount(_passengerCount - 1),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusSmall,
+                            ),
+                            child: Icon(
+                              Icons.remove_circle_outline,
+                              color:
+                                  _passengerCount > 1
+                                      ? theme.primaryColor
+                                      : theme.disabledColor,
+                              size: 20,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppTheme.paddingSmall,
+                            ),
+                            child: Text(
+                              '$_passengerCount',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: AppTheme.fontSizeRegular,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap:
+                                () =>
+                                    _updatePassengerCount(_passengerCount + 1),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusSmall,
+                            ),
+                            child: Icon(
+                              Icons.add_circle_outline,
+                              color:
+                                  _passengerCount < 50
+                                      ? theme.primaryColor
+                                      : theme.disabledColor,
+                              size: 20,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
-      ],
+
+          const SizedBox(height: AppTheme.paddingMedium),
+
+          // Search button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isSearchEnabled ? _search : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: theme.disabledColor.withOpacity(0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    AppTheme.borderRadiusRegular,
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppTheme.paddingRegular,
+                ),
+              ),
+              child: const Text(
+                'Search Schedules',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: AppTheme.fontSizeRegular,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,7 +1,7 @@
 class RouteModel {
   final int id;
-  final String origin;      // This field comes from the API
-  final String destination; // This field comes from the API
+  final String origin;
+  final String destination;
   final double distance;
   final int duration;
   final double basePrice;
@@ -19,10 +19,10 @@ class RouteModel {
   // Added these getters for compatibility with FerryService
   String get departure => origin;
   String get arrival => destination;
-  
+
   // Combine the origin/destination for display
   String get routeName => '$origin → $destination';
-  
+
   // Alias for compatibility
   String get departurePort => origin;
   String get arrivalPort => destination;
@@ -50,21 +50,34 @@ class RouteModel {
     try {
       return RouteModel(
         id: json['id'] ?? 0,
-        origin: json['origin'] ?? '',
-        destination: json['destination'] ?? '',
+        origin: json['origin'], // Diubah dari = menjadi :
+        destination: json['destination'], // Diubah dari = menjadi :
         distance: double.tryParse(json['distance'].toString()) ?? 0.0,
         duration: json['duration'] ?? 0,
         basePrice: double.tryParse(json['base_price'].toString()) ?? 0.0,
-        motorcyclePrice: double.tryParse(json['motorcycle_price'].toString()) ?? 0.0,
+        motorcyclePrice:
+            double.tryParse(json['motorcycle_price'].toString()) ?? 0.0,
         carPrice: double.tryParse(json['car_price'].toString()) ?? 0.0,
         busPrice: double.tryParse(json['bus_price'].toString()) ?? 0.0,
         truckPrice: double.tryParse(json['truck_price'].toString()) ?? 0.0,
         status: json['status'] ?? 'INACTIVE',
         statusReason: json['status_reason'],
-        statusUpdatedAt: json['status_updated_at'] != null ? DateTime.parse(json['status_updated_at']) : null,
-        statusExpiryDate: json['status_expiry_date'] != null ? DateTime.parse(json['status_expiry_date']) : null,
-        createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
-        updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+        statusUpdatedAt:
+            json['status_updated_at'] != null
+                ? DateTime.parse(json['status_updated_at'])
+                : null,
+        statusExpiryDate:
+            json['status_expiry_date'] != null
+                ? DateTime.parse(json['status_expiry_date'])
+                : null,
+        createdAt:
+            json['created_at'] != null
+                ? DateTime.parse(json['created_at'])
+                : null,
+        updatedAt:
+            json['updated_at'] != null
+                ? DateTime.parse(json['updated_at'])
+                : null,
       );
     } catch (e) {
       print('Error parsing route model: $e');
@@ -97,7 +110,7 @@ class RouteModel {
   String get formattedDuration {
     final hours = duration ~/ 60;
     final minutes = duration % 60;
-    
+
     if (hours > 0) {
       return '$hours h ${minutes > 0 ? '$minutes m' : ''}';
     } else {

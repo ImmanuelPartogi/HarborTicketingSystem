@@ -27,8 +27,8 @@
                     <p class="mt-1 text-blue-100">Kelola jadwal penyeberangan kapal ferry</p>
                 </div>
                 <a href="{{ route('admin.schedules.create') }}"
-                class="bg-white hover:bg-blue-700 hover:text-white text-blue-700 font-medium py-2 px-4 rounded-lg flex items-center transition-colors shadow-md">
-                <i class="fas fa-plus mr-2"></i> Tambah Jadwal Baru
+                    class="bg-white hover:bg-blue-700 hover:text-white text-blue-700 font-medium py-2 px-4 rounded-lg flex items-center transition-colors shadow-md">
+                    <i class="fas fa-plus mr-2"></i> Tambah Jadwal Baru
                 </a>
             </div>
         </div>
@@ -269,7 +269,7 @@
                                                 '4' => 'Kamis',
                                                 '5' => 'Jumat',
                                                 '6' => 'Sabtu',
-                                                '0' => 'Minggu',
+                                                '7' => 'Minggu',
                                             ];
                                         @endphp
 

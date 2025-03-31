@@ -121,7 +121,6 @@
                                             '5' => 'Jumat',
                                             '6' => 'Sabtu',
                                             '7' => 'Minggu',
-                                            '0' => 'Minggu',
                                         ];
                                         $dayLabels = [];
                                         foreach ($days as $day) {
@@ -270,7 +269,7 @@
                                     </td>
                                     <td class="py-3 px-4 border-b text-sm">
                                         <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs">
-                                            {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->translatedFormat('l') : '-' }}
+                                            {{ is_object($date) && $date->date ? \Carbon\Carbon::parse($date->date)->locale('id')->translatedFormat('l') : '-' }}
                                         </span>
                                     </td>
                                     <td class="py-3 px-4 border-b text-sm">
@@ -866,21 +865,13 @@
                 const date = new Date(dateString);
                 if (isNaN(date.getTime())) return false;
 
-                // JavaScript uses 0-6 (where 0=Sunday through 6=Saturday)
-                // Convert to format 1-7 (where 1=Monday through 7=Sunday)
+                // JavaScript menggunakan 0-6 (di mana 0=Minggu sampai 6=Sabtu)
+                // Konversi ke format backend 1-7 (di mana 1=Senin sampai 7=Minggu)
                 const jsDay = date.getDay();
                 const backendDay = jsDay === 0 ? 7 : jsDay;
 
-                // Pastikan scheduleDays berisi angka, bukan string
-                const operationDays = scheduleDays.map(day => parseInt(day, 10));
-
-                // Debug untuk membantu troubleshooting
-                console.log(
-                    `Validating date: ${dateString}, JS day: ${jsDay}, backendDay: ${backendDay}, operationDays: ${operationDays}`
-                );
-
-                // Periksa apakah hari ini ada dalam daftar hari operasi
-                return operationDays.includes(backendDay);
+                // Periksa apakah hari tersebut ada dalam hari operasi jadwal
+                return scheduleDays.includes(backendDay);
             } catch (e) {
                 console.error('Error validating date:', e);
                 return false;
