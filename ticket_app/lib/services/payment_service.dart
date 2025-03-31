@@ -18,61 +18,46 @@ class PaymentService {
     required String paymentMethod,
     required String paymentChannel,
   }) async {
-    // PERBAIKAN: Pastikan endpoint menggunakan booking code
     print('Creating payment for booking: $bookingIdentifier');
+    print('Payment method: $paymentMethod, channel: $paymentChannel');
     print('Menunggu sebelum mencoba memproses pembayaran...');
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(Duration(seconds: 3));
 
-    try {
-      final response = await _apiService.post(
-        '/api/v1/bookings/$bookingIdentifier/pay',
-        body: {
-          'payment_method': paymentMethod,
-          'payment_channel': paymentChannel,
-        },
-      );
+    // Implementasi retry dengan exponential backoff
+    int maxRetries = 5;
+    int currentRetry = 0;
 
-      return response;
-    } catch (e) {
-      print('Error processing payment, retrying in 2s (1/3)');
-      await Future.delayed(Duration(seconds: 2));
-
+    while (currentRetry < maxRetries) {
       try {
-        // Coba alternatif endpoint jika yang pertama gagal
-        print(
-          'Trying alternative endpoint: /api/v1/payments/booking/$bookingIdentifier',
-        );
         final response = await _apiService.post(
-          '/api/v1/payments/booking/$bookingIdentifier',
+          '/api/v1/bookings/$bookingIdentifier/pay',
           body: {
             'payment_method': paymentMethod,
             'payment_channel': paymentChannel,
           },
         );
 
+        print('Payment response: $response');
         return response;
-      } catch (innerError) {
-        print('Error processing payment, retrying in 2s (2/3)');
-        await Future.delayed(Duration(seconds: 2));
+      } catch (e) {
+        currentRetry++;
 
-        try {
-          // Coba sekali lagi dengan endpoint orisinal
-          final response = await _apiService.post(
-            '/api/v1/bookings/$bookingIdentifier/pay',
-            body: {
-              'payment_method': paymentMethod,
-              'payment_channel': paymentChannel,
-            },
-            bypassThrottling: true,
-          );
+        // Log error
+        print('Payment attempt $currentRetry failed: $e');
 
-          return response;
-        } catch (finalError) {
-          print('Max retries exceeded for payment processing');
-          throw Exception('Unexpected error: $finalError');
+        if (currentRetry >= maxRetries) {
+          print('Max retries exceeded');
+          throw e;
+        } else {
+          // Exponential backoff: tunggu semakin lama setelah setiap kegagalan
+          int delaySeconds = 3 * currentRetry;
+          print('Retrying in $delaySeconds seconds...');
+          await Future.delayed(Duration(seconds: delaySeconds));
         }
       }
     }
+
+    throw Exception('Max retries exceeded');
   }
 
   Future<bool> openPaymentUrl(String url) async {

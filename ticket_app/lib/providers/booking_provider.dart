@@ -341,22 +341,35 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // PENTING: Selalu gunakan bookingCode bukan ID untuk API calls
-      final bookingCode = _currentBooking!.bookingCode;
+      // Format payment method untuk validasi
+      String formattedPaymentMethod = _convertPaymentMethodFormat(
+        paymentMethod,
+      );
 
-      print('Creating payment for booking: $bookingCode');
-      // Tambahkan delay untuk pastikan data tersinkronisasi
-      print('Menunggu sebelum memproses pembayaran...');
+      print('Creating payment for booking ID: ${_currentBooking!.id}');
+      print(
+        'Payment method: $formattedPaymentMethod, channel: $paymentChannel',
+      );
+
+      // Tunggu untuk memastikan data tersinkronisasi
       await Future.delayed(Duration(seconds: 3));
 
-      final paymentResponse = await _paymentService!.createPayment(
-        bookingIdentifier: bookingCode,
-        paymentMethod: paymentMethod,
-        paymentChannel: paymentChannel,
+      // PERBAIKAN: Tambahkan null assertion untuk _apiService
+      if (_apiService == null) {
+        throw Exception('API service not initialized');
+      }
+
+      // Gunakan endpoint berdasarkan ID numerik
+      final response = await _apiService!.post(
+        '/api/v1/bookings/id/${_currentBooking!.id}/pay',
+        body: {
+          'payment_method': formattedPaymentMethod,
+          'payment_channel': paymentChannel,
+        },
       );
 
       // Refresh data booking setelah pembayaran
-      await fetchBookingDetail(bookingCode); // Gunakan booking code
+      await fetchBookingDetail(_currentBooking!.id);
 
       _isProcessingPayment = false;
       notifyListeners();
@@ -366,6 +379,22 @@ class BookingProvider extends ChangeNotifier {
       _isProcessingPayment = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  // Helper method untuk konversi format payment method
+  String _convertPaymentMethodFormat(String paymentMethod) {
+    switch (paymentMethod.toLowerCase()) {
+      case 'virtual_account':
+        return 'VIRTUAL_ACCOUNT';
+      case 'e_wallet':
+        return 'E_WALLET';
+      case 'credit_card':
+        return 'CREDIT_CARD';
+      case 'bank_transfer':
+        return 'BANK_TRANSFER';
+      default:
+        return paymentMethod.toUpperCase();
     }
   }
 

@@ -216,6 +216,80 @@ class BookingController extends Controller
     }
 
     /**
+     * Process payment for a booking using ID instead of booking code.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function processPaymentById(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'payment_method' => 'required|in:VIRTUAL_ACCOUNT,E_WALLET,BANK_TRANSFER,CREDIT_CARD',
+            'payment_channel' => 'required|string|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Cari booking dengan ID numerik
+        $booking = Booking::findOrFail($id);
+
+        // Pastikan hanya pemilik booking yang dapat melakukan pembayaran
+        if ($booking->user_id !== $request->user()->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        if ($booking->status !== 'PENDING' && $booking->status !== 'DRAFT') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking is not in pending status'
+            ], 400);
+        }
+
+        try {
+            Log::info('Processing payment for booking by ID', [
+                'booking_id' => $booking->id,
+                'booking_code' => $booking->booking_code,
+                'payment_method' => $request->payment_method,
+                'payment_channel' => $request->payment_channel
+            ]);
+
+            $payment = $this->paymentService->createPayment($booking, $request->all());
+            $paymentUrl = $this->paymentService->getPaymentUrl($payment);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment initiated successfully',
+                'data' => [
+                    'payment' => $payment,
+                    'payment_url' => $paymentUrl
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Payment processing failed', [
+                'booking_id' => $booking->id,
+                'booking_code' => $booking->booking_code,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment processing failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Cancel a booking.
      *
      * @param  \Illuminate\Http\Request  $request
