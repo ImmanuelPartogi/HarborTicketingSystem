@@ -428,23 +428,51 @@ class BookingProvider extends ChangeNotifier {
     try {
       print('Fetching booking details for identifier: $bookingIdentifier');
 
-      // PERBAIKAN: Pastikan menggunakan booking code, bukan ID numerik
+      // Handle ID numerik (int) dengan endpoint khusus
+      if (bookingIdentifier is int) {
+        try {
+          print('Using numeric ID endpoint for booking ID: $bookingIdentifier');
+
+          // Gunakan endpoint khusus untuk ID numerik
+          final response = await _apiService!.get(
+            '/api/v1/bookings/id/$bookingIdentifier',
+          );
+
+          // Proses response
+          if (response.containsKey('data') && response['data'] is Map) {
+            if (response['data'].containsKey('booking')) {
+              _currentBooking = Booking.fromJson(response['data']['booking']);
+            } else {
+              _currentBooking = Booking.fromJson(response['data']);
+            }
+
+            print('Successfully loaded booking by ID: ${_currentBooking!.id}');
+            _isLoadingBookingDetail = false;
+            notifyListeners();
+            return;
+          }
+        } catch (e) {
+          print('Error fetching booking by ID: $e');
+          // Gagal dengan ID, lanjutkan dengan cara lain jika memungkinkan
+        }
+      }
+
+      // Cara normal dengan booking code jika tidak berhasil dengan ID
       String identifier;
 
-      // Jika identifier adalah booking object atau memiliki bookingCode property
+      // Tentukan identifier yang akan digunakan
       if (bookingIdentifier is Booking) {
         identifier = bookingIdentifier.bookingCode;
-      }
-      // Jika identifier adalah integer (ID), convert ke string dan beri peringatan
-      else if (bookingIdentifier is int) {
-        // PENTING: Gunakan current booking jika ada dan ID cocok
+      } else if (bookingIdentifier is int) {
+        // Coba gunakan booking code dari cache jika ada dan ID cocok
         if (_currentBooking != null &&
             _currentBooking!.id == bookingIdentifier) {
           identifier = _currentBooking!.bookingCode;
-          print('Using booking code ${identifier} from cached booking');
+          print('Using booking code $identifier from cached booking');
         } else {
-          // Berikan pesan error bahwa ID numerik tidak didukung
-          throw Exception('Booking ID tidak didukung, gunakan booking code');
+          throw Exception(
+            'Tidak dapat menemukan booking code untuk ID: $bookingIdentifier',
+          );
         }
       } else {
         // Asumsikan string
@@ -459,15 +487,16 @@ class BookingProvider extends ChangeNotifier {
       _currentBooking = await _bookingService!.getBookingDetail(identifier);
 
       if (_currentBooking == null) {
-        throw Exception('No booking found with identifier: $identifier');
+        throw Exception(
+          'Booking tidak ditemukan dengan identifier: $identifier',
+        );
       }
 
       print('Successfully loaded booking: ${_currentBooking!.bookingCode}');
-
-      _isLoadingBookingDetail = false;
-      notifyListeners();
     } catch (e) {
-      _bookingError = 'Failed to load booking details: ${e.toString()}';
+      _bookingError = 'Gagal memuat detail booking: ${e.toString()}';
+      print('Error in fetchBookingDetail: $_bookingError');
+    } finally {
       _isLoadingBookingDetail = false;
       notifyListeners();
     }

@@ -46,6 +46,7 @@ class Payment extends Model
         'refund_amount',
         'refund_date',
         'payload',
+        'notes',  // Tambahkan ini
     ];
 
     /**
@@ -158,7 +159,8 @@ class Payment extends Model
 
         if (($status === self::STATUS_REFUNDED || $status === self::STATUS_PARTIAL_REFUND) &&
             !$this->refund_date &&
-            $this->refund_amount) {
+            $this->refund_amount
+        ) {
             $this->refund_date = now();
         }
 

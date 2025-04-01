@@ -69,6 +69,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(functi
     Route::post('/bookings/{bookingCode}/reschedule', [BookingController::class, 'reschedule']);
     Route::get('/bookings/{bookingCode}/payment-status', [BookingController::class, 'paymentStatus']);
     Route::post('/bookings/id/{id}/pay', [BookingController::class, 'processPaymentById']);
+    Route::get('/bookings/id/{id}', [BookingController::class, 'showById']);
 
     // Tickets
     Route::get('/tickets', [TicketController::class, 'index']);

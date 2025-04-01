@@ -26,6 +26,7 @@ return new class extends Migration
             $table->decimal('refund_amount', 12, 2)->nullable();
             $table->timestamp('refund_date')->nullable();
             $table->text('payload')->nullable()->comment('Respon mentah dari payment gateway');
+            $table->text('notes')->nullable()->comment('Catatan tambahan atau pesan error');
             $table->timestamps();
 
             $table->index('status');

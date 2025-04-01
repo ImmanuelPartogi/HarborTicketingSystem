@@ -52,18 +52,29 @@ class PaymentService
         $payment->payment_method = $paymentMethod;
         $payment->payment_channel = $paymentChannel;
         $payment->status = 'PENDING';
-        $payment->payment_code = $this->generatePaymentCode();
-        $payment->expired_at = Carbon::now()->addHours(24); // 24 hours expiry
+
+        // Simpan payment_code di payload
+        $payloadData = [
+            'payment_code' => $this->generatePaymentCode(),
+            'payment_url' => null,
+            'payment_data' => null
+        ];
+        $payment->payload = json_encode($payloadData);
+        $payment->expiry_date = Carbon::now()->addHours(24); // 24 hours expiry
         $payment->save();
 
         // Process the payment with Midtrans based on the payment method
         try {
-            $paymentData = $this->processPaymentWithMidtrans($payment, $booking);
+            $midtransData = $this->processPaymentWithMidtrans($payment, $booking);
 
             // Update payment with Midtrans response data
-            $payment->transaction_id = $paymentData['transaction_id'] ?? null;
-            $payment->payment_url = $paymentData['payment_url'] ?? null;
-            $payment->payment_data = json_encode($paymentData);
+            $payment->transaction_id = $midtransData['transaction_id'] ?? null;
+
+            // Update payload untuk menyimpan payment_url dan payment_data
+            $payloadData = json_decode($payment->payload, true) ?: [];
+            $payloadData['payment_url'] = $midtransData['payment_url'] ?? null;
+            $payloadData['payment_data'] = $midtransData;
+            $payment->payload = json_encode($payloadData);
             $payment->save();
 
             // Update booking status if needed
@@ -109,6 +120,8 @@ class PaymentService
         ];
 
         // Prepare transaction details
+        $payloadData = json_decode($payment->payload, true) ?: [];
+        $paymentCode = $payloadData['payment_code'] ?? ('PAY-' . strtoupper(Str::random(8)));
         $orderId = 'ORDER-' . $booking->booking_code . '-' . time();
         $amount = $payment->amount;
 
@@ -344,13 +357,17 @@ class PaymentService
 
         // Update payment and booking status based on transaction status
         $payment->transaction_id = $transactionId;
-        $payment->payment_data = json_encode($notificationData);
+
+        // Update payload dengan notification data
+        $payloadData = json_decode($payment->payload, true) ?: [];
+        $payloadData['payment_data'] = $notificationData;
+        $payment->payload = json_encode($payloadData);
 
         switch ($transactionStatus) {
             case 'capture':
             case 'settlement':
                 $payment->status = 'SUCCESS';
-                $payment->paid_at = Carbon::now();
+                $payment->payment_date = Carbon::now();
                 $booking->status = 'CONFIRMED';
 
                 // Generate tickets for the booking
@@ -395,14 +412,17 @@ class PaymentService
      */
     public function getPaymentUrl(Payment $payment)
     {
-        // Check if payment has a payment URL
-        if (!empty($payment->payment_url)) {
-            return $payment->payment_url;
+        // Ambil data dari payload
+        $payloadData = json_decode($payment->payload, true) ?: [];
+
+        // Check if payment has a payment URL in payload
+        if (!empty($payloadData['payment_url'])) {
+            return $payloadData['payment_url'];
         }
 
         // Check if payment data contains actions for redirection
-        if (!empty($payment->payment_data)) {
-            $paymentData = json_decode($payment->payment_data, true);
+        if (!empty($payloadData['payment_data'])) {
+            $paymentData = $payloadData['payment_data'];
 
             // For e-wallets, find the redirect URL
             if (isset($paymentData['actions'])) {
@@ -443,7 +463,7 @@ class PaymentService
                     case 'capture':
                     case 'settlement':
                         $payment->status = 'SUCCESS';
-                        $payment->paid_at = Carbon::now();
+                        $payment->payment_date = Carbon::now();
 
                         // Update booking status
                         $booking = $payment->booking;
@@ -469,7 +489,10 @@ class PaymentService
                         break;
                 }
 
-                $payment->payment_data = json_encode($response);
+                // Update payload dengan response
+                $payloadData = json_decode($payment->payload, true) ?: [];
+                $payloadData['payment_data'] = $response;
+                $payment->payload = json_encode($payloadData);
                 $payment->save();
 
                 return $payment->status;
@@ -486,7 +509,7 @@ class PaymentService
         }
 
         // Check if payment has expired
-        if ($payment->expired_at && Carbon::now()->gt($payment->expired_at)) {
+        if ($payment->expiry_date && Carbon::now()->gt($payment->expiry_date)) {
             $payment->status = 'EXPIRED';
             $payment->save();
         }
@@ -537,6 +560,8 @@ class PaymentService
 
             // Update payment status
             $payment->status = 'REFUNDED';
+            $payment->refund_amount = $amount;
+            $payment->refund_date = Carbon::now();
             $payment->notes = "Refunded: {$amount} - {$reason}";
             $payment->save();
 

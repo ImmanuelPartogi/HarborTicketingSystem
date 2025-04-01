@@ -538,4 +538,35 @@ class BookingController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Get booking details by ID.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function showById(Request $request, $id)
+    {
+        $booking = Booking::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->with([
+                'schedule.route',
+                'schedule.ferry',
+                'passengers',
+                'vehicles',
+                'tickets',
+                'payments' => function ($query) {
+                    $query->orderBy('created_at', 'desc');
+                }
+            ])
+            ->firstOrFail();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'booking' => $booking
+            ]
+        ]);
+    }
 }
