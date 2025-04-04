@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:ticket_app/screens/booking/payment_detail_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -185,7 +186,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     if (_selectedPaymentMethod.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select a payment method'),
+          content: Text('Silakan pilih metode pembayaran'),
           backgroundColor: Colors.red,
         ),
       );
@@ -201,49 +202,54 @@ class _PaymentScreenState extends State<PaymentScreen> {
         context,
         listen: false,
       );
+
+      // Debug log
+      print(
+        'Memproses pembayaran: tipe=$_selectedPaymentType, metode=$_selectedPaymentMethod',
+      );
+
       final success = await bookingProvider.processPayment(
         _selectedPaymentType,
         _selectedPaymentMethod,
       );
 
-      setState(() {
-        _isPaymentProcessed = success;
-      });
-
-      // Refresh the booking data to get payment details
       if (success && mounted) {
+        // Refresh data booking untuk mendapatkan info pembayaran
         await bookingProvider.fetchBookingDetail(widget.bookingId);
 
-        // Check if we need to navigate to another screen
-        final booking = bookingProvider.currentBooking;
-        final payment = booking?.payment;
-
-        if (payment != null) {
-          if (payment.paymentUrl != null && payment.paymentUrl!.isNotEmpty) {
-            // Handle redirect URLs for e-wallets
-            if (_selectedPaymentType == 'e_wallet') {
-              final url = payment.paymentUrl!;
-              if (await canLaunch(url)) {
-                await launch(url);
-              }
-            }
-          }
-        }
+        // PERBAIKAN UTAMA: Navigasi ke halaman detail pembayaran
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => PaymentDetailScreen(bookingId: widget.bookingId),
+          ),
+        );
       } else if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isPaymentProcessed = false;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              bookingProvider.paymentError ?? 'Payment processing failed',
+              bookingProvider.paymentError ?? 'Proses pembayaran gagal',
             ),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } finally {
+    } catch (e) {
+      print('Error saat memproses pembayaran: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -1136,8 +1142,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
         const SizedBox(height: AppTheme.paddingMedium),
 
-        // Menampilkan preview VA atau QR code
-        _buildPaymentPreview(),
+        // Pesan informasi pembayaran (bukan preview)
+        _buildPaymentInfoMessage(),
 
         Text(
           instructions['steps'] ?? 'No instructions available',
@@ -1157,7 +1163,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(width: AppTheme.paddingRegular),
               Expanded(
                 child: Text(
-                  'Please complete your payment within $_formattedRemainingTime to secure your booking.',
+                  'Harap selesaikan pembayaran dalam $_formattedRemainingTime untuk memastikan pemesanan Anda.',
                   style: const TextStyle(fontSize: AppTheme.fontSizeRegular),
                 ),
               ),
@@ -1166,6 +1172,185 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       ],
     );
+  }
+
+  // Metode baru untuk pesan informasi pembayaran
+  Widget _buildPaymentInfoMessage() {
+    if (_selectedPaymentType == 'virtual_account') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+        padding: const EdgeInsets.all(AppTheme.paddingRegular),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+          border: Border.all(color: Colors.blue.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusSmall,
+                    ),
+                    image: DecorationImage(
+                      image: AssetImage(
+                        'assets/images/payment_methods/${_selectedPaymentMethod.toLowerCase()}.png',
+                      ),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppTheme.paddingSmall),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_selectedPaymentMethod.toUpperCase()} Virtual Account',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: AppTheme.fontSizeRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Nomor VA akan ditampilkan setelah menekan tombol "Pay Now"',
+                        style: TextStyle(fontSize: AppTheme.fontSizeSmall),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.paddingSmall),
+            Container(
+              padding: const EdgeInsets.all(AppTheme.paddingSmall),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'PENTING: Gunakan nomor VA yang benar dari halaman pembayaran setelah klik "Pay Now"',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeSmall,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.deepOrange,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (_selectedPaymentType == 'e_wallet') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+        padding: const EdgeInsets.all(AppTheme.paddingRegular),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+          border: Border.all(color: Colors.green.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusSmall,
+                    ),
+                    image: DecorationImage(
+                      image: AssetImage(
+                        'assets/images/payment_methods/${_selectedPaymentMethod.toLowerCase()}.png',
+                      ),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppTheme.paddingSmall),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_selectedPaymentMethod.toUpperCase()} Payment',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: AppTheme.fontSizeRegular,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'QR Code akan ditampilkan setelah menekan tombol "Pay Now"',
+                        style: TextStyle(fontSize: AppTheme.fontSizeSmall),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.paddingSmall),
+            Container(
+              padding: const EdgeInsets.all(AppTheme.paddingSmall),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'PENTING: Gunakan QR Code yang benar dari halaman pembayaran setelah klik "Pay Now"',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeSmall,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.deepOrange,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+        padding: const EdgeInsets.all(AppTheme.paddingRegular),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: const Text(
+          'Informasi pembayaran akan ditampilkan setelah menekan tombol "Pay Now"',
+          style: TextStyle(fontSize: AppTheme.fontSizeRegular),
+        ),
+      );
+    }
   }
 
   String _getPreviewVANumber(String bankCode) {

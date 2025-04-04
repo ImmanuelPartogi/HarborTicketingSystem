@@ -25,6 +25,8 @@ class BookingProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _pendingVehicles = [];
   int _scheduleId = 0;
 
+  // Tambahkan _isLoading yang hilang
+  bool _isLoading = false;
   bool _isLoadingBookings = false;
   bool _isCreatingBooking = false;
   bool _isProcessingPayment = false;
@@ -46,6 +48,8 @@ class BookingProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get pendingVehicles => _pendingVehicles;
   int get scheduleId => _scheduleId;
 
+  // Tambahkan getter untuk _isLoading
+  bool get isLoading => _isLoading;
   bool get isLoadingBookings => _isLoadingBookings;
   bool get isCreatingBooking => _isCreatingBooking;
   bool get isProcessingPayment => _isProcessingPayment;
@@ -320,64 +324,48 @@ class BookingProvider extends ChangeNotifier {
   }
 
   // Process payment for current booking with Midtrans
-  Future<bool> processPayment(
-    String paymentMethod,
-    String paymentChannel,
-  ) async {
-    if (!_checkInitialized()) return false;
-
+  Future<bool> processPayment(String paymentType, String paymentMethod) async {
     if (_currentBooking == null) {
-      _paymentError = 'No active booking found';
-      notifyListeners();
+      _paymentError = 'Tidak ada booking aktif';
       return false;
     }
 
-    print('Processing payment for booking:');
-    print('  ID: ${_currentBooking!.id}');
-    print('  Code: ${_currentBooking!.bookingCode}');
+    // Pastikan _paymentService tidak null sebelum digunakan
+    if (_paymentService == null) {
+      _paymentError = 'Payment service not initialized';
+      return false;
+    }
 
     _isProcessingPayment = true;
     _paymentError = null;
     notifyListeners();
 
     try {
-      // Format payment method untuk validasi
-      String formattedPaymentMethod = _convertPaymentMethodFormat(
-        paymentMethod,
+      // Debug logs
+      print('Memproses pembayaran untuk booking ID: ${_currentBooking!.id}');
+      print('Metode: $paymentMethod, Tipe: $paymentType');
+
+      final response = await _paymentService!.createPayment(
+        bookingIdentifier: 'id/${_currentBooking!.id}',
+        paymentMethod: paymentType,
+        paymentChannel: paymentMethod,
       );
 
-      print('Creating payment for booking ID: ${_currentBooking!.id}');
-      print(
-        'Payment method: $formattedPaymentMethod, channel: $paymentChannel',
-      );
+      // Debug log response
+      print('Response API pembayaran: $response');
 
-      // Tunggu untuk memastikan data tersinkronisasi
-      await Future.delayed(Duration(seconds: 3));
-
-      // PERBAIKAN: Tambahkan null assertion untuk _apiService
-      if (_apiService == null) {
-        throw Exception('API service not initialized');
-      }
-
-      // Gunakan endpoint berdasarkan ID numerik
-      final response = await _apiService!.post(
-        '/api/v1/bookings/id/${_currentBooking!.id}/pay',
-        body: {
-          'payment_method': formattedPaymentMethod,
-          'payment_channel': paymentChannel,
-        },
-      );
-
-      // Refresh data booking setelah pembayaran
-      await fetchBookingDetail(_currentBooking!.id);
+      // Selalu muat ulang data booking setelah pembayaran
+      await fetchBookingDetail(_currentBooking!.id, forceRefresh: true);
 
       _isProcessingPayment = false;
       notifyListeners();
+
       return true;
     } catch (e) {
-      _paymentError = 'Payment processing failed: ${e.toString()}';
       _isProcessingPayment = false;
+      _paymentError = e.toString();
       notifyListeners();
+      print('Error saat memproses pembayaran: $e');
       return false;
     }
   }
@@ -418,86 +406,58 @@ class BookingProvider extends ChangeNotifier {
   }
 
   // Fetch booking detail
-  Future<void> fetchBookingDetail(dynamic bookingIdentifier) async {
-    if (!_checkInitialized()) return;
+  Future<void> fetchBookingDetail(
+    dynamic bookingIdentifier, {
+    bool forceRefresh = false,
+  }) async {
+    if (bookingIdentifier == null) {
+      throw Exception('ID booking tidak valid');
+    }
 
-    _isLoadingBookingDetail = true;
-    _bookingError = null;
+    // Pastikan _apiService tidak null
+    if (_apiService == null) {
+      throw Exception('API service not initialized');
+    }
+
+    // Skip jika sudah ada data booking yang sama (kecuali force refresh)
+    if (!forceRefresh &&
+        _currentBooking != null &&
+        (_currentBooking!.id.toString() == bookingIdentifier.toString() ||
+            _currentBooking!.bookingCode == bookingIdentifier)) {
+      print('Menggunakan data booking yang ada, skip fetch');
+      return;
+    }
+
+    _isLoading = true;
     notifyListeners();
 
     try {
-      print('Fetching booking details for identifier: $bookingIdentifier');
+      final response = await _apiService!.get(endpoint);
 
-      // Handle ID numerik (int) dengan endpoint khusus
-      if (bookingIdentifier is int) {
-        try {
-          print('Using numeric ID endpoint for booking ID: $bookingIdentifier');
+      if (response['success'] == true) {
+        final bookingData = response['data']['booking'];
+        _currentBooking = Booking.fromJson(bookingData);
+        print('Berhasil memuat booking: ${_currentBooking!.id}');
 
-          // Gunakan endpoint khusus untuk ID numerik
-          final response = await _apiService!.get(
-            '/api/v1/bookings/id/$bookingIdentifier',
-          );
-
-          // Proses response
-          if (response.containsKey('data') && response['data'] is Map) {
-            if (response['data'].containsKey('booking')) {
-              _currentBooking = Booking.fromJson(response['data']['booking']);
-            } else {
-              _currentBooking = Booking.fromJson(response['data']);
-            }
-
-            print('Successfully loaded booking by ID: ${_currentBooking!.id}');
-            _isLoadingBookingDetail = false;
-            notifyListeners();
-            return;
-          }
-        } catch (e) {
-          print('Error fetching booking by ID: $e');
-          // Gagal dengan ID, lanjutkan dengan cara lain jika memungkinkan
-        }
-      }
-
-      // Cara normal dengan booking code jika tidak berhasil dengan ID
-      String identifier;
-
-      // Tentukan identifier yang akan digunakan
-      if (bookingIdentifier is Booking) {
-        identifier = bookingIdentifier.bookingCode;
-      } else if (bookingIdentifier is int) {
-        // Coba gunakan booking code dari cache jika ada dan ID cocok
-        if (_currentBooking != null &&
-            _currentBooking!.id == bookingIdentifier) {
-          identifier = _currentBooking!.bookingCode;
-          print('Using booking code $identifier from cached booking');
+        // PERBAIKAN: Debug data payment
+        if (_currentBooking!.payment != null) {
+          print('Payment data ditemukan:');
+          print('Payment ID: ${_currentBooking!.payment!.id}');
+          print('Payment Method: ${_currentBooking!.payment!.paymentMethod}');
+          print('Payment Channel: ${_currentBooking!.payment!.paymentChannel}');
+          print('VA Number: ${_currentBooking!.payment!.vaNumber}');
         } else {
-          throw Exception(
-            'Tidak dapat menemukan booking code untuk ID: $bookingIdentifier',
-          );
+          print('WARNING: Payment data tidak ditemukan dalam booking');
         }
       } else {
-        // Asumsikan string
-        identifier = bookingIdentifier.toString();
+        _bookingError = 'Failed to load booking: ${response['message']}';
+        print('Error loading booking: ${_bookingError}');
       }
-
-      // Tunggu sebelum request untuk memastikan data tersinkronisasi
-      print('Delaying initial request to allow data synchronization...');
-      await Future.delayed(Duration(seconds: 2));
-
-      // Gunakan booking service dengan retry
-      _currentBooking = await _bookingService!.getBookingDetail(identifier);
-
-      if (_currentBooking == null) {
-        throw Exception(
-          'Booking tidak ditemukan dengan identifier: $identifier',
-        );
-      }
-
-      print('Successfully loaded booking: ${_currentBooking!.bookingCode}');
     } catch (e) {
-      _bookingError = 'Gagal memuat detail booking: ${e.toString()}';
-      print('Error in fetchBookingDetail: $_bookingError');
+      print('Error saat memuat detail booking: $e');
+      throw e;
     } finally {
-      _isLoadingBookingDetail = false;
+      _isLoading = false;
       notifyListeners();
     }
   }
@@ -581,6 +541,11 @@ class BookingProvider extends ChangeNotifier {
       return false;
     }
 
+    // Pastikan _apiService tidak null
+    if (_apiService == null) {
+      throw Exception('API service not initialized');
+    }
+
     _isCheckingPaymentStatus = true;
     notifyListeners();
 
@@ -632,9 +597,7 @@ class BookingProvider extends ChangeNotifier {
 
         return false;
       } catch (innerError) {
-        debugPrint(
-          'Error checking payment status: $e, second attempt: $innerError',
-        );
+        print('Error checking payment status: $e, second attempt: $innerError');
         _isCheckingPaymentStatus = false;
         notifyListeners();
         return false;
@@ -645,6 +608,11 @@ class BookingProvider extends ChangeNotifier {
   // Generate tickets for a booking - dengan pendekatan yang lebih robust
   Future<bool> generateTickets(int bookingId) async {
     if (!_checkInitialized()) return false;
+
+    // Pastikan _apiService tidak null
+    if (_apiService == null) {
+      throw Exception('API service not initialized');
+    }
 
     try {
       if (_currentBooking == null || _currentBooking!.id != bookingId) {
@@ -727,13 +695,13 @@ class BookingProvider extends ChangeNotifier {
 
   // Get available payment methods
   List<Map<String, dynamic>> getAvailablePaymentMethods() {
-    if (!_checkInitialized()) return [];
+    if (!_checkInitialized() || _paymentService == null) return [];
     return _paymentService!.getAvailablePaymentMethods();
   }
 
   // Get payment methods by type
   List<Map<String, dynamic>> getPaymentMethodsByType(String type) {
-    if (!_checkInitialized()) return [];
+    if (!_checkInitialized() || _paymentService == null) return [];
     return _paymentService!.getPaymentMethodsByType(type);
   }
 

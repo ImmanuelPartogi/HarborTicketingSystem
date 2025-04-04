@@ -18,8 +18,12 @@ class PaymentService {
     required String paymentMethod,
     required String paymentChannel,
   }) async {
+    // Standarisasi parameter ke format UPPERCASE
+    final upperCaseMethod = paymentMethod.toUpperCase();
+    final upperCaseChannel = paymentChannel.toUpperCase();
+
     print('Creating payment for booking: $bookingIdentifier');
-    print('Payment method: $paymentMethod, channel: $paymentChannel');
+    print('Payment method: $upperCaseMethod, channel: $upperCaseChannel');
     print('Menunggu sebelum mencoba memproses pembayaran...');
     await Future.delayed(Duration(seconds: 3));
 
@@ -32,8 +36,10 @@ class PaymentService {
         final response = await _apiService.post(
           '/api/v1/bookings/$bookingIdentifier/pay',
           body: {
-            'payment_method': paymentMethod,
-            'payment_channel': paymentChannel,
+            'payment_method':
+                upperCaseMethod, // PENTING: Selalu gunakan uppercase
+            'payment_channel':
+                upperCaseChannel, // Konsistensi format untuk channel
           },
         );
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert'; // Pastikan import ini ada
+import 'dart:convert';
 
 class Payment {
   final int id;
@@ -65,9 +65,9 @@ class Payment {
       }
     }
 
-    // PERBAIKAN UTAMA: Fungsi untuk mengurai payload
+    // PERBAIKAN UTAMA: Ekstraksi data pembayaran Midtrans dari payload
     Map<String, dynamic>? parsePayloadData(dynamic value) {
-      print('Parsing payload data: $value');
+      print('Parsing payload: $value');
       if (value == null) return null;
       
       // Jika sudah berbentuk Map, gunakan langsung
@@ -77,21 +77,22 @@ class Payment {
       if (value is String) {
         try {
           var decoded = jsonDecode(value);
-          print('Decoded payload: $decoded');
+          print('Decoded payload JSON: $decoded');
           
           if (decoded is Map<String, dynamic>) {
             // Jika ada payment_data di dalam payload, ekstrak itu
-            if (decoded.containsKey('payment_data') && decoded['payment_data'] != null) {
+            if (decoded.containsKey('payment_data') && 
+                decoded['payment_data'] != null) {
               var paymentData = decoded['payment_data'];
-              print('Found payment_data in payload: $paymentData');
               
-              // Jika payment_data masih berupa string, parse lagi
+              // Jika payment_data masih berupa string JSON, parse lagi
               if (paymentData is String) {
                 try {
-                  return jsonDecode(paymentData);
+                  var parsedPaymentData = jsonDecode(paymentData);
+                  print('Parsed payment_data: $parsedPaymentData');
+                  return parsedPaymentData;
                 } catch (e) {
-                  print('Could not parse payment_data as JSON: $e');
-                  return null;
+                  print('Error parsing payment_data string: $e');
                 }
               } else if (paymentData is Map<String, dynamic>) {
                 return paymentData;
@@ -101,14 +102,14 @@ class Payment {
             return decoded;
           }
         } catch (e) {
-          print('Error parsing payload: $e');
+          print('Error parsing payload JSON: $e');
         }
       }
       return null;
     }
 
     var payloadData = parsePayloadData(json['payload']);
-    print('Final parsed payload data: $payloadData');
+    print('Final parsed payment data: $payloadData');
 
     return Payment(
       id: json['id'] ?? 0,
@@ -221,29 +222,47 @@ class Payment {
     }
   }
 
-  // PERBAIKAN: Getter untuk nomor VA
+  // PERBAIKAN: Ekstraksi VA number dari format Midtrans
   String? get vaNumber {
     if (paymentData == null) return null;
     
     if (paymentMethod.toUpperCase() == 'VIRTUAL_ACCOUNT') {
-      // Format untuk BCA, BNI, BRI (array va_numbers)
+      print('Extracting VA for ${paymentChannel.toUpperCase()}: $paymentData');
+      
+      // Format untuk BNI atau bank lain dengan va_numbers array
       if (paymentData!.containsKey('va_numbers')) {
         final vaNumbers = paymentData!['va_numbers'] as List<dynamic>?;
         if (vaNumbers != null && vaNumbers.isNotEmpty) {
+          print('Found va_numbers: $vaNumbers');
           return vaNumbers[0]['va_number']?.toString();
         }
       }
       
-      // Format khusus Permata
+      // Alternatif format untuk BNI
+      if (paymentData!.containsKey('virtual_account')) {
+        print('Found virtual_account: ${paymentData!['virtual_account']}');
+        return paymentData!['virtual_account']?.toString();
+      }
+      
+      // Format untuk Permata
       if (paymentData!.containsKey('permata_va_number')) {
+        print('Found permata_va_number: ${paymentData!['permata_va_number']}');
         return paymentData!['permata_va_number']?.toString();
       }
       
-      // Format langsung
+      // Format langsung va_number
       if (paymentData!.containsKey('va_number')) {
+        print('Found va_number: ${paymentData!['va_number']}');
         return paymentData!['va_number']?.toString();
       }
+      
+      // Format untuk Mandiri Bill Payment
+      if (paymentData!.containsKey('bill_key')) {
+        print('Found bill_key: ${paymentData!['bill_key']}');
+        return paymentData!['bill_key']?.toString();
+      }
     }
+    
     return null;
   }
 
@@ -277,6 +296,7 @@ class Payment {
         if (actions != null) {
           for (final action in actions) {
             if (action['name'] == 'generate-qr-code') {
+              print('Found QR Code URL: ${action['url']}');
               return action['url']?.toString();
             }
           }
@@ -285,6 +305,7 @@ class Payment {
       
       // Cek field langsung
       if (paymentData!.containsKey('qr_code_url')) {
+        print('Found direct QR code URL: ${paymentData!['qr_code_url']}');
         return paymentData!['qr_code_url']?.toString();
       }
     }
@@ -302,6 +323,7 @@ class Payment {
         if (actions != null) {
           for (final action in actions) {
             if (action['name'] == 'deeplink-redirect') {
+              print('Found deeplink URL: ${action['url']}');
               return action['url']?.toString();
             }
           }
