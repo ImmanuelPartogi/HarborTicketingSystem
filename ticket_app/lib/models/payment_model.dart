@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert'; // Menambahkan import untuk jsonDecode
+import 'dart:convert'; // Pastikan import ini ada
 
 class Payment {
   final int id;
@@ -35,7 +35,7 @@ class Payment {
   });
 
   factory Payment.fromJson(Map<String, dynamic> json) {
-    // Helper functions to safely parse values
+    // Helper functions untuk parsing nilai dengan aman
     double parseDouble(dynamic value) {
       if (value == null) return 0.0;
       if (value is double) return value;
@@ -65,22 +65,50 @@ class Payment {
       }
     }
 
-    Map<String, dynamic>? parsePaymentData(dynamic value) {
+    // PERBAIKAN UTAMA: Fungsi untuk mengurai payload
+    Map<String, dynamic>? parsePayloadData(dynamic value) {
+      print('Parsing payload data: $value');
       if (value == null) return null;
+      
+      // Jika sudah berbentuk Map, gunakan langsung
       if (value is Map<String, dynamic>) return value;
+      
+      // Jika berbentuk string JSON, parse terlebih dahulu
       if (value is String) {
         try {
-          // Menggunakan jsonDecode dari dart:convert, bukan json.decode
-          final decoded = jsonDecode(value);
+          var decoded = jsonDecode(value);
+          print('Decoded payload: $decoded');
+          
           if (decoded is Map<String, dynamic>) {
+            // Jika ada payment_data di dalam payload, ekstrak itu
+            if (decoded.containsKey('payment_data') && decoded['payment_data'] != null) {
+              var paymentData = decoded['payment_data'];
+              print('Found payment_data in payload: $paymentData');
+              
+              // Jika payment_data masih berupa string, parse lagi
+              if (paymentData is String) {
+                try {
+                  return jsonDecode(paymentData);
+                } catch (e) {
+                  print('Could not parse payment_data as JSON: $e');
+                  return null;
+                }
+              } else if (paymentData is Map<String, dynamic>) {
+                return paymentData;
+              }
+            }
+            // Jika tidak ada payment_data, gunakan payload langsung
             return decoded;
           }
         } catch (e) {
-          print('Error parsing payment data: $e');
+          print('Error parsing payload: $e');
         }
       }
       return null;
     }
+
+    var payloadData = parsePayloadData(json['payload']);
+    print('Final parsed payload data: $payloadData');
 
     return Payment(
       id: json['id'] ?? 0,
@@ -92,9 +120,9 @@ class Payment {
       transactionId: json['transaction_id'],
       paymentCode: json['payment_code'],
       paymentUrl: json['payment_url'],
-      paymentData: parsePaymentData(json['payment_data']),
-      expiredAt: parseDateTime(json['expired_at']),
-      paidAt: parseNullableDateTime(json['paid_at']),
+      paymentData: payloadData,
+      expiredAt: parseDateTime(json['expiry_date'] ?? json['expired_at']),
+      paidAt: parseNullableDateTime(json['payment_date'] ?? json['paid_at']),
       createdAt: parseDateTime(json['created_at']),
       updatedAt: parseDateTime(json['updated_at']),
     );
@@ -193,50 +221,89 @@ class Payment {
     }
   }
 
-  // Getters for payment information
+  // PERBAIKAN: Getter untuk nomor VA
   String? get vaNumber {
     if (paymentData == null) return null;
     
     if (paymentMethod.toUpperCase() == 'VIRTUAL_ACCOUNT') {
-      return paymentData!['va_number'] as String?;
-    }
-    return null;
-  }
-
-  String? get bankName {
-    if (paymentData == null) return null;
-    
-    if (paymentMethod.toUpperCase() == 'VIRTUAL_ACCOUNT') {
-      return paymentData!['bank'] as String?;
-    }
-    return paymentChannel;
-  }
-
-  String? get qrCodeUrl {
-    if (paymentData == null) return null;
-    
-    if (paymentMethod.toUpperCase() == 'E_WALLET') {
-      final actions = paymentData!['actions'] as List<dynamic>?;
-      if (actions != null) {
-        for (final action in actions) {
-          if (action['name'] == 'generate-qr-code') {
-            return action['url'] as String?;
-          }
+      // Format untuk BCA, BNI, BRI (array va_numbers)
+      if (paymentData!.containsKey('va_numbers')) {
+        final vaNumbers = paymentData!['va_numbers'] as List<dynamic>?;
+        if (vaNumbers != null && vaNumbers.isNotEmpty) {
+          return vaNumbers[0]['va_number']?.toString();
         }
+      }
+      
+      // Format khusus Permata
+      if (paymentData!.containsKey('permata_va_number')) {
+        return paymentData!['permata_va_number']?.toString();
+      }
+      
+      // Format langsung
+      if (paymentData!.containsKey('va_number')) {
+        return paymentData!['va_number']?.toString();
       }
     }
     return null;
   }
 
+  // PERBAIKAN: Getter untuk nama bank
+  String? get bankName {
+    if (paymentData == null) return null;
+    
+    if (paymentMethod.toUpperCase() == 'VIRTUAL_ACCOUNT') {
+      if (paymentData!.containsKey('va_numbers')) {
+        final vaNumbers = paymentData!['va_numbers'] as List<dynamic>?;
+        if (vaNumbers != null && vaNumbers.isNotEmpty) {
+          return vaNumbers[0]['bank']?.toString();
+        }
+      }
+      
+      if (paymentData!.containsKey('bank')) {
+        return paymentData!['bank']?.toString();
+      }
+    }
+    return paymentChannel;
+  }
+
+  // PERBAIKAN: Getter untuk URL QR Code (E-Wallet)
+  String? get qrCodeUrl {
+    if (paymentData == null) return null;
+    
+    if (paymentMethod.toUpperCase() == 'E_WALLET') {
+      // Cek actions untuk QR Code
+      if (paymentData!.containsKey('actions')) {
+        final actions = paymentData!['actions'] as List<dynamic>?;
+        if (actions != null) {
+          for (final action in actions) {
+            if (action['name'] == 'generate-qr-code') {
+              return action['url']?.toString();
+            }
+          }
+        }
+      }
+      
+      // Cek field langsung
+      if (paymentData!.containsKey('qr_code_url')) {
+        return paymentData!['qr_code_url']?.toString();
+      }
+    }
+    return null;
+  }
+
+  // PERBAIKAN: Getter untuk URL Deep Link (E-Wallet)
   String? get deepLinkUrl {
     if (paymentData == null) return null;
     
     if (paymentMethod.toUpperCase() == 'E_WALLET') {
-      final actions = paymentData!['actions'] as List<dynamic>?;
-      if (actions != null) {
-        for (final action in actions) {
-          if (action['name'] == 'deeplink-redirect') {
-            return action['url'] as String?;
+      // Cek actions untuk deeplink
+      if (paymentData!.containsKey('actions')) {
+        final actions = paymentData!['actions'] as List<dynamic>?;
+        if (actions != null) {
+          for (final action in actions) {
+            if (action['name'] == 'deeplink-redirect') {
+              return action['url']?.toString();
+            }
           }
         }
       }

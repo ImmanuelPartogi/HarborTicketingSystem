@@ -1135,6 +1135,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
         ),
         const SizedBox(height: AppTheme.paddingMedium),
+
+        // Menampilkan preview VA atau QR code
+        _buildPaymentPreview(),
+
         Text(
           instructions['steps'] ?? 'No instructions available',
           style: const TextStyle(fontSize: AppTheme.fontSizeRegular),
@@ -1162,6 +1166,149 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       ],
     );
+  }
+
+  String _getPreviewVANumber(String bankCode) {
+    switch (bankCode.toLowerCase()) {
+      case 'bca':
+        return '9123 xxxx xxxx xxxx'; // Format BCA VA
+      case 'bni':
+        return '8810 xxxx xxxx xxxx'; // Format BNI VA
+      case 'bri':
+        return '8881 xxxx xxxx xxxx'; // Format BRI VA
+      case 'mandiri':
+        return '8900 xxxx xxxx xxxx'; // Format Mandiri VA
+      case 'permata':
+        return '8214 xxxx xxxx xxxx'; // Format Permata VA
+      default:
+        return 'xxxx xxxx xxxx xxxx';
+    }
+  }
+
+  Widget _buildPaymentPreview() {
+    if (_selectedPaymentType == 'virtual_account') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+        padding: const EdgeInsets.all(AppTheme.paddingRegular),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Virtual Account Number Preview',
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeRegular,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: AppTheme.paddingSmall),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusSmall,
+                    ),
+                    image: DecorationImage(
+                      image: AssetImage(
+                        'assets/images/payment_methods/${_selectedPaymentMethod.toLowerCase()}.png',
+                      ),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppTheme.paddingSmall),
+                Expanded(
+                  child: Text(
+                    _getPreviewVANumber(_selectedPaymentMethod),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppTheme.fontSizeMedium,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.paddingXSmall),
+            const Text(
+              'Nomor VA aktual akan diberikan setelah menekan tombol "Pay Now"',
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeSmall,
+                color: Colors.orange,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (_selectedPaymentType == 'e_wallet') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+        padding: const EdgeInsets.all(AppTheme.paddingRegular),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusSmall,
+                    ),
+                    image: DecorationImage(
+                      image: AssetImage(
+                        'assets/images/payment_methods/${_selectedPaymentMethod.toLowerCase()}.png',
+                      ),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppTheme.paddingSmall),
+                Expanded(
+                  child: const Text(
+                    'QR Code Payment',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: AppTheme.fontSizeMedium,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.paddingSmall),
+            Icon(Icons.qr_code_2, size: 100, color: Colors.grey.shade400),
+            const SizedBox(height: AppTheme.paddingSmall),
+            const Text(
+              'QR Code akan ditampilkan setelah menekan tombol "Pay Now"',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeSmall,
+                color: Colors.orange,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildPaymentInstructionsForExistingPayment(Payment payment) {

@@ -742,9 +742,317 @@ class BookingProvider extends ChangeNotifier {
     String paymentMethod,
     String paymentType,
   ) {
-    if (!_checkInitialized())
-      return {'title': 'Error', 'steps': 'Service not initialized'};
-    return _paymentService!.getPaymentInstructions(paymentMethod, paymentType);
+    if (paymentType == 'virtual_account') {
+      switch (paymentMethod.toLowerCase()) {
+        case 'bca':
+          return {
+            'title': 'BCA Virtual Account Payment Instructions',
+            'steps': '''
+1. Login to your BCA Mobile Banking app or Internet Banking.
+2. Choose "Transfer" > "Virtual Account".
+3. Enter the BCA Virtual Account number shown above.
+4. Confirm the payment details and amount.
+5. Enter your PIN or password to authorize the payment.
+6. A receipt will be shown when payment is successful.
+7. Your booking will be automatically confirmed.
+
+You can also pay through BCA ATM:
+1. Insert your ATM card and enter your PIN.
+2. Select "Other Transactions".
+3. Select "Transfer".
+4. Select "To BCA Virtual Account".
+5. Enter the Virtual Account number.
+6. Confirm the payment details and complete the transaction.
+''',
+          };
+        case 'bni':
+          return {
+            'title': 'BNI Virtual Account Payment Instructions',
+            'steps': '''
+1. Login to your BNI Mobile Banking app or Internet Banking.
+2. Choose "Transfer" > "Virtual Account" or "Transfer to BNI Virtual Account".
+3. Enter the BNI Virtual Account number shown above.
+4. Confirm the payment details and amount.
+5. Enter your PIN or password to authorize the payment.
+6. A receipt will be shown when payment is successful.
+7. Your booking will be automatically confirmed.
+
+You can also pay through BNI ATM:
+1. Insert your ATM card and enter your PIN.
+2. Select "Menu Lainnya".
+3. Select "Transfer".
+4. Select "Rekening Tabungan".
+5. Select "Ke Rekening BNI".
+6. Enter the Virtual Account number.
+7. Confirm the payment details and complete the transaction.
+''',
+          };
+        case 'bri':
+          return {
+            'title': 'BRI Virtual Account Payment Instructions',
+            'steps': '''
+1. Login to your BRI Mobile Banking app or Internet Banking.
+2. Choose "Transfer" > "BRIVA".
+3. Enter the BRI Virtual Account number shown above.
+4. Confirm the payment details and amount.
+5. Enter your PIN or password to authorize the payment.
+6. A receipt will be shown when payment is successful.
+7. Your booking will be automatically confirmed.
+
+You can also pay through BRI ATM:
+1. Insert your ATM card and enter your PIN.
+2. Select "Transaksi Lainnya".
+3. Select "Pembayaran".
+4. Select "BRIVA".
+5. Enter the BRIVA number.
+6. Confirm the payment details and complete the transaction.
+''',
+          };
+        case 'mandiri':
+          return {
+            'title': 'Mandiri Bill Payment Instructions',
+            'steps': '''
+1. Login to your Mandiri Mobile Banking app or Internet Banking.
+2. Choose "Pembayaran" > "Multi Payment".
+3. Select "Ferry Ticketing" as the biller.
+4. Enter your payment code shown above.
+5. Confirm the payment details and amount.
+6. Enter your PIN or password to authorize the payment.
+7. A receipt will be shown when payment is successful.
+8. Your booking will be automatically confirmed.
+
+You can also pay through Mandiri ATM:
+1. Insert your ATM card and enter your PIN.
+2. Select "Bayar/Beli".
+3. Select "Multi Payment".
+4. Enter company code "70012" (Ferry Ticketing).
+5. Enter your payment code.
+6. Confirm the payment details and complete the transaction.
+''',
+          };
+        case 'permata':
+          return {
+            'title': 'Permata Virtual Account Payment Instructions',
+            'steps': '''
+1. Login to your Permata Mobile Banking app or Internet Banking.
+2. Choose "Pembayaran" > "Pembayaran Tagihan".
+3. Select "Virtual Account".
+4. Enter the Permata Virtual Account number shown above.
+5. Confirm the payment details and amount.
+6. Enter your PIN or password to authorize the payment.
+7. A receipt will be shown when payment is successful.
+8. Your booking will be automatically confirmed.
+
+You can also pay through Permata ATM:
+1. Insert your ATM card and enter your PIN.
+2. Select "Transaksi Lainnya".
+3. Select "Pembayaran".
+4. Select "Pembayaran Lainnya".
+5. Select "Virtual Account".
+6. Enter the Virtual Account number.
+7. Confirm the payment details and complete the transaction.
+''',
+          };
+        default:
+          return {
+            'title': 'Virtual Account Payment Instructions',
+            'steps': '''
+1. Login to your mobile banking app or internet banking.
+2. Choose "Transfer" > "Virtual Account" or similar option.
+3. Enter the Virtual Account number shown above.
+4. Confirm the payment details and amount.
+5. Enter your PIN or password to authorize the payment.
+6. A receipt will be shown when payment is successful.
+7. Your booking will be automatically confirmed.
+
+You can also pay through ATM:
+1. Insert your ATM card and enter your PIN.
+2. Select "Transfer" or "Payment".
+3. Select "Virtual Account" or similar option.
+4. Enter the Virtual Account number.
+5. Confirm the payment details and complete the transaction.
+''',
+          };
+      }
+    } else if (paymentType == 'e_wallet') {
+      switch (paymentMethod.toLowerCase()) {
+        case 'gopay':
+          return {
+            'title': 'GoPay Payment Instructions',
+            'steps': '''
+1. Press the "Pay Now" button below.
+2. A QR code will be displayed on the next screen.
+3. Open your GoPay app.
+4. Tap "Scan" or "Pay" in your GoPay app.
+5. Scan the QR code that appears.
+6. Confirm the payment details and amount.
+7. Enter your PIN to authorize payment.
+8. A notification will confirm your successful payment.
+9. Your booking will be automatically confirmed.
+
+Alternatively:
+- If using a mobile device, you may be redirected to the GoPay app automatically.
+- Follow the instructions in the GoPay app to complete your payment.
+''',
+          };
+        case 'ovo':
+          return {
+            'title': 'OVO Payment Instructions',
+            'steps': '''
+1. Press the "Pay Now" button below.
+2. A QR code will be displayed on the next screen.
+3. Open your OVO app.
+4. Tap "Scan QR" in your OVO app.
+5. Scan the QR code that appears.
+6. Confirm the payment details and amount.
+7. Enter your OVO PIN to authorize payment.
+8. A notification will confirm your successful payment.
+9. Your booking will be automatically confirmed.
+
+Alternatively:
+- If using a mobile device, you may be redirected to the OVO app automatically.
+- Follow the instructions in the OVO app to complete your payment.
+''',
+          };
+        case 'dana':
+          return {
+            'title': 'DANA Payment Instructions',
+            'steps': '''
+1. Press the "Pay Now" button below.
+2. A QR code will be displayed on the next screen.
+3. Open your DANA app.
+4. Tap "Scan" icon at the bottom of the DANA app.
+5. Scan the QR code that appears.
+6. Confirm the payment details and amount.
+7. Enter your DANA PIN to authorize payment.
+8. A notification will confirm your successful payment.
+9. Your booking will be automatically confirmed.
+
+Alternatively:
+- If using a mobile device, you may be redirected to the DANA app automatically.
+- Follow the instructions in the DANA app to complete your payment.
+''',
+          };
+        case 'shopeepay':
+          return {
+            'title': 'ShopeePay Payment Instructions',
+            'steps': '''
+1. Press the "Pay Now" button below.
+2. You will be redirected to the Shopee app.
+3. If the Shopee app doesn't open automatically, open it manually.
+4. A payment page will appear in the Shopee app.
+5. Confirm the payment details and amount.
+6. Swipe to pay or enter your PIN to authorize payment.
+7. A notification will confirm your successful payment.
+8. Your booking will be automatically confirmed.
+
+Note:
+- Make sure you have the latest version of the Shopee app installed.
+- Ensure you have sufficient balance in your ShopeePay wallet.
+''',
+          };
+        default:
+          return {
+            'title': 'E-Wallet Payment Instructions',
+            'steps': '''
+1. Press the "Pay Now" button below.
+2. A QR code or payment page will be displayed.
+3. Open your e-wallet app.
+4. Use the scan feature in your e-wallet app to scan the QR code.
+5. Alternatively, you may be redirected to your e-wallet app automatically.
+6. Confirm the payment details and amount.
+7. Enter your PIN to authorize payment.
+8. A notification will confirm your successful payment.
+9. Your booking will be automatically confirmed.
+''',
+          };
+      }
+    } else if (paymentType == 'bank_transfer') {
+      return {
+        'title': 'Manual Bank Transfer Instructions',
+        'steps': '''
+1. Make a transfer to the following bank account:
+   Bank: ${_getBankName(paymentMethod)}
+   Account Number: ${_getBankAccountNumber(paymentMethod)}
+   Account Name: PT Harbor Ferry Services
+
+2. Use your booking code (shown above) as the transfer reference.
+
+3. After making the transfer, please upload your transfer receipt:
+   - Take a clear photo of your transfer receipt
+   - Click the "Upload Receipt" button below
+   - Verify the details are correct and submit
+
+4. Your booking will be confirmed after our team verifies your payment.
+5. This process may take up to 24 hours during business days.
+''',
+      };
+    } else if (paymentType == 'credit_card') {
+      return {
+        'title': 'Credit Card Payment Instructions',
+        'steps': '''
+1. Press the "Pay Now" button below.
+2. You will be redirected to a secure payment page.
+3. Enter your credit card details:
+   - Card number
+   - Cardholder name
+   - Expiry date
+   - CVV/CVC (3-digit security code)
+4. Some banks may require additional verification:
+   - OTP (One-Time Password) sent to your registered mobile number
+   - 3D Secure authentication
+5. After successful verification, your payment will be processed.
+6. You will be redirected back to the booking confirmation page.
+7. Your booking will be automatically confirmed.
+
+Note:
+- This is a secure payment process. Your card details are encrypted.
+- Make sure you have sufficient balance in your credit card.
+''',
+      };
+    }
+
+    return {
+      'title': 'Payment Instructions',
+      'steps':
+          'Follow the instructions after clicking "Pay Now" button to complete your payment.',
+    };
+  }
+
+  // Helper method untuk mendapatkan nama bank untuk pembayaran bank transfer
+  String _getBankName(String bankCode) {
+    switch (bankCode.toLowerCase()) {
+      case 'bca':
+        return 'BCA (Bank Central Asia)';
+      case 'bni':
+        return 'BNI (Bank Negara Indonesia)';
+      case 'bri':
+        return 'BRI (Bank Rakyat Indonesia)';
+      case 'mandiri':
+        return 'Bank Mandiri';
+      case 'permata':
+        return 'Bank Permata';
+      default:
+        return bankCode.toUpperCase();
+    }
+  }
+
+  // Helper method untuk mendapatkan nomor rekening bank untuk pembayaran bank transfer
+  String _getBankAccountNumber(String bankCode) {
+    switch (bankCode.toLowerCase()) {
+      case 'bca':
+        return '1234567890';
+      case 'bni':
+        return '0123456789';
+      case 'bri':
+        return '0987654321';
+      case 'mandiri':
+        return '1357924680';
+      case 'permata':
+        return '9876543210';
+      default:
+        return '0000000000';
+    }
   }
 
   // Calculate total price for booking
