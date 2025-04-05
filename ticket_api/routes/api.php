@@ -11,6 +11,7 @@ use App\Http\Controllers\API\PaymentController;
 use App\Http\Controllers\API\TicketController;
 use App\Http\Controllers\API\ProfileController;
 use App\Http\Controllers\API\VehicleController;
+use App\Http\Controllers\API\TicketGenerationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +56,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/payments/finish', [PaymentController::class, 'finish']);
     Route::get('/payments/unfinish', [PaymentController::class, 'unfinish']);
     Route::get('/payments/error', [PaymentController::class, 'error']);
+    Route::get('/payments/{id}/generate-tickets', [TicketGenerationController::class, 'autoGenerateTickets']);
 });
 
 // Rest of your routes remain unchanged
@@ -78,7 +80,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(functi
     Route::get('/bookings/id/{id}', [BookingController::class, 'showById']);
     Route::get('/bookings/id/{id}/payment-status', [BookingController::class, 'paymentStatusById']);
     Route::post('/bookings/{id}/generate-tickets', [BookingController::class, 'generateTickets']);
-    
+
     // Tickets
     Route::get('/tickets', [TicketController::class, 'index']);
     Route::get('/tickets/{ticketCode}', [TicketController::class, 'show']);

@@ -92,10 +92,9 @@ class TicketService
         $ticket = new Ticket();
         $ticket->booking_id = $booking->id;
         $ticket->passenger_id = $passenger->id;
-        $ticket->schedule_id = $booking->schedule_id;
         $ticket->ticket_code = $ticketCode;
         $ticket->status = 'ACTIVE';
-        $ticket->boarding_status = 'PENDING';
+        $ticket->boarding_status = Ticket::BOARDING_NOT_BOARDED;
         $ticket->checked_in = false;
 
         // Generate watermark data
@@ -154,10 +153,9 @@ class TicketService
         $ticket = new Ticket();
         $ticket->booking_id = $booking->id;
         $ticket->vehicle_id = $vehicle->id;
-        $ticket->schedule_id = $booking->schedule_id;
         $ticket->ticket_code = $ticketCode;
         $ticket->status = 'ACTIVE';
-        $ticket->boarding_status = 'PENDING';
+        $ticket->boarding_status = Ticket::BOARDING_NOT_BOARDED;
         $ticket->checked_in = false;
 
         // Generate watermark data
@@ -210,9 +208,15 @@ class TicketService
      */
     protected function generateTicketCode($prefix = 'TIX')
     {
-        $random = strtoupper(Str::random(6));
-        $timestamp = time();
-        return "{$prefix}-{$random}-{$timestamp}";
+        // Gunakan metode dari model Ticket yang sudah ada
+        $code = Ticket::generateTicketCode();
+
+        // Tambahkan prefix jika berbeda dari default
+        if ($prefix !== 'TIX') {
+            return $prefix . '-' . $code;
+        }
+
+        return $code;
     }
 
     /**

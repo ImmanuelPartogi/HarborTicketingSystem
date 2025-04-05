@@ -27,30 +27,30 @@ class VehicleDetailsScreen extends StatefulWidget {
 
 class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  
+
   String _selectedVehicleType = 'car';
   final TextEditingController _licensePlateController = TextEditingController();
   final TextEditingController _brandController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
-  
+
   bool _saveVehicleInfo = true;
   bool _isLoading = false;
   List<Map<String, dynamic>> _savedVehicles = [];
-  
+
   // Prices for different vehicle types
   double _carPrice = 0;
   double _motorcyclePrice = 0;
   double _busPrice = 0;
   double _truckPrice = 0;
-  
+
   @override
   void initState() {
     super.initState();
     _loadSavedVehicles();
     _loadVehiclePrices();
   }
-  
+
   @override
   void dispose() {
     _licensePlateController.dispose();
@@ -59,16 +59,19 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     _weightController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadSavedVehicles() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+      final bookingProvider = Provider.of<BookingProvider>(
+        context,
+        listen: false,
+      );
       final savedVehicles = await bookingProvider.loadSavedVehicles();
-      
+
       setState(() {
         _savedVehicles = savedVehicles;
       });
@@ -78,16 +81,16 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       });
     }
   }
-  
+
   Future<void> _loadVehiclePrices() async {
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
-    
+
     try {
       // Make sure we have the schedule details
       if (ferryProvider.selectedSchedule == null) {
         await ferryProvider.fetchScheduleDetail(widget.scheduleId);
       }
-      
+
       // Get vehicle prices from route
       final schedule = ferryProvider.selectedSchedule;
       if (schedule != null && schedule.route != null) {
@@ -102,7 +105,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       print('Error loading vehicle prices: $e');
     }
   }
-  
+
   double _getSelectedVehiclePrice() {
     switch (_selectedVehicleType) {
       case 'car':
@@ -117,7 +120,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
         return 0;
     }
   }
-  
+
   void _useSavedVehicle(Map<String, dynamic> vehicle) {
     setState(() {
       _selectedVehicleType = vehicle['type'] ?? 'car';
@@ -126,10 +129,10 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       _modelController.text = vehicle['model'] ?? '';
       _weightController.text = vehicle['weight']?.toString() ?? '';
     });
-    
+
     Navigator.pop(context); // Close the bottom sheet
   }
-  
+
   void _showSavedVehiclesBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -158,39 +161,40 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 ),
               ),
               const SizedBox(height: AppTheme.paddingMedium),
-              
+
               Expanded(
-                child: _savedVehicles.isEmpty
-                    ? const Center(
-                        child: Text('No saved vehicles found'),
-                      )
-                    : ListView.builder(
-                        itemCount: _savedVehicles.length,
-                        itemBuilder: (context, index) {
-                          final vehicle = _savedVehicles[index];
-                          return ListTile(
-                            leading: Icon(
-                              vehicle['type'] == 'car'
-                                  ? Icons.directions_car
-                                  : vehicle['type'] == 'motorcycle'
-                                      ? Icons.two_wheeler
-                                      : vehicle['type'] == 'bus'
-                                          ? Icons.directions_bus
-                                          : Icons.local_shipping,
-                            ),
-                            title: Text(vehicle['license_plate'] ?? 'Unknown'),
-                            subtitle: Text(
-                              '${vehicle['brand'] ?? ''} ${vehicle['model'] ?? ''}',
-                            ),
-                            onTap: () => _useSavedVehicle(vehicle),
-                            trailing: const Icon(Icons.check_circle_outline),
-                          );
-                        },
-                      ),
+                child:
+                    _savedVehicles.isEmpty
+                        ? const Center(child: Text('No saved vehicles found'))
+                        : ListView.builder(
+                          itemCount: _savedVehicles.length,
+                          itemBuilder: (context, index) {
+                            final vehicle = _savedVehicles[index];
+                            return ListTile(
+                              leading: Icon(
+                                vehicle['type'] == 'car'
+                                    ? Icons.directions_car
+                                    : vehicle['type'] == 'motorcycle'
+                                    ? Icons.two_wheeler
+                                    : vehicle['type'] == 'bus'
+                                    ? Icons.directions_bus
+                                    : Icons.local_shipping,
+                              ),
+                              title: Text(
+                                vehicle['license_plate'] ?? 'Unknown',
+                              ),
+                              subtitle: Text(
+                                '${vehicle['brand'] ?? ''} ${vehicle['model'] ?? ''}',
+                              ),
+                              onTap: () => _useSavedVehicle(vehicle),
+                              trailing: const Icon(Icons.check_circle_outline),
+                            );
+                          },
+                        ),
               ),
-              
+
               const SizedBox(height: AppTheme.paddingMedium),
-              
+
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -203,39 +207,45 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       },
     );
   }
-  
+
   Future<void> _proceedToBooking() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       // Prepare vehicle data
       final vehicleData = {
-        'type': _selectedVehicleType,
+        'type': _selectedVehicleType.toUpperCase(), // Konversi ke uppercase
         'license_plate': _licensePlateController.text,
         'brand': _brandController.text,
         'model': _modelController.text,
-        'weight': _weightController.text.isNotEmpty ? double.parse(_weightController.text) : null,
+        'weight':
+            _weightController.text.isNotEmpty
+                ? double.parse(_weightController.text)
+                : null,
         'price': _getSelectedVehiclePrice(),
         'save_info': _saveVehicleInfo,
       };
-      
+
       // Add vehicle to booking provider
-      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+      final bookingProvider = Provider.of<BookingProvider>(
+        context,
+        listen: false,
+      );
       bookingProvider.clearVehicles();
       bookingProvider.addVehicle(vehicleData);
-      
+
       // Create booking
       final success = await bookingProvider.createBooking();
-      
+
       if (success && mounted) {
         final currentBooking = bookingProvider.currentBooking;
-        
+
         Navigator.pushNamed(
           context,
           AppRoutes.payment,
@@ -247,7 +257,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(bookingProvider.bookingError ?? 'Failed to create booking'),
+            content: Text(
+              bookingProvider.bookingError ?? 'Failed to create booking',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -278,11 +290,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       symbol: 'Rp ',
       decimalDigits: 0,
     );
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Vehicle Details'),
-      ),
+      appBar: AppBar(title: const Text('Vehicle Details')),
       body: LoadingOverlay(
         isLoading: _isLoading,
         loadingMessage: 'Processing booking...',
@@ -313,9 +323,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                       ),
                   ],
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingMedium),
-                
+
                 // Vehicle type
                 Text(
                   'Vehicle Type',
@@ -326,11 +336,13 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                
+
                 Container(
                   decoration: BoxDecoration(
                     border: Border.all(color: theme.dividerColor),
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusRegular,
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -342,9 +354,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         price: _carPrice,
                         icon: Icons.directions_car,
                       ),
-                      
+
                       const Divider(height: 1),
-                      
+
                       // Motorcycle option
                       _buildVehicleTypeOption(
                         type: 'motorcycle',
@@ -353,9 +365,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         price: _motorcyclePrice,
                         icon: Icons.two_wheeler,
                       ),
-                      
+
                       const Divider(height: 1),
-                      
+
                       // Bus option
                       _buildVehicleTypeOption(
                         type: 'bus',
@@ -364,9 +376,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         price: _busPrice,
                         icon: Icons.directions_bus,
                       ),
-                      
+
                       const Divider(height: 1),
-                      
+
                       // Truck option
                       _buildVehicleTypeOption(
                         type: 'truck',
@@ -378,9 +390,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingLarge),
-                
+
                 // Vehicle details
                 Text(
                   'Vehicle Details',
@@ -390,9 +402,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                     color: theme.textTheme.displaySmall?.color,
                   ),
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingMedium),
-                
+
                 // License plate
                 CustomTextField(
                   label: 'License Plate',
@@ -407,9 +419,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingMedium),
-                
+
                 // Brand and model
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,9 +435,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         textCapitalization: TextCapitalization.words,
                       ),
                     ),
-                    
+
                     const SizedBox(width: AppTheme.paddingMedium),
-                    
+
                     // Model
                     Expanded(
                       child: CustomTextField(
@@ -437,9 +449,9 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingMedium),
-                
+
                 // Weight (for trucks)
                 if (_selectedVehicleType == 'truck')
                   CustomTextField(
@@ -451,15 +463,16 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                     ],
                     validator: (value) {
-                      if (_selectedVehicleType == 'truck' && (value == null || value.isEmpty)) {
+                      if (_selectedVehicleType == 'truck' &&
+                          (value == null || value.isEmpty)) {
                         return 'Weight is required for trucks';
                       }
                       return null;
                     },
                   ),
-                
+
                 const SizedBox(height: AppTheme.paddingMedium),
-                
+
                 // Save vehicle info
                 Row(
                   children: [
@@ -490,15 +503,17 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingLarge),
-                
+
                 // Summary
                 Container(
                   padding: const EdgeInsets.all(AppTheme.paddingMedium),
                   decoration: BoxDecoration(
                     color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusMedium,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
@@ -529,18 +544,16 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                           ),
                           Text(
                             currencyFormat.format(_getSelectedVehiclePrice()),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingLarge),
-                
+
                 // Continue button
                 CustomButton(
                   text: 'Continue to Payment',
@@ -548,7 +561,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                   type: ButtonType.primary,
                   isFullWidth: true,
                 ),
-                
+
                 const SizedBox(height: AppTheme.paddingLarge),
               ],
             ),
@@ -557,7 +570,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       ),
     );
   }
-  
+
   Widget _buildVehicleTypeOption({
     required String type,
     required String title,
@@ -570,7 +583,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       symbol: 'Rp ',
       decimalDigits: 0,
     );
-    
+
     return RadioListTile<String>(
       value: type,
       groupValue: _selectedVehicleType,
@@ -589,9 +602,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 Text(
                   subtitle,
@@ -605,9 +616,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
           ),
           Text(
             currencyFormat.format(price),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
       ),

@@ -194,6 +194,23 @@ class PaymentController extends Controller
             // Check status dengan Midtrans & update database
             $status = $this->paymentService->checkPaymentStatus($payment);
 
+            if ($status === 'SUCCESS' && $payment->booking->tickets()->count() === 0) {
+                Log::info('Payment is successful, auto-generating tickets', [
+                    'payment_id' => $id,
+                    'booking_id' => $payment->booking_id
+                ]);
+
+                // Pastikan booking sudah CONFIRMED
+                $booking = $payment->booking;
+                if ($booking->status !== 'CONFIRMED') {
+                    $booking->update(['status' => 'CONFIRMED']);
+                    $booking->refresh();
+                }
+
+                // Generate tickets langsung menggunakan ticketService yang sudah di-inject
+                $this->ticketService->generateTicketsForBooking($booking);
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
