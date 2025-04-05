@@ -181,6 +181,81 @@ class PaymentController extends Controller
     }
 
     /**
+     * Get payment status directly.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPaymentStatus($id)
+    {
+        try {
+            $payment = Payment::findOrFail($id);
+
+            // Check status dengan Midtrans & update database
+            $status = $this->paymentService->checkPaymentStatus($payment);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'status' => $status,
+                    'payment' => $payment,
+                    'booking' => $payment->booking
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting payment status', [
+                'payment_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get payment status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Manual check and update payment status.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function manualCheckAndUpdate($id)
+    {
+        try {
+            $payment = Payment::findOrFail($id);
+            $oldStatus = $payment->status;
+
+            // Force check status dengan Midtrans & update database
+            $status = $this->paymentService->checkPaymentStatus($payment);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment status updated successfully',
+                'data' => [
+                    'old_status' => $oldStatus,
+                    'new_status' => $status,
+                    'payment' => $payment,
+                    'booking' => $payment->booking
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error manually updating payment status', [
+                'payment_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update payment status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Finish redirect URL for Midtrans.
      *
      * @param Request $request

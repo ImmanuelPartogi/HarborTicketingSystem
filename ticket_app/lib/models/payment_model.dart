@@ -69,22 +69,22 @@ class Payment {
     Map<String, dynamic>? parsePayloadData(dynamic value) {
       print('Parsing payload: $value');
       if (value == null) return null;
-      
+
       // Jika sudah berbentuk Map, gunakan langsung
       if (value is Map<String, dynamic>) return value;
-      
+
       // Jika berbentuk string JSON, parse terlebih dahulu
       if (value is String) {
         try {
           var decoded = jsonDecode(value);
           print('Decoded payload JSON: $decoded');
-          
+
           if (decoded is Map<String, dynamic>) {
             // Jika ada payment_data di dalam payload, ekstrak itu
-            if (decoded.containsKey('payment_data') && 
+            if (decoded.containsKey('payment_data') &&
                 decoded['payment_data'] != null) {
               var paymentData = decoded['payment_data'];
-              
+
               // Jika payment_data masih berupa string JSON, parse lagi
               if (paymentData is String) {
                 try {
@@ -225,10 +225,10 @@ class Payment {
   // PERBAIKAN: Ekstraksi VA number dari format Midtrans
   String? get vaNumber {
     if (paymentData == null) return null;
-    
+
     if (paymentMethod.toUpperCase() == 'VIRTUAL_ACCOUNT') {
       print('Extracting VA for ${paymentChannel.toUpperCase()}: $paymentData');
-      
+
       // Format untuk BNI atau bank lain dengan va_numbers array
       if (paymentData!.containsKey('va_numbers')) {
         final vaNumbers = paymentData!['va_numbers'] as List<dynamic>?;
@@ -237,39 +237,39 @@ class Payment {
           return vaNumbers[0]['va_number']?.toString();
         }
       }
-      
+
       // Alternatif format untuk BNI
       if (paymentData!.containsKey('virtual_account')) {
         print('Found virtual_account: ${paymentData!['virtual_account']}');
         return paymentData!['virtual_account']?.toString();
       }
-      
+
       // Format untuk Permata
       if (paymentData!.containsKey('permata_va_number')) {
         print('Found permata_va_number: ${paymentData!['permata_va_number']}');
         return paymentData!['permata_va_number']?.toString();
       }
-      
+
       // Format langsung va_number
       if (paymentData!.containsKey('va_number')) {
         print('Found va_number: ${paymentData!['va_number']}');
         return paymentData!['va_number']?.toString();
       }
-      
+
       // Format untuk Mandiri Bill Payment
       if (paymentData!.containsKey('bill_key')) {
         print('Found bill_key: ${paymentData!['bill_key']}');
         return paymentData!['bill_key']?.toString();
       }
     }
-    
+
     return null;
   }
 
   // PERBAIKAN: Getter untuk nama bank
   String? get bankName {
     if (paymentData == null) return null;
-    
+
     if (paymentMethod.toUpperCase() == 'VIRTUAL_ACCOUNT') {
       if (paymentData!.containsKey('va_numbers')) {
         final vaNumbers = paymentData!['va_numbers'] as List<dynamic>?;
@@ -277,7 +277,7 @@ class Payment {
           return vaNumbers[0]['bank']?.toString();
         }
       }
-      
+
       if (paymentData!.containsKey('bank')) {
         return paymentData!['bank']?.toString();
       }
@@ -288,7 +288,7 @@ class Payment {
   // PERBAIKAN: Getter untuk URL QR Code (E-Wallet)
   String? get qrCodeUrl {
     if (paymentData == null) return null;
-    
+
     if (paymentMethod.toUpperCase() == 'E_WALLET') {
       // Cek actions untuk QR Code
       if (paymentData!.containsKey('actions')) {
@@ -302,7 +302,7 @@ class Payment {
           }
         }
       }
-      
+
       // Cek field langsung
       if (paymentData!.containsKey('qr_code_url')) {
         print('Found direct QR code URL: ${paymentData!['qr_code_url']}');
@@ -315,7 +315,7 @@ class Payment {
   // PERBAIKAN: Getter untuk URL Deep Link (E-Wallet)
   String? get deepLinkUrl {
     if (paymentData == null) return null;
-    
+
     if (paymentMethod.toUpperCase() == 'E_WALLET') {
       // Cek actions untuk deeplink
       if (paymentData!.containsKey('actions')) {
@@ -355,5 +355,13 @@ class Payment {
 
   bool get hasVaNumber {
     return vaNumber != null && vaNumber!.isNotEmpty;
+  }
+
+  void validatePaymentData() {
+    if (paymentData != null && vaNumber != null) {
+      print(
+        'PAYMENT VALIDATION: Transaction ID: $transactionId, VA: $vaNumber',
+      );
+    }
   }
 }

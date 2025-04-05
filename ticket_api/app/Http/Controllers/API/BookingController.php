@@ -454,46 +454,75 @@ class BookingController extends Controller
     }
 
     /**
+     * Get payment status for a booking by ID.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function paymentStatusById(Request $request, $id)
+    {
+        $booking = Booking::where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->with(['payments' => function ($query) {
+                $query->orderBy('created_at', 'desc');
+            }])
+            ->firstOrFail();
+
+        $latestPayment = $booking->payments->first();
+
+        if (!$latestPayment) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'status' => 'NO_PAYMENT',
+                    'message' => 'No payment found for this booking'
+                ]
+            ]);
+        }
+
+        $status = $this->paymentService->checkPaymentStatus($latestPayment);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'status' => $status,
+                'payment' => $latestPayment
+            ]
+        ]);
+    }
+
+    /**
      * Generate tickets for a booking.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $bookingCode
      * @return \Illuminate\Http\JsonResponse
      */
-    public function generateTickets(Request $request, $bookingCode)
+    public function generateTickets(Request $request, $id)
     {
-        $booking = Booking::where('booking_code', $bookingCode)
-            ->where('user_id', $request->user()->id)
-            ->firstOrFail();
-
-        if ($booking->status !== 'CONFIRMED') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot generate tickets for unconfirmed booking'
-            ], 400);
-        }
-
         try {
-            $result = $this->ticketService->generateTicketsForBooking($booking);
+            $booking = Booking::findOrFail($id);
 
-            if ($result['success']) {
-                return response()->json([
-                    'success' => true,
-                    'message' => $result['message'],
-                    'data' => [
-                        'tickets' => $result['tickets'] ?? []
-                    ]
-                ]);
-            } else {
+            // Only allow for CONFIRMED bookings
+            if ($booking->status !== 'CONFIRMED') {
                 return response()->json([
                     'success' => false,
-                    'message' => $result['message']
+                    'message' => 'Booking must be confirmed to generate tickets'
                 ], 400);
             }
+
+            $ticketService = app(TicketService::class);
+            $result = $ticketService->generateTicketsForBooking($booking);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tickets generated successfully',
+                'data' => $result
+            ]);
         } catch (\Exception $e) {
             Log::error('Error generating tickets', [
-                'booking_id' => $booking->id,
-                'booking_code' => $bookingCode,
+                'booking_id' => $id,
                 'error' => $e->getMessage()
             ]);
 

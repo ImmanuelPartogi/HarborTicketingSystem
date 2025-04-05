@@ -87,9 +87,9 @@ class PaymentService {
 
   Future<bool> checkPaymentStatus(int paymentId) async {
     try {
+      // Gunakan format URL yang benar sesuai dengan endpoint baru yang sudah dibuat
       final response = await _apiService.get(
-        ApiConfig.bookings + '/payment-status',
-        queryParams: {'payment_id': paymentId.toString()},
+        '/api/v1/bookings/id/$paymentId/payment-status',
       );
 
       if (response['success'] == true && response['data'] != null) {
@@ -100,6 +100,27 @@ class PaymentService {
       return false;
     } catch (e) {
       debugPrint('Error checking payment status: $e');
+
+      // Strategi fallback: jika endpoint tidak tersedia,
+      // coba dapatkan booking detail dan periksa status pembayaran dari sana
+      try {
+        final bookingDetail = await _apiService.get(
+          '/api/v1/bookings/id/$paymentId',
+        );
+
+        if (bookingDetail['success'] == true &&
+            bookingDetail['data'] != null &&
+            bookingDetail['data']['booking'] != null) {
+          final booking = bookingDetail['data']['booking'];
+          if (booking['payments'] != null && booking['payments'].isNotEmpty) {
+            final latestPayment = booking['payments'][0];
+            return latestPayment['status'] == 'SUCCESS';
+          }
+        }
+      } catch (_) {
+        // Abaikan error dari fallback
+      }
+
       return false;
     }
   }

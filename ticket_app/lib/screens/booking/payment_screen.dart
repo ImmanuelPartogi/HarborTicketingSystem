@@ -215,7 +215,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       if (success && mounted) {
         // Refresh data booking untuk mendapatkan info pembayaran
-        await bookingProvider.fetchBookingDetail(widget.bookingId);
+        await bookingProvider.fetchBookingDetail(
+          widget.bookingId,
+          forceRefresh: true,
+        );
 
         // PERBAIKAN UTAMA: Navigasi ke halaman detail pembayaran
         Navigator.pushReplacement(

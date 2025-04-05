@@ -238,4 +238,35 @@ class BookingService {
       throw Exception('Failed to fetch ticket details: ${e.toString()}');
     }
   }
+
+  Future<String> checkPaymentStatus(int bookingId) async {
+    try {
+      // Coba gunakan endpoint yang benar
+      final response = await _apiService.get(
+        '/api/v1/bookings/id/$bookingId/payment-status',
+      );
+
+      if (response['success'] == true && response['data'] != null) {
+        return response['data']['status'] ?? 'UNKNOWN';
+      }
+
+      // Jika gagal, coba ambil dari booking detail
+      return _getPaymentStatusFromBookingDetail(bookingId);
+    } catch (e) {
+      print('Error checking payment status: $e');
+      return _getPaymentStatusFromBookingDetail(bookingId);
+    }
+  }
+
+  Future<String> _getPaymentStatusFromBookingDetail(int bookingId) async {
+    try {
+      final bookingDetail = await getBookingDetail(bookingId);
+      if (bookingDetail.payment != null) {
+        return bookingDetail.payment!.status;
+      }
+    } catch (e) {
+      print('Error getting booking detail for payment status: $e');
+    }
+    return 'UNKNOWN';
+  }
 }

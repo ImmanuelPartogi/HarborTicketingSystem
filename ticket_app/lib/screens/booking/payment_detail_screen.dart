@@ -41,6 +41,14 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     });
   }
 
+  void _startPaymentTimer() {
+    // Memulai countdown timer
+    _startCountdownTimer();
+
+    // Memulai timer pengecekan status secara periodik
+    _startStatusCheckTimer();
+  }
+
   @override
   void dispose() {
     _paymentCheckTimer?.cancel();
@@ -513,10 +521,9 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                                     ),
                                   ),
                                   Text(
-                                    booking.bookingNumber,
+                                    'Booking ID: ${booking.id} (${booking.bookingNumber})',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: theme.primaryColor,
                                     ),
                                   ),
                                 ],
@@ -1180,6 +1187,7 @@ Anda juga dapat membayar melalui ATM:
     );
   }
 }
+
 
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;

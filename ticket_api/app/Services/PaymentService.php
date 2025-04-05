@@ -446,54 +446,70 @@ class PaymentService
      */
     public function checkPaymentStatus(Payment $payment)
     {
-        // If payment is already successful or refunded, return current status
+        // Jika payment sudah success atau refunded, return current status
         if (in_array($payment->status, ['SUCCESS', 'REFUNDED'])) {
             return $payment->status;
         }
 
-        // If payment has transaction ID, check with Midtrans
+        // Jika payment memiliki transaction_id, cek dengan Midtrans
         if ($payment->transaction_id) {
             try {
                 $response = $this->callMidtrans('/v2/' . $payment->transaction_id . '/status', 'GET');
 
                 Log::info('Midtrans status check response', ['response' => $response]);
 
-                // Update payment status based on response
+                // Update payment berdasarkan respons
+                $newStatus = null;
+
                 switch ($response['transaction_status'] ?? null) {
                     case 'capture':
                     case 'settlement':
-                        $payment->status = 'SUCCESS';
-                        $payment->payment_date = Carbon::now();
+                        $newStatus = 'SUCCESS';
+                        $payment->status = $newStatus;
+                        $payment->payment_date = now();
 
-                        // Update booking status
+                        // Update booking
                         $booking = $payment->booking;
-                        $booking->status = 'CONFIRMED';
-                        $booking->save();
+                        if ($booking && $booking->status === 'PENDING') {
+                            $booking->status = 'CONFIRMED';
+                            $booking->save();
 
-                        // Generate tickets for the booking
-                        $this->generateTickets($booking);
+                            // Generate tickets
+                            $this->generateTickets($booking);
+                        }
                         break;
 
                     case 'pending':
-                        $payment->status = 'PENDING';
+                        $newStatus = 'PENDING';
+                        $payment->status = $newStatus;
                         break;
 
                     case 'deny':
                     case 'cancel':
                     case 'expire':
-                        $payment->status = 'FAILED';
+                        $newStatus = 'FAILED';
+                        $payment->status = $newStatus;
                         break;
 
                     case 'refund':
-                        $payment->status = 'REFUNDED';
+                        $newStatus = 'REFUNDED';
+                        $payment->status = $newStatus;
                         break;
                 }
 
-                // Update payload dengan response
-                $payloadData = json_decode($payment->payload, true) ?: [];
-                $payloadData['payment_data'] = $response;
-                $payment->payload = json_encode($payloadData);
-                $payment->save();
+                // Update payload
+                if ($newStatus) {
+                    $payloadData = json_decode($payment->payload, true) ?: [];
+                    $payloadData['payment_data'] = $response;
+                    $payment->payload = json_encode($payloadData);
+                    $payment->save();
+
+                    Log::info("Payment status updated from Midtrans", [
+                        'payment_id' => $payment->id,
+                        'old_status' => $payment->getOriginal('status'),
+                        'new_status' => $newStatus
+                    ]);
+                }
 
                 return $payment->status;
             } catch (\Exception $e) {
@@ -503,13 +519,12 @@ class PaymentService
                     'error' => $e->getMessage()
                 ]);
 
-                // Return current status if check fails
                 return $payment->status;
             }
         }
 
-        // Check if payment has expired
-        if ($payment->expiry_date && Carbon::now()->gt($payment->expiry_date)) {
+        // Cek jika payment expired
+        if ($payment->expiry_date && now()->gt($payment->expiry_date) && $payment->status === 'PENDING') {
             $payment->status = 'EXPIRED';
             $payment->save();
         }
@@ -594,20 +609,27 @@ class PaymentService
     protected function generateTickets(Booking $booking)
     {
         try {
+            Log::info('Attempting to generate tickets for booking', ['booking_id' => $booking->id]);
+
             // Check if tickets already exist for this booking
             if ($booking->tickets()->count() > 0) {
+                Log::info('Tickets already exist for booking', ['booking_id' => $booking->id]);
                 return;
             }
 
             // Call the TicketService to generate tickets
             $ticketService = app(TicketService::class);
-            $ticketService->generateTicketsForBooking($booking);
+            $result = $ticketService->generateTicketsForBooking($booking);
 
-            Log::info('Tickets generated for booking', ['booking_id' => $booking->id]);
+            Log::info('Tickets generated for booking', [
+                'booking_id' => $booking->id,
+                'result' => $result
+            ]);
         } catch (\Exception $e) {
             Log::error('Failed to generate tickets', [
                 'booking_id' => $booking->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
         }
     }

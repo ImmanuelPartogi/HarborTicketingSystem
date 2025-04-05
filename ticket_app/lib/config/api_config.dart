@@ -12,26 +12,27 @@ class ApiConfig {
   static const String refreshToken = '/api/v1/refresh-token';
   static const String logout = '/api/v1/logout';
 
-  // Endpoint profil - DIPERBAIKI agar sesuai dengan rute Laravel
+  // Endpoint profil
   static const String profile = '/api/v1/profile';
-  // ⚠️ Menghapus '/api/v1/profile/update' yang salah dan menggunakan '/api/v1/profile' untuk update
   static const String updateProfile = '/api/v1/profile';
-  static const String changePassword =
-      '/api/v1/change-password'; // Juga diperbarui agar sesuai dengan rute
+  static const String changePassword = '/api/v1/change-password';
 
-  // Endpoint lainnya tetap tidak berubah
+  // Endpoint lainnya
   static const String ferries = '/api/v1/ferries';
   static const String routes = '/api/v1/routes';
   static const String schedules = '/api/v1/schedules';
 
   static const String bookings = '/api/v1/bookings';
-  static const String bookingDetail = '/api/v1/bookings/{id}';
-  static const String cancelBooking = '/api/v1/bookings/{id}/cancel';
-  static const String rescheduleBooking = '/api/v1/bookings/{id}/reschedule';
-  static const String generateTickets = 'bookings/{id}/generate-tickets';
+  // Diperbaiki untuk menggunakan format /id/
+  static const String bookingDetail = '/api/v1/bookings/id/{id}';
+  // Diperbaiki jika cancelBooking dan rescheduleBooking menggunakan ID numerik
+  static const String cancelBooking = '/api/v1/bookings/id/{id}/cancel';
+  static const String rescheduleBooking = '/api/v1/bookings/id/{id}/reschedule';
+  static const String generateTickets = '/api/v1/bookings/id/{id}/generate-tickets';
 
   static const String payments = '/api/v1/payments';
-  static const String paymentStatus = '/api/v1/payments/{id}/status';
+  // Diperbaiki untuk menggunakan endpoint yang benar
+  static const String paymentStatus = '/api/v1/bookings/id/{id}/payment-status';
 
   static const String tickets = '/api/v1/tickets';
   static const String ticketDetail = '/api/v1/tickets/{id}';
@@ -39,7 +40,7 @@ class ApiConfig {
 
   static const String notifications = '/api/v1/notifications';
 
-  // Kode Status HTTP dan header tetap tidak berubah
+  // Kode Status HTTP dan header tidak perlu diubah
   static const int statusOk = 200;
   static const int statusCreated = 201;
   static const int statusNoContent = 204;

@@ -406,6 +406,8 @@ class BookingProvider extends ChangeNotifier {
   }
 
   // Fetch booking detail
+  // Fetch booking detail
+  // Fetch booking detail
   Future<void> fetchBookingDetail(
     dynamic bookingIdentifier, {
     bool forceRefresh = false,
@@ -428,18 +430,32 @@ class BookingProvider extends ChangeNotifier {
       return;
     }
 
-    _isLoading = true;
+    _isLoadingBookingDetail = true;
     notifyListeners();
 
     try {
+      // PERBAIKAN: Tentukan endpoint berdasarkan tipe bookingIdentifier
+      // Format endpoint yang benar untuk ID numerik adalah /api/v1/bookings/id/{id}
+      final String endpoint;
+
+      if (bookingIdentifier is int ||
+          int.tryParse(bookingIdentifier.toString()) != null) {
+        // Gunakan format /id/ untuk ID numerik sesuai dengan format yang berhasil di endpoint pembayaran
+        endpoint = '/api/v1/bookings/id/$bookingIdentifier';
+      } else {
+        // Jika menggunakan booking code
+        endpoint = '/api/v1/bookings/code/$bookingIdentifier';
+      }
+
+      print('Fetching booking dari endpoint: $endpoint');
       final response = await _apiService!.get(endpoint);
 
-      if (response['success'] == true) {
+      if (response['success'] == true && response['data'] != null) {
         final bookingData = response['data']['booking'];
         _currentBooking = Booking.fromJson(bookingData);
         print('Berhasil memuat booking: ${_currentBooking!.id}');
 
-        // PERBAIKAN: Debug data payment
+        // Debug data payment
         if (_currentBooking!.payment != null) {
           print('Payment data ditemukan:');
           print('Payment ID: ${_currentBooking!.payment!.id}');
@@ -450,14 +466,16 @@ class BookingProvider extends ChangeNotifier {
           print('WARNING: Payment data tidak ditemukan dalam booking');
         }
       } else {
-        _bookingError = 'Failed to load booking: ${response['message']}';
+        _bookingError =
+            'Failed to load booking: ${response['message'] ?? "Unknown error"}';
         print('Error loading booking: ${_bookingError}');
       }
     } catch (e) {
-      print('Error saat memuat detail booking: $e');
-      throw e;
+      _bookingError = 'Error saat memuat detail booking: $e';
+      print(_bookingError);
+      throw Exception(_bookingError);
     } finally {
-      _isLoading = false;
+      _isLoadingBookingDetail = false;
       notifyListeners();
     }
   }

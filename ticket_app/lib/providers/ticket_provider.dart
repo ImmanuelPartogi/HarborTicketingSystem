@@ -21,11 +21,11 @@ class TicketProvider extends ChangeNotifier {
   bool _isGeneratingTickets = false;
 
   String? _ticketError;
-  
+
   // Tracking waktu terakhir request untuk throttling sederhana
   DateTime? _lastActiveTicketsRequest;
   DateTime? _lastTicketHistoryRequest;
-  
+
   // Flag untuk mencegah multiple fetch pada initState
   bool _activeTicketsInitialized = false;
   bool _ticketHistoryInitialized = false;
@@ -73,7 +73,7 @@ class TicketProvider extends ChangeNotifier {
     if (!forceReload && DebugConfig.shouldSkipDataLoad('active tickets')) {
       return;
     }
-    
+
     // 1. Prevent multiple concurrent fetches
     if (_isLoadingActiveTickets) {
       debugPrint('SKIP FETCH: Active tickets already loading');
@@ -81,16 +81,21 @@ class TicketProvider extends ChangeNotifier {
     }
 
     // 2. Skip if already initialized and not forcing reload
-    if (!forceReload && _activeTicketsInitialized && _activeTickets.isNotEmpty) {
+    if (!forceReload &&
+        _activeTicketsInitialized &&
+        _activeTickets.isNotEmpty) {
       debugPrint('SKIP FETCH: Active tickets already initialized');
       return;
     }
-    
+
     // 3. Implement proper throttling
     if (!forceReload && _lastActiveTicketsRequest != null) {
-      final difference = DateTime.now().difference(_lastActiveTicketsRequest!).inSeconds;
+      final difference =
+          DateTime.now().difference(_lastActiveTicketsRequest!).inSeconds;
       if (difference < 30) {
-        debugPrint('THROTTLED: Please wait before refreshing active tickets again (${30 - difference}s remaining)');
+        debugPrint(
+          'THROTTLED: Please wait before refreshing active tickets again (${30 - difference}s remaining)',
+        );
         return;
       }
     }
@@ -103,7 +108,7 @@ class TicketProvider extends ChangeNotifier {
 
     try {
       final tickets = await _ticketService.getActiveTickets();
-      
+
       // 5. Batch state changes at the end
       setState(() {
         _activeTickets = tickets;
@@ -125,7 +130,7 @@ class TicketProvider extends ChangeNotifier {
     if (!forceReload && DebugConfig.shouldSkipDataLoad('ticket history')) {
       return;
     }
-    
+
     // 1. Prevent multiple concurrent fetches
     if (_isLoadingTicketHistory) {
       debugPrint('SKIP FETCH: Ticket history already loading');
@@ -133,16 +138,21 @@ class TicketProvider extends ChangeNotifier {
     }
 
     // 2. Skip if already initialized and not forcing reload
-    if (!forceReload && _ticketHistoryInitialized && _ticketHistory.isNotEmpty) {
+    if (!forceReload &&
+        _ticketHistoryInitialized &&
+        _ticketHistory.isNotEmpty) {
       debugPrint('SKIP FETCH: Ticket history already initialized');
       return;
     }
-    
+
     // 3. Implement proper throttling
     if (!forceReload && _lastTicketHistoryRequest != null) {
-      final difference = DateTime.now().difference(_lastTicketHistoryRequest!).inSeconds;
+      final difference =
+          DateTime.now().difference(_lastTicketHistoryRequest!).inSeconds;
       if (difference < 30) {
-        debugPrint('THROTTLED: Please wait before refreshing ticket history again (${30 - difference}s remaining)');
+        debugPrint(
+          'THROTTLED: Please wait before refreshing ticket history again (${30 - difference}s remaining)',
+        );
         return;
       }
     }
@@ -155,7 +165,7 @@ class TicketProvider extends ChangeNotifier {
 
     try {
       final tickets = await _ticketService.getTicketHistory();
-      
+
       // 5. Batch state changes at the end
       setState(() {
         _ticketHistory = tickets;
@@ -174,7 +184,7 @@ class TicketProvider extends ChangeNotifier {
   // Fetch ticket detail
   Future<void> fetchTicketDetail(int id) async {
     if (_isLoadingTicketDetail) return;
-    
+
     // Skip fetch jika ticket sudah ada
     if (_selectedTicket != null && _selectedTicket!.id == id) {
       debugPrint('SKIP FETCH: Selected ticket already loaded (id: $id)');
@@ -232,7 +242,7 @@ class TicketProvider extends ChangeNotifier {
     if (existingTickets.isNotEmpty) {
       return existingTickets;
     }
-    
+
     setState(() {
       _isLoadingActiveTickets = true;
       _ticketError = null;
@@ -248,12 +258,12 @@ class TicketProvider extends ChangeNotifier {
           updatedTickets.add(ticket);
         }
       }
-      
+
       setState(() {
         _activeTickets = updatedTickets;
         _isLoadingActiveTickets = false;
       });
-      
+
       return tickets;
     } catch (e) {
       setState(() {
@@ -262,6 +272,22 @@ class TicketProvider extends ChangeNotifier {
       });
       return [];
     }
+  }
+
+  // Force refresh tiket setelah pembayaran berhasil
+  Future<void> refreshAfterPayment(int bookingId) async {
+    // Batalkan throttling untuk memastikan refresh selalu dilakukan
+    _lastActiveTicketsRequest = null;
+    _lastTicketHistoryRequest = null;
+
+    // Tunggu sebentar untuk memberi waktu server membuat tiket
+    await Future.delayed(Duration(seconds: 3));
+
+    // Fetch tiket dari booking
+    await fetchTicketsByBookingId(bookingId);
+
+    // Refresh semua tiket aktif
+    await fetchActiveTickets(forceReload: true);
   }
 
   // Mendapatkan tiket berdasarkan booking ID

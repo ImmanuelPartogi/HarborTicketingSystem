@@ -48,7 +48,13 @@ Route::prefix('v1')->group(function () {
     Route::post('/schedules/check-availability', [ScheduleController::class, 'checkAvailability']);
 
     // Payment Notification Callback (from Midtrans)
+    Route::get('/payments/status/{id}', [PaymentController::class, 'getPaymentStatus']);
+
+    // Dan tambahkan route public untuk callback (memastikan tidak membutuhkan autentikasi)
     Route::post('/payments/notification', [PaymentController::class, 'notification']);
+    Route::get('/payments/finish', [PaymentController::class, 'finish']);
+    Route::get('/payments/unfinish', [PaymentController::class, 'unfinish']);
+    Route::get('/payments/error', [PaymentController::class, 'error']);
 });
 
 // Rest of your routes remain unchanged
@@ -70,7 +76,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->group(functi
     Route::get('/bookings/{bookingCode}/payment-status', [BookingController::class, 'paymentStatus']);
     Route::post('/bookings/id/{id}/pay', [BookingController::class, 'processPaymentById']);
     Route::get('/bookings/id/{id}', [BookingController::class, 'showById']);
-
+    Route::get('/bookings/id/{id}/payment-status', [BookingController::class, 'paymentStatusById']);
+    Route::post('/bookings/{id}/generate-tickets', [BookingController::class, 'generateTickets']);
+    
     // Tickets
     Route::get('/tickets', [TicketController::class, 'index']);
     Route::get('/tickets/{ticketCode}', [TicketController::class, 'show']);

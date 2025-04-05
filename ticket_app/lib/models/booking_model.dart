@@ -120,6 +120,28 @@ class Booking {
         }
       }
       
+      // Process payment data correctly - handle both singular and plural forms
+      Payment? paymentData;
+      
+      // Check for single payment
+      if (bookingData['payment'] != null) {
+        print('Found single payment data');
+        paymentData = Payment.fromJson(bookingData['payment']);
+      } 
+      // Check for payments array (plural)
+      else if (bookingData['payments'] != null && bookingData['payments'] is List) {
+        final paymentsList = bookingData['payments'] as List;
+        if (paymentsList.isNotEmpty) {
+          print('Found payments array with ${paymentsList.length} items, using latest');
+          // Use the latest payment (last item in the array)
+          paymentData = Payment.fromJson(paymentsList.last);
+        } else {
+          print('Payments array is empty');
+        }
+      } else {
+        print('WARNING: Payment data tidak ditemukan dalam booking');
+      }
+      
       // Create booking object with the normalized data
       final booking = Booking(
         id: parseInt(bookingData['id']),
@@ -140,12 +162,15 @@ class Booking {
         vehicles: bookingData['vehicles'] != null
             ? List<Vehicle>.from(bookingData['vehicles'].map((x) => Vehicle.fromJson(x)))
             : null,
-        payment: bookingData['payment'] != null ? Payment.fromJson(bookingData['payment']) : null,
+        payment: paymentData,
       );
       
       // Log created booking object
       print('Booking created successfully with ID: ${booking.id}');
       print('Booking code: ${booking.bookingNumber}');
+      if (booking.payment != null) {
+        print('Payment data found: ID=${booking.payment!.id}, Method=${booking.payment!.paymentMethod}');
+      }
       
       return booking;
     } catch (e) {
