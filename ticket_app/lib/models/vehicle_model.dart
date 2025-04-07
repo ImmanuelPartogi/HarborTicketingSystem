@@ -24,15 +24,31 @@ class Vehicle {
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
+    // Helper function untuk parsing double dengan aman
+    double? parseDoubleValue(dynamic value) {
+      if (value == null) return null;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) {
+        try {
+          return double.parse(value);
+        } catch (e) {
+          print('Error parsing double from string: $value');
+          return null;
+        }
+      }
+      return null;
+    }
+
     return Vehicle(
       id: json['id'],
       bookingId: json['booking_id'],
       type: json['type'],
       licensePlate: json['license_plate'],
-      weight: json['weight']?.toDouble(),
+      weight: parseDoubleValue(json['weight']), // Perbaikan di sini
       brand: json['brand'],
       model: json['model'],
-      price: json['price'].toDouble(),
+      price: parseDoubleValue(json['price']) ?? 0.0, // Perbaikan di sini juga
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -70,7 +86,7 @@ class Vehicle {
 
   String get vehicleInfo {
     List<String> info = [];
-    
+
     if (brand != null && model != null) {
       info.add('$brand $model');
     } else if (brand != null) {
@@ -78,13 +94,13 @@ class Vehicle {
     } else if (model != null) {
       info.add(model!);
     }
-    
+
     info.add(licensePlate);
-    
+
     if (weight != null) {
       info.add('$weight kg');
     }
-    
+
     return info.join(' • ');
   }
 }

@@ -8,7 +8,8 @@ class Booking {
   final int userId;
   final int scheduleId;
   final String bookingNumber;
-  final String status; // 'pending', 'confirmed', 'cancelled', 'completed', 'refunded'
+  final String
+  status; // 'pending', 'confirmed', 'cancelled', 'completed', 'refunded'
   final int passengerCount;
   final double totalAmount;
   final DateTime bookedAt;
@@ -45,10 +46,10 @@ class Booking {
     try {
       // Debug logs
       print('Booking.fromJson received: ${json.keys.toList()}');
-      
+
       // Normalize data structure based on API response format
       Map<String, dynamic> bookingData = json;
-      
+
       // Handle nested response from different API endpoints
       if (json.containsKey('booking')) {
         bookingData = json['booking'];
@@ -62,14 +63,16 @@ class Booking {
           print('Using data object directly');
         }
       }
-      
+
       // Log resolved booking data
       print('Processing booking data with keys: ${bookingData.keys.toList()}');
       print('ID field present: ${bookingData.containsKey('id')}');
       if (bookingData.containsKey('id')) {
-        print('ID value: ${bookingData['id']} (${bookingData['id'].runtimeType})');
+        print(
+          'ID value: ${bookingData['id']} (${bookingData['id'].runtimeType})',
+        );
       }
-      
+
       // Helper functions for safe parsing
       int parseInt(dynamic value, {int defaultValue = 0}) {
         if (value == null) return defaultValue;
@@ -81,7 +84,7 @@ class Booking {
           return defaultValue;
         }
       }
-      
+
       double parseDouble(dynamic value, {double defaultValue = 0.0}) {
         if (value == null) return defaultValue;
         if (value is double) return value;
@@ -92,12 +95,12 @@ class Booking {
           return defaultValue;
         }
       }
-      
+
       String parseString(dynamic value, {String defaultValue = ''}) {
         if (value == null) return defaultValue;
         return value.toString();
       }
-      
+
       DateTime parseDateTime(dynamic value, {DateTime? defaultValue}) {
         if (value == null) {
           return defaultValue ?? DateTime.now();
@@ -109,7 +112,7 @@ class Booking {
           return defaultValue ?? DateTime.now();
         }
       }
-      
+
       DateTime? parseNullableDateTime(dynamic value) {
         if (value == null) return null;
         try {
@@ -119,20 +122,23 @@ class Booking {
           return null;
         }
       }
-      
+
       // Process payment data correctly - handle both singular and plural forms
       Payment? paymentData;
-      
+
       // Check for single payment
       if (bookingData['payment'] != null) {
         print('Found single payment data');
         paymentData = Payment.fromJson(bookingData['payment']);
-      } 
+      }
       // Check for payments array (plural)
-      else if (bookingData['payments'] != null && bookingData['payments'] is List) {
+      else if (bookingData['payments'] != null &&
+          bookingData['payments'] is List) {
         final paymentsList = bookingData['payments'] as List;
         if (paymentsList.isNotEmpty) {
-          print('Found payments array with ${paymentsList.length} items, using latest');
+          print(
+            'Found payments array with ${paymentsList.length} items, using latest',
+          );
           // Use the latest payment (last item in the array)
           paymentData = Payment.fromJson(paymentsList.last);
         } else {
@@ -141,7 +147,22 @@ class Booking {
       } else {
         print('WARNING: Payment data tidak ditemukan dalam booking');
       }
-      
+
+      // PERBAIKAN: Gunakan alternatif untuk booked_at (yang tidak ada di API)
+      DateTime bookedAt;
+      if (bookingData.containsKey('booked_at') &&
+          bookingData['booked_at'] != null) {
+        bookedAt = parseDateTime(bookingData['booked_at']);
+        print('Using provided booked_at field');
+      } else if (bookingData.containsKey('booking_date') &&
+          bookingData['booking_date'] != null) {
+        bookedAt = parseDateTime(bookingData['booking_date']);
+        print('Using booking_date as a replacement for booked_at');
+      } else {
+        bookedAt = parseDateTime(bookingData['created_at']);
+        print('Using created_at as a replacement for booked_at');
+      }
+
       // Create booking object with the normalized data
       final booking = Booking(
         id: parseInt(bookingData['id']),
@@ -151,27 +172,39 @@ class Booking {
         status: parseString(bookingData['status'], defaultValue: 'pending'),
         passengerCount: parseInt(bookingData['passenger_count']),
         totalAmount: parseDouble(bookingData['total_amount']),
-        bookedAt: parseDateTime(bookingData['booked_at']),
+        bookedAt:
+            bookedAt, // Menggunakan nilai yang sudah diambil dari alternatif
         cancelledAt: parseNullableDateTime(bookingData['cancelled_at']),
         createdAt: parseDateTime(bookingData['created_at']),
         updatedAt: parseDateTime(bookingData['updated_at']),
-        schedule: bookingData['schedule'] != null ? ScheduleModel.fromJson(bookingData['schedule']) : null,
-        tickets: bookingData['tickets'] != null
-            ? List<Ticket>.from(bookingData['tickets'].map((x) => Ticket.fromJson(x)))
-            : null,
-        vehicles: bookingData['vehicles'] != null
-            ? List<Vehicle>.from(bookingData['vehicles'].map((x) => Vehicle.fromJson(x)))
-            : null,
+        schedule:
+            bookingData['schedule'] != null
+                ? ScheduleModel.fromJson(bookingData['schedule'])
+                : null,
+        tickets:
+            bookingData['tickets'] != null
+                ? List<Ticket>.from(
+                  bookingData['tickets'].map((x) => Ticket.fromJson(x)),
+                )
+                : null,
+        vehicles:
+            bookingData['vehicles'] != null
+                ? List<Vehicle>.from(
+                  bookingData['vehicles'].map((x) => Vehicle.fromJson(x)),
+                )
+                : null,
         payment: paymentData,
       );
-      
+
       // Log created booking object
       print('Booking created successfully with ID: ${booking.id}');
       print('Booking code: ${booking.bookingNumber}');
       if (booking.payment != null) {
-        print('Payment data found: ID=${booking.payment!.id}, Method=${booking.payment!.paymentMethod}');
+        print(
+          'Payment data found: ID=${booking.payment!.id}, Method=${booking.payment!.paymentMethod}',
+        );
       }
-      
+
       return booking;
     } catch (e) {
       print('Error parsing booking: $e');
@@ -244,19 +277,20 @@ class Booking {
   }
 
   bool get needsPayment {
-    return isPending && (payment == null || payment!.isPending || payment!.isFailed);
+    return isPending &&
+        (payment == null || payment!.isPending || payment!.isFailed);
   }
 
   bool get canBeCancelled {
-    return (isPending || isConfirmed) && 
-           schedule != null && 
-           schedule!.departureTime.difference(DateTime.now()).inHours > 24;
+    return (isPending || isConfirmed) &&
+        schedule != null &&
+        schedule!.departureTime.difference(DateTime.now()).inHours > 24;
   }
 
   bool get canBeRescheduled {
-    return isConfirmed && 
-           schedule != null && 
-           schedule!.departureTime.difference(DateTime.now()).inHours > 48;
+    return isConfirmed &&
+        schedule != null &&
+        schedule!.departureTime.difference(DateTime.now()).inHours > 48;
   }
 
   double get vehicleTotalPrice {

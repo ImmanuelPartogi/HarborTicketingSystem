@@ -215,4 +215,19 @@ class Ticket extends Model
     {
         return $this->passenger_id ? 'Passenger' : 'Vehicle';
     }
+
+    /**
+     * Get the schedule through booking relation.
+     */
+    public function schedule()
+    {
+        return $this->hasOneThrough(
+            Schedule::class,
+            Booking::class,
+            'id', // Foreign key on bookings table
+            'id', // Foreign key on schedules table
+            'booking_id', // Local key on tickets table
+            'schedule_id' // Local key on bookings table
+        );
+    }
 }

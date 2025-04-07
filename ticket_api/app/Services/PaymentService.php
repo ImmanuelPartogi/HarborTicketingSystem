@@ -370,8 +370,8 @@ class PaymentService
                 $payment->payment_date = Carbon::now();
                 $booking->status = 'CONFIRMED';
 
-                // Generate tickets for the booking
-                $this->generateTickets($booking);
+                // Generate tickets with retry mechanism
+                $this->generateTicketsWithRetry($booking);
                 break;
 
             case 'pending':
@@ -396,11 +396,22 @@ class PaymentService
         $payment->save();
         $booking->save();
 
+        // Double check: pastikan tiket dibuat jika payment SUCCESS
+        if ($payment->status === 'SUCCESS' && $booking->tickets()->count() === 0) {
+            Log::warning('Payment is SUCCESS but no tickets generated, trying again', [
+                'booking_id' => $booking->id,
+                'payment_id' => $payment->id
+            ]);
+            $this->generateTicketsWithRetry($booking);
+        }
+
         return [
             'success' => true,
             'message' => 'Notification processed successfully',
             'status' => $payment->status,
-            'booking_status' => $booking->status
+            'booking_status' => $booking->status,
+            'booking_code' => $booking->booking_code, // Tambahkan ini untuk identifikasi
+            'booking_id' => $booking->id // Tambahkan ini untuk identifikasi
         ];
     }
 
@@ -447,7 +458,16 @@ class PaymentService
     public function checkPaymentStatus(Payment $payment)
     {
         // Jika payment sudah success atau refunded, return current status
-        if (in_array($payment->status, ['SUCCESS', 'REFUNDED'])) {
+        if ($payment->status === 'SUCCESS') {
+            $booking = $payment->booking;
+            // Pastikan tiket dibuat jika payment success tapi tidak ada tiket
+            if ($booking && $booking->tickets()->count() === 0) {
+                Log::info('Payment successful but no tickets found, generating tickets now', [
+                    'booking_id' => $booking->id,
+                    'payment_id' => $payment->id
+                ]);
+                $this->generateTickets($booking);
+            }
             return $payment->status;
         }
 
@@ -474,8 +494,8 @@ class PaymentService
                             $booking->status = 'CONFIRMED';
                             $booking->save();
 
-                            // Generate tickets
-                            $this->generateTickets($booking);
+                            // Generate tickets dengan retry mechanism
+                            $this->generateTicketsWithRetry($booking);
                         }
                         break;
 
@@ -530,6 +550,58 @@ class PaymentService
         }
 
         return $payment->status;
+    }
+
+    /**
+     * Generate tickets with retry mechanism
+     *
+     * @param Booking $booking
+     * @param int $maxRetries
+     * @return bool
+     */
+    protected function generateTicketsWithRetry(Booking $booking, $maxRetries = 3)
+    {
+        $retry = 0;
+        $success = false;
+
+        while ($retry < $maxRetries && !$success) {
+            try {
+                // Check if tickets already exist
+                if ($booking->tickets()->count() > 0) {
+                    Log::info('Tickets already exist for booking', ['booking_id' => $booking->id]);
+                    return true;
+                }
+
+                Log::info('Attempting to generate tickets for booking (attempt ' . ($retry + 1) . ')', ['booking_id' => $booking->id]);
+
+                // Generate tickets
+                $ticketService = app(TicketService::class);
+                $result = $ticketService->generateTicketsForBooking($booking);
+
+                if ($result['success']) {
+                    Log::info('Tickets generated successfully', [
+                        'booking_id' => $booking->id,
+                        'tickets_count' => count($result['tickets'] ?? [])
+                    ]);
+                    $success = true;
+                } else {
+                    throw new \Exception($result['message'] ?? 'Unknown error generating tickets');
+                }
+            } catch (\Exception $e) {
+                $retry++;
+                Log::error('Failed to generate tickets (attempt ' . $retry . ')', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage()
+                ]);
+
+                // Wait before retrying (exponential backoff)
+                if ($retry < $maxRetries) {
+                    sleep(2 * $retry);
+                }
+            }
+        }
+
+        return $success;
     }
 
     /**
