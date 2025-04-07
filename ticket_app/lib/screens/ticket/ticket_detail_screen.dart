@@ -11,10 +11,8 @@ import '../../widgets/ticket/animated_ticket.dart';
 class TicketDetailScreen extends StatefulWidget {
   final int ticketId;
 
-  const TicketDetailScreen({
-    Key? key,
-    required this.ticketId,
-  }) : super(key: key);
+  const TicketDetailScreen({Key? key, required this.ticketId})
+    : super(key: key);
 
   @override
   State<TicketDetailScreen> createState() => _TicketDetailScreenState();
@@ -26,12 +24,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     super.initState();
     _loadTicketDetail();
   }
-  
+
   Future<void> _loadTicketDetail() async {
     final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
     await ticketProvider.fetchTicketDetail(widget.ticketId);
   }
-  
+
   void _showQRCode() {
     Navigator.pushNamed(
       context,
@@ -43,7 +41,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ticket Details'),
@@ -53,63 +51,64 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               // Show ticket help or info
               showDialog(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Ticket Information'),
-                  content: const SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'About Your E-Ticket',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: AppTheme.fontSizeMedium,
-                          ),
+                builder:
+                    (context) => AlertDialog(
+                      title: const Text('Ticket Information'),
+                      content: const SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'About Your E-Ticket',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: AppTheme.fontSizeMedium,
+                              ),
+                            ),
+                            SizedBox(height: AppTheme.paddingSmall),
+                            Text(
+                              'This electronic ticket serves as your boarding pass. Please present this ticket when boarding the ferry.',
+                            ),
+                            SizedBox(height: AppTheme.paddingMedium),
+                            Text(
+                              'Security Features',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: AppTheme.fontSizeMedium,
+                              ),
+                            ),
+                            SizedBox(height: AppTheme.paddingSmall),
+                            Text(
+                              '• Dynamic watermark pattern\n'
+                              '• Secure QR code that updates periodically\n'
+                              '• One-time use validation\n'
+                              '• Real-time status updates',
+                            ),
+                            SizedBox(height: AppTheme.paddingMedium),
+                            Text(
+                              'Important Notes',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: AppTheme.fontSizeMedium,
+                              ),
+                            ),
+                            SizedBox(height: AppTheme.paddingSmall),
+                            Text(
+                              '• Please arrive at least 30 minutes before departure\n'
+                              '• Have your ID ready for verification\n'
+                              '• The ticket will expire 30 minutes after scheduled departure',
+                            ),
+                          ],
                         ),
-                        SizedBox(height: AppTheme.paddingSmall),
-                        Text(
-                          'This electronic ticket serves as your boarding pass. Please present this ticket when boarding the ferry.',
-                        ),
-                        SizedBox(height: AppTheme.paddingMedium),
-                        Text(
-                          'Security Features',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: AppTheme.fontSizeMedium,
-                          ),
-                        ),
-                        SizedBox(height: AppTheme.paddingSmall),
-                        Text(
-                          '• Dynamic watermark pattern\n'
-                          '• Secure QR code that updates periodically\n'
-                          '• One-time use validation\n'
-                          '• Real-time status updates',
-                        ),
-                        SizedBox(height: AppTheme.paddingMedium),
-                        Text(
-                          'Important Notes',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: AppTheme.fontSizeMedium,
-                          ),
-                        ),
-                        SizedBox(height: AppTheme.paddingSmall),
-                        Text(
-                          '• Please arrive at least 30 minutes before departure\n'
-                          '• Have your ID ready for verification\n'
-                          '• The ticket will expire 30 minutes after scheduled departure',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
                         ),
                       ],
                     ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                ),
               );
             },
             icon: const Icon(Icons.info_outline),
@@ -119,21 +118,19 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       body: Consumer<TicketProvider>(
         builder: (context, ticketProvider, _) {
           if (ticketProvider.isLoadingTicketDetail) {
-            return const Center(child: LoadingIndicator(message: 'Loading ticket...'));
+            return const Center(
+              child: LoadingIndicator(message: 'Loading ticket...'),
+            );
           }
-          
+
           final ticket = ticketProvider.selectedTicket;
-          
+
           if (ticket == null) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
+                  Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: AppTheme.paddingMedium),
                   Text(
                     'Ticket Not Found',
@@ -161,10 +158,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
               ),
             );
           }
-          
+
           // Check if ticket is valid for displaying
           final isValid = ticketProvider.isTicketValid(ticket);
-          
+
           return Stack(
             children: [
               SingleChildScrollView(
@@ -177,15 +174,17 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                       ticket: ticket,
                       onTap: isValid ? _showQRCode : null,
                     ),
-                    
+
                     const SizedBox(height: AppTheme.paddingLarge),
-                    
+
                     // Ticket details card
                     Container(
                       padding: const EdgeInsets.all(AppTheme.paddingMedium),
                       decoration: BoxDecoration(
                         color: theme.cardColor,
-                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.borderRadiusMedium,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
@@ -205,7 +204,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: AppTheme.paddingMedium),
-                          
+
                           // Ticket number and status
                           _buildInfoRow(
                             label: 'Ticket Number',
@@ -216,11 +215,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             value: ticket.statusText,
                             valueColor: ticket.statusColor,
                           ),
-                          
+
                           if (ticket.schedule != null) ...[
                             _buildInfoRow(
                               label: 'Route',
-                              value: ticket.schedule!.route?.routeName ?? 'Unknown',
+                              value:
+                                  ticket.schedule!.route?.routeName ??
+                                  'Unknown',
                             ),
                             _buildInfoRow(
                               label: 'Ferry',
@@ -238,16 +239,18 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: AppTheme.paddingLarge),
-                    
+
                     // Passenger details card
                     if (ticket.passenger != null)
                       Container(
                         padding: const EdgeInsets.all(AppTheme.paddingMedium),
                         decoration: BoxDecoration(
                           color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.borderRadiusMedium,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.05),
@@ -267,14 +270,15 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               ),
                             ),
                             const SizedBox(height: AppTheme.paddingMedium),
-                            
+
                             _buildInfoRow(
                               label: 'Name',
                               value: ticket.passenger!.name,
                             ),
                             _buildInfoRow(
                               label: 'ID',
-                              value: '${ticket.passenger!.identityTypeText}: ${ticket.passenger!.identityNumber}',
+                              value:
+                                  '${ticket.passenger!.identityTypeText}: ${ticket.passenger!.identityNumber}',
                             ),
                             if (ticket.passenger!.gender != null)
                               _buildInfoRow(
@@ -289,9 +293,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           ],
                         ),
                       ),
-                    
+
                     const SizedBox(height: AppTheme.paddingLarge),
-                    
+
                     // Show QR Code button (if ticket is valid)
                     if (isValid)
                       CustomButton(
@@ -301,7 +305,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                         icon: Icons.qr_code,
                         isFullWidth: true,
                       ),
-                    
+
                     if (!isValid && ticket.isExpired)
                       Center(
                         child: Padding(
@@ -316,7 +320,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           ),
                         ),
                       ),
-                    
+
                     if (!isValid && ticket.isUsed)
                       Center(
                         child: Padding(
@@ -331,7 +335,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           ),
                         ),
                       ),
-                    
+
                     if (!isValid && ticket.isCancelled)
                       Center(
                         child: Padding(
@@ -346,12 +350,12 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           ),
                         ),
                       ),
-                    
+
                     const SizedBox(height: AppTheme.paddingLarge),
                   ],
                 ),
               ),
-              
+
               // Warning overlay for expired/cancelled tickets
               if (!isValid && (ticket.isExpired || ticket.isCancelled))
                 Positioned(
@@ -360,9 +364,10 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                   right: 0,
                   child: Container(
                     padding: const EdgeInsets.all(AppTheme.paddingRegular),
-                    color: ticket.isExpired
-                        ? Colors.orange.withOpacity(0.9)
-                        : Colors.red.withOpacity(0.9),
+                    color:
+                        ticket.isExpired
+                            ? Colors.orange.withOpacity(0.9)
+                            : Colors.red.withOpacity(0.9),
                     child: SafeArea(
                       child: Row(
                         children: [
@@ -393,14 +398,91 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       ),
     );
   }
-  
+
+  // di file ticket_detail_screen.dart atau sejenis
+  Widget _buildTicketInfo(Ticket ticket) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          ticket.vehicle != null
+              ? '${ticket.vehicle!.typeText} Ticket'
+              : 'Passenger Ticket',
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeLarge,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        // Jika kendaraan, tampilkan plat nomor
+        if (ticket.vehicle != null) ...[
+          const SizedBox(height: AppTheme.paddingSmall),
+          Text(
+            'License Plate: ${ticket.vehicle!.licensePlate}',
+            style: TextStyle(fontSize: AppTheme.fontSizeMedium),
+          ),
+        ],
+
+        // Informasi jadwal dan rute
+        const SizedBox(height: AppTheme.paddingMedium),
+        Text(
+          'Route: ${ticket.schedule?.route?.routeName ?? "Unknown"}',
+          style: TextStyle(fontSize: AppTheme.fontSizeRegular),
+        ),
+
+        const SizedBox(height: AppTheme.paddingSmall),
+        Text(
+          'Departure: ${DateFormat('EEE, dd MMM yyyy').format(ticket.schedule!.departureTime)}',
+          style: TextStyle(fontSize: AppTheme.fontSizeRegular),
+        ),
+
+        const SizedBox(height: AppTheme.paddingSmall),
+        Text(
+          'Time: ${ticket.schedule!.formattedDepartureTime}',
+          style: TextStyle(fontSize: AppTheme.fontSizeRegular),
+        ),
+
+        const SizedBox(height: AppTheme.paddingSmall),
+        Text(
+          'Ferry: ${ticket.schedule?.ferry?.name ?? "Unknown"}',
+          style: TextStyle(fontSize: AppTheme.fontSizeRegular),
+        ),
+
+        // Status tiket
+        const SizedBox(height: AppTheme.paddingMedium),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.paddingRegular,
+                vertical: AppTheme.paddingSmall / 2,
+              ),
+              decoration: BoxDecoration(
+                color: ticket.statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                border: Border.all(color: ticket.statusColor),
+              ),
+              child: Text(
+                ticket.statusText,
+                style: TextStyle(
+                  color: ticket.statusColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildInfoRow({
     required String label,
     required String value,
     Color? valueColor,
   }) {
     final theme = Theme.of(context);
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTheme.paddingSmall),
       child: Row(

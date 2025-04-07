@@ -45,12 +45,7 @@ class BookingController extends Controller
         $validator = Validator::make($request->all(), [
             'schedule_id' => 'required|exists:schedules,id',
             'booking_date' => 'required|date_format:Y-m-d|after_or_equal:today',
-            'passengers' => 'required|array|min:1',
-            'passengers.*.name' => 'required|string|max:255',
-            'passengers.*.id_number' => 'required|string|max:30',
-            'passengers.*.id_type' => 'required|in:KTP,SIM,PASPOR',
-            'passengers.*.dob' => 'required|date_format:Y-m-d',
-            'passengers.*.gender' => 'required|in:MALE,FEMALE',
+            'passenger_count' => 'required|integer|min:1',
             'vehicles' => 'nullable|array',
             'vehicles.*.type' => 'required_with:vehicles|in:MOTORCYCLE,CAR,BUS,TRUCK',
             'vehicles.*.license_plate' => 'required_with:vehicles|string|max:20',

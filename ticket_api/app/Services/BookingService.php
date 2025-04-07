@@ -45,101 +45,35 @@ class BookingService
      * @param int $userId
      * @return Booking
      */
-    public function createBooking(array $data, int $userId)
-    {
+    Future<Booking> createBooking({
+        required Map<String, dynamic> bookingData,
+      }) async {
         try {
-            DB::beginTransaction();
+          // Debug log
+          print('Creating booking with data: ${json.encode(bookingData)}');
 
-            // Check if the schedule is available for the date
-            $schedule = Schedule::findOrFail($data['schedule_id']);
-            $bookingDate = Carbon::parse($data['booking_date']);
+          final response = await _apiService.createBooking(bookingData);
 
-            $scheduleDate = ScheduleDate::where('schedule_id', $schedule->id)
-                ->where('date', $bookingDate->format('Y-m-d'))
-                ->first();
-
-            if (!$scheduleDate) {
-                $scheduleDate = ScheduleDate::create([
-                    'schedule_id' => $schedule->id,
-                    'date' => $bookingDate->format('Y-m-d'),
-                    'status' => 'AVAILABLE',
-                ]);
+          // Extract booking data from response
+          Map<String, dynamic> extractedBookingData;
+          if (response.containsKey('data')) {
+            if (response['data'].containsKey('booking')) {
+              extractedBookingData = response['data']['booking'];
+            } else {
+              extractedBookingData = response['data'];
             }
+          } else if (response.containsKey('booking')) {
+            extractedBookingData = response['booking'];
+          } else {
+            extractedBookingData = response;
+          }
 
-            if ($scheduleDate->status !== 'AVAILABLE') {
-                throw new \Exception('Jadwal tidak tersedia untuk tanggal ini.');
-            }
-
-            // Calculate total amount
-            $route = $schedule->route;
-            $totalAmount = $route->base_price * count($data['passengers']);
-
-            // Add vehicle cost if any
-            if (isset($data['vehicles']) && !empty($data['vehicles'])) {
-                foreach ($data['vehicles'] as $vehicleData) {
-                    $vehiclePrice = $route->getPriceForVehicle($vehicleData['type']);
-                    $totalAmount += $vehiclePrice;
-                }
-            }
-
-            // Create booking
-            $booking = Booking::create([
-                'booking_code' => Booking::generateBookingCode(),
-                'user_id' => $userId,
-                'schedule_id' => $data['schedule_id'],
-                'booking_date' => $data['booking_date'],
-                'passenger_count' => count($data['passengers']),
-                'vehicle_count' => isset($data['vehicles']) ? count($data['vehicles']) : 0,
-                'total_amount' => $totalAmount,
-                'status' => 'PENDING',
-            ]);
-
-            // Create passengers
-            foreach ($data['passengers'] as $index => $passengerData) {
-                $passenger = Passenger::create([
-                    'booking_id' => $booking->id,
-                    'name' => $passengerData['name'],
-                    'id_number' => $passengerData['id_number'],
-                    'id_type' => $passengerData['id_type'],
-                    'dob' => $passengerData['dob'],
-                    'gender' => $passengerData['gender'],
-                    'is_primary' => $index === 0, // First passenger is primary
-                ]);
-            }
-
-            // Create vehicles if any
-            if (isset($data['vehicles']) && !empty($data['vehicles'])) {
-                foreach ($data['vehicles'] as $vehicleData) {
-                    $vehicle = Vehicle::create([
-                        'booking_id' => $booking->id,
-                        'type' => $vehicleData['type'],
-                        'license_plate' => $vehicleData['license_plate'],
-                        'weight' => $vehicleData['weight'] ?? null,
-                        'owner_passenger_id' => $vehicleData['owner_passenger_id'] ?? null,
-                    ]);
-                }
-            }
-
-            // Create booking log
-            BookingLog::create([
-                'booking_id' => $booking->id,
-                'previous_status' => 'NEW',
-                'new_status' => 'PENDING',
-                'changed_by_type' => 'USER',
-                'changed_by_id' => $userId,
-                'notes' => 'Pemesanan baru dibuat',
-            ]);
-
-            // Update schedule date capacities
-            $this->updateScheduleDateCapacity($scheduleDate, $booking);
-
-            DB::commit();
-            return $booking;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
+          return Booking.fromJson(extractedBookingData);
+        } catch (e) {
+          print('Error creating booking: ${e.toString()}');
+          throw Exception('Failed to create booking: ${e.toString()}');
         }
-    }
+      }
 
     /**
      * Confirm a booking after payment.

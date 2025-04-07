@@ -4,8 +4,7 @@ namespace App\Services;
 
 use App\Models\Booking;
 use App\Models\Ticket;
-use App\Models\Passenger; // Tambahkan ini
-use App\Models\Vehicle;   // Tambahkan ini
+use App\Models\Vehicle;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -42,10 +41,10 @@ class TicketService
 
             $tickets = [];
 
-            // Generate passenger tickets
-            foreach ($booking->passengers as $passenger) {
+            // Generate passenger tickets (satu tiket per jumlah penumpang, tanpa data personal)
+            for ($i = 0; $i < $booking->passenger_count; $i++) {
                 $ticketData = [
-                    'passenger_id' => $passenger->id,
+                    'passenger_id' => null, // Tidak lagi mengaitkan tiket dengan penumpang tertentu
                     'vehicle_id' => null,
                 ];
 
@@ -53,14 +52,12 @@ class TicketService
                 $tickets[] = $ticket;
             }
 
-            // Generate vehicle tickets
+            // Generate vehicle tickets (satu tiket per kendaraan, tanpa data pemilik)
             foreach ($booking->vehicles as $vehicle) {
-                if ($vehicle->owner_passenger_id) {
-                    $this->createVehicleTicket($booking, [
-                        'vehicle_id' => $vehicle->id,
-                        'passenger_id' => $vehicle->owner_passenger_id
-                    ]);
-                }
+                $this->createVehicleTicket($booking, [
+                    'vehicle_id' => $vehicle->id,
+                    'passenger_id' => null  // Tidak lagi mengaitkan kendaraan dengan penumpang tertentu
+                ]);
             }
 
             Log::info('Tickets generated successfully', [
@@ -99,39 +96,35 @@ class TicketService
         // Generate ticket code
         $ticketCode = $this->generateTicketCode();
 
-        // Get passenger
-        $passenger = Passenger::findOrFail($ticketData['passenger_id']);
-
         // Create ticket record
         $ticket = new Ticket();
         $ticket->booking_id = $booking->id;
-        $ticket->passenger_id = $passenger->id;
+        $ticket->passenger_id = null; // Tidak lagi mengaitkan dengan penumpang
         $ticket->vehicle_id = $ticketData['vehicle_id'] ?? null;
         $ticket->ticket_code = $ticketCode;
         $ticket->status = 'ACTIVE';
         $ticket->boarding_status = Ticket::BOARDING_NOT_BOARDED;
         $ticket->checked_in = false;
 
-        // Generate watermark data
+        // Generate watermark data tanpa data penumpang
         $watermarkData = [
-            'passenger_name' => $passenger->name,
             'departure_date' => $booking->booking_date,
             'route' => $booking->schedule->route->name,
             'ferry' => $booking->schedule->ferry->name,
             'departure_time' => $booking->schedule->departure_time,
             'arrival_time' => $booking->schedule->arrival_time,
-            'timestamp' => Carbon::now()->timestamp
+            'timestamp' => Carbon::now()->timestamp,
+            'ticket_type' => 'PASSENGER'
         ];
         $ticket->watermark_data = json_encode($watermarkData);
 
         // Generate QR code
         $qrData = [
             'ticket_code' => $ticketCode,
-            'passenger_id' => $passenger->id,
-            'passenger_name' => $passenger->name,
             'booking_id' => $booking->id,
             'booking_code' => $booking->booking_code,
             'schedule_id' => $booking->schedule_id,
+            'ticket_type' => 'PASSENGER',
             'generated_at' => Carbon::now()->toIso8601String()
         ];
 
@@ -164,14 +157,13 @@ class TicketService
         // Generate ticket code
         $ticketCode = $this->generateTicketCode('VEH');
 
-        // Get vehicle and passenger
+        // Get vehicle
         $vehicle = Vehicle::findOrFail($ticketData['vehicle_id']);
-        $passenger = Passenger::findOrFail($ticketData['passenger_id']);
 
         // Create ticket record
         $ticket = new Ticket();
         $ticket->booking_id = $booking->id;
-        $ticket->passenger_id = $passenger->id;  // Ini bagian krusial
+        $ticket->passenger_id = null;  // Tidak lagi mengaitkan dengan penumpang
         $ticket->vehicle_id = $vehicle->id;
         $ticket->ticket_code = $ticketCode;
         $ticket->status = 'ACTIVE';
@@ -187,7 +179,8 @@ class TicketService
             'ferry' => $booking->schedule->ferry->name,
             'departure_time' => $booking->schedule->departure_time,
             'arrival_time' => $booking->schedule->arrival_time,
-            'timestamp' => Carbon::now()->timestamp
+            'timestamp' => Carbon::now()->timestamp,
+            'ticket_type' => 'VEHICLE'
         ];
         $ticket->watermark_data = json_encode($watermarkData);
 
@@ -200,6 +193,7 @@ class TicketService
             'booking_id' => $booking->id,
             'booking_code' => $booking->booking_code,
             'schedule_id' => $booking->schedule_id,
+            'ticket_type' => 'VEHICLE',
             'generated_at' => Carbon::now()->toIso8601String()
         ];
 
@@ -216,10 +210,6 @@ class TicketService
         $ticket->qr_code = $qrFileName;
 
         $ticket->save();
-
-        $watermarkData['passenger_name'] = $passenger->name;
-        $qrData['passenger_name'] = $passenger->name;
-        $qrData['passenger_id'] = $passenger->id;
 
         return $ticket;
     }
@@ -331,107 +321,105 @@ class TicketService
     }
 
     /**
-     * Validate a ticket.
-     *
-     * @param string $ticketCode
-     * @return array
-     */
-    public function validateTicket($ticketCode)
-    {
-        try {
-            $ticket = Ticket::where('ticket_code', $ticketCode)
-                ->with(['booking', 'passenger', 'vehicle', 'schedule.route', 'schedule.ferry'])
-                ->first();
+ * Validate a ticket.
+ *
+ * @param string $ticketCode
+ * @return array
+ */
+public function validateTicket($ticketCode)
+{
+    try {
+        $ticket = Ticket::where('ticket_code', $ticketCode)
+            ->with(['booking', 'vehicle', 'schedule.route', 'schedule.ferry'])
+            ->first();
 
-            if (!$ticket) {
-                return [
-                    'valid' => false,
-                    'message' => 'Ticket not found'
-                ];
-            }
-
-            // Check ticket status
-            if ($ticket->status !== 'ACTIVE') {
-                return [
-                    'valid' => false,
-                    'message' => 'Ticket is not active',
-                    'status' => $ticket->status
-                ];
-            }
-
-            // Check if already boarded
-            if ($ticket->boarding_status === 'BOARDED') {
-                return [
-                    'valid' => false,
-                    'message' => 'Ticket has already been used for boarding',
-                    'boarding_status' => $ticket->boarding_status
-                ];
-            }
-
-            // Check if schedule date matches today
-            $scheduleDate = Carbon::parse($ticket->booking->booking_date);
-            $today = Carbon::today();
-
-            if (!$scheduleDate->isSameDay($today)) {
-                return [
-                    'valid' => false,
-                    'message' => 'Ticket is not valid for today',
-                    'ticket_date' => $scheduleDate->toDateString(),
-                    'today' => $today->toDateString()
-                ];
-            }
-
-            // Get passenger or vehicle info
-            $entityInfo = [];
-            if ($ticket->passenger) {
-                $entityInfo = [
-                    'type' => 'passenger',
-                    'name' => $ticket->passenger->name,
-                    'identity_number' => $ticket->passenger->identity_number,
-                    'identity_type' => $ticket->passenger->identity_type
-                ];
-            } elseif ($ticket->vehicle) {
-                $entityInfo = [
-                    'type' => 'vehicle',
-                    'license_plate' => $ticket->vehicle->license_plate,
-                    'vehicle_type' => $ticket->vehicle->type
-                ];
-            }
-
-            return [
-                'valid' => true,
-                'message' => 'Ticket is valid',
-                'ticket' => [
-                    'id' => $ticket->id,
-                    'ticket_code' => $ticket->ticket_code,
-                    'boarding_status' => $ticket->boarding_status,
-                    'checked_in' => $ticket->checked_in
-                ],
-                'booking' => [
-                    'id' => $ticket->booking->id,
-                    'booking_code' => $ticket->booking->booking_code,
-                    'booking_date' => $ticket->booking->booking_date
-                ],
-                'schedule' => [
-                    'route' => $ticket->schedule->route->name,
-                    'ferry' => $ticket->schedule->ferry->name,
-                    'departure_time' => $ticket->schedule->departure_time,
-                    'arrival_time' => $ticket->schedule->arrival_time
-                ],
-                'entity' => $entityInfo
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error validating ticket', [
-                'ticket_code' => $ticketCode,
-                'error' => $e->getMessage()
-            ]);
-
+        if (!$ticket) {
             return [
                 'valid' => false,
-                'message' => 'Error validating ticket'
+                'message' => 'Ticket not found'
             ];
         }
+
+        // Check ticket status
+        if ($ticket->status !== 'ACTIVE') {
+            return [
+                'valid' => false,
+                'message' => 'Ticket is not active',
+                'status' => $ticket->status
+            ];
+        }
+
+        // Check if already boarded
+        if ($ticket->boarding_status === 'BOARDED') {
+            return [
+                'valid' => false,
+                'message' => 'Ticket has already been used for boarding',
+                'boarding_status' => $ticket->boarding_status
+            ];
+        }
+
+        // Check if schedule date matches today
+        $scheduleDate = Carbon::parse($ticket->booking->booking_date);
+        $today = Carbon::today();
+
+        if (!$scheduleDate->isSameDay($today)) {
+            return [
+                'valid' => false,
+                'message' => 'Ticket is not valid for today',
+                'ticket_date' => $scheduleDate->toDateString(),
+                'today' => $today->toDateString()
+            ];
+        }
+
+        // Get entity info (vehicle or generic passenger ticket)
+        $entityInfo = [];
+        if ($ticket->vehicle) {
+            $entityInfo = [
+                'type' => 'vehicle',
+                'license_plate' => $ticket->vehicle->license_plate,
+                'vehicle_type' => $ticket->vehicle->type
+            ];
+        } else {
+            $entityInfo = [
+                'type' => 'passenger',
+                'ticket_code' => $ticket->ticket_code
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'message' => 'Ticket is valid',
+            'ticket' => [
+                'id' => $ticket->id,
+                'ticket_code' => $ticket->ticket_code,
+                'boarding_status' => $ticket->boarding_status,
+                'checked_in' => $ticket->checked_in
+            ],
+            'booking' => [
+                'id' => $ticket->booking->id,
+                'booking_code' => $ticket->booking->booking_code,
+                'booking_date' => $ticket->booking->booking_date
+            ],
+            'schedule' => [
+                'route' => $ticket->schedule->route->name,
+                'ferry' => $ticket->schedule->ferry->name,
+                'departure_time' => $ticket->schedule->departure_time,
+                'arrival_time' => $ticket->schedule->arrival_time
+            ],
+            'entity' => $entityInfo
+        ];
+    } catch (\Exception $e) {
+        Log::error('Error validating ticket', [
+            'ticket_code' => $ticketCode,
+            'error' => $e->getMessage()
+        ]);
+
+        return [
+            'valid' => false,
+            'message' => 'Error validating ticket'
+        ];
     }
+}
 
     /**
      * Mark a ticket as boarded.

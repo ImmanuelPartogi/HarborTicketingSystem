@@ -36,12 +36,12 @@ class TicketController extends Controller
         $query = Ticket::whereHas('booking', function ($query) use ($request) {
             $query->where('user_id', $request->user()->id);
         })
-        ->with([
-            'booking.schedule.route',
-            'booking.schedule.ferry',
-            'passenger',
-            'vehicle'
-        ]);
+            ->with([
+                'booking.schedule.route',
+                'booking.schedule.ferry',
+                'passenger',
+                'vehicle'
+            ]);
 
         if ($status) {
             $query->where('status', $status);
@@ -67,23 +67,33 @@ class TicketController extends Controller
     public function show(Request $request, $ticketCode)
     {
         $ticket = Ticket::where('ticket_code', $ticketCode)
-            ->whereHas('booking', function ($query) use ($request) {
-                $query->where('user_id', $request->user()->id);
-            })
-            ->with([
-                'booking.schedule.route',
-                'booking.schedule.ferry',
-                'passenger',
-                'vehicle'
-            ])
+            ->with(['booking', 'vehicle', 'schedule.route', 'schedule.ferry'])
             ->firstOrFail();
+
+        // Tambahkan informasi yang diperlukan tanpa mengandalkan data penumpang
+        $ticketInfo = [
+            'ticket_code' => $ticket->ticket_code,
+            'status' => $ticket->status,
+            'boarding_status' => $ticket->boarding_status,
+            'ticket_type' => $ticket->vehicle_id ? 'Vehicle' : 'Passenger',
+            'ferry' => $ticket->schedule->ferry->name,
+            'route' => $ticket->schedule->route->name,
+            'departure_date' => $ticket->booking->booking_date,
+            'departure_time' => $ticket->schedule->departure_time,
+            'arrival_time' => $ticket->schedule->arrival_time,
+        ];
+
+        // Tambahkan info kendaraan jika tiket untuk kendaraan
+        if ($ticket->vehicle) {
+            $ticketInfo['vehicle'] = [
+                'type' => $ticket->vehicle->type,
+                'license_plate' => $ticket->vehicle->license_plate,
+            ];
+        }
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'ticket' => $ticket,
-                'watermark_data' => json_decode($ticket->watermark_data)
-            ]
+            'data' => $ticketInfo
         ]);
     }
 
@@ -200,23 +210,58 @@ class TicketController extends Controller
      */
     public function validateTicket(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'ticket_code' => 'required|string'
         ]);
 
-        try {
-            $result = $this->ticketService->validateTicket($request->ticket_code);
-
-            return response()->json([
-                'success' => $result['valid'],
-                'message' => $result['message'],
-                'data' => $result
-            ], $result['valid'] ? 200 : 400);
-        } catch (\Exception $e) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $ticketService = app(TicketService::class);
+        $result = $ticketService->validateTicket($request->ticket_code);
+
+        return response()->json([
+            'success' => true,
+            'data' => $result
+        ]);
+    }
+
+    public function autoGenerateTickets(Request $request, $bookingId)
+    {
+        try {
+            $booking = Booking::findOrFail($bookingId);
+
+            // Periksa status booking
+            if ($booking->status !== 'CONFIRMED') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tickets can only be generated for confirmed bookings'
+                ], 400);
+            }
+
+            // Gunakan ticket service
+            $ticketService = app(TicketService::class);
+            $result = $ticketService->generateTicketsForBooking($booking);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tickets generated successfully',
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to auto-generate tickets', [
+                'booking_id' => $bookingId,
                 'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate tickets: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -229,42 +274,50 @@ class TicketController extends Controller
      */
     public function markAsBoarded(Request $request)
     {
-        $request->validate([
-            'ticket_code' => 'required|string'
+        $validator = Validator::make($request->all(), [
+            'ticket_code' => 'required|exists:tickets,ticket_code',
         ]);
 
-        $ticket = Ticket::where('ticket_code', $request->ticket_code)
-            ->firstOrFail();
-
-        if ($ticket->status !== 'ACTIVE') {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ticket is not active'
-            ], 400);
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        if ($ticket->boarding_status === 'BOARDED') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ticket is already boarded'
-            ], 400);
-        }
+        $ticketCode = $request->ticket_code;
 
         try {
-            $ticket = $this->ticketService->markAsBoarded($ticket);
+            $ticketService = app(TicketService::class);
+            $validationResult = $ticketService->validateTicket($ticketCode);
+
+            if (!$validationResult['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validationResult['message'],
+                    'data' => $validationResult
+                ], 400);
+            }
+
+            $ticket = Ticket::where('ticket_code', $ticketCode)->firstOrFail();
+            $ticket = $ticketService->markAsBoarded($ticket);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Ticket marked as boarded',
+                'message' => 'Ticket marked as boarded successfully',
                 'data' => [
-                    'ticket' => $ticket
+                    'ticket' => $ticket,
+                    'entity_type' => $ticket->vehicle_id ? 'vehicle' : 'passenger',
+                    'entity_info' => $ticket->vehicle_id
+                        ? ['type' => $ticket->vehicle->type, 'license_plate' => $ticket->vehicle->license_plate]
+                        : ['ticket_code' => $ticket->ticket_code]
                 ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to mark ticket as boarded',
-                'error' => $e->getMessage()
+                'message' => 'Failed to mark ticket as boarded: ' . $e->getMessage()
             ], 500);
         }
     }

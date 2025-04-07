@@ -205,32 +205,14 @@ class BookingProvider extends ChangeNotifier {
   }
 
   // Create a new booking - dengan pengecekan inisialisasi
+  // di BookingProvider.dart
   Future<bool> createBooking() async {
     if (!_checkInitialized()) return false;
 
-    if (_scheduleId <= 0 || _pendingPassengers.isEmpty) {
+    if (_scheduleId <= 0) {
       _bookingError = 'Invalid booking data';
       notifyListeners();
       return false;
-    }
-
-    // Validasi data penumpang sebelum melanjutkan
-    for (var passenger in _pendingPassengers) {
-      // Cek nomor identitas
-      if (passenger['identity_number'] == null ||
-          passenger['identity_number'].toString().trim().isEmpty) {
-        _bookingError = 'ID number is required for all passengers';
-        notifyListeners();
-        return false;
-      }
-
-      // Cek tanggal lahir
-      if (passenger['date_of_birth'] == null ||
-          passenger['date_of_birth'].toString().trim().isEmpty) {
-        _bookingError = 'Date of birth is required for all passengers';
-        notifyListeners();
-        return false;
-      }
     }
 
     _isCreatingBooking = true;
@@ -238,52 +220,28 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Format data penumpang untuk API
-      List<Map<String, dynamic>> formattedPassengers = [];
-      for (var passenger in _pendingPassengers) {
-        // Pastikan semua field penting terisi dan tidak null
-        Map<String, dynamic> formattedPassenger = {
-          'name': passenger['name'] ?? '',
-          'id_number': passenger['identity_number'] ?? '',
-          'id_type': _convertIdTypeToApi(passenger['identity_type'] ?? 'ktp'),
-          'dob': passenger['date_of_birth'] ?? '',
-          'gender': _convertGenderToApi(passenger['gender'] ?? 'm'),
-          'email': passenger['email'] ?? '',
-          'phone': passenger['phone'] ?? '',
-          'address': passenger['address'] ?? '',
-        };
-
-        // Debug untuk melihat data yang akan dikirim
-        print('Formatted passenger data: ${json.encode(formattedPassenger)}');
-
-        formattedPassengers.add(formattedPassenger);
-      }
-
-      _currentBooking = await _bookingService!.createBooking(
-        scheduleId: _scheduleId,
-        passengers: formattedPassengers,
-        vehicles: _pendingVehicles.isNotEmpty ? _pendingVehicles : null,
-      );
+      // Buat booking dengan jumlah penumpang saja
+      final bookingData = {
+        'schedule_id': _scheduleId,
+        'booking_date': DateTime.now().toIso8601String().split('T')[0],
+        'passenger_count': _pendingPassengers.length, // Hanya kirim jumlah
+        'vehicles':
+            _pendingVehicles.isNotEmpty
+                ? _pendingVehicles.map((v) {
+                  // Hapus owner_passenger_id jika ada
+                  final vehicleData = Map<String, dynamic>.from(v);
+                  vehicleData.remove('owner_passenger_id');
+                  return vehicleData;
+                }).toList()
+                : null,
+      };
 
       // Debug log
-      print('Booking created successfully:');
-      print('  ID: ${_currentBooking!.id}');
-      print('  Code: ${_currentBooking!.bookingCode}');
-      print('  Status: ${_currentBooking!.status}');
+      print('Booking request data: ${json.encode(bookingData)}');
 
-      // Simpan data penumpang dan kendaraan untuk penggunaan di masa mendatang
-      for (var passenger in _pendingPassengers) {
-        if (passenger.containsKey('save_info') &&
-            passenger['save_info'] == true) {
-          await _storageService!.savePassenger(passenger);
-        }
-      }
-
-      for (var vehicle in _pendingVehicles) {
-        if (vehicle.containsKey('save_info') && vehicle['save_info'] == true) {
-          await _storageService!.saveVehicle(vehicle);
-        }
-      }
+      _currentBooking = await _bookingService!.createBooking(
+        bookingData: bookingData,
+      );
 
       _isCreatingBooking = false;
       notifyListeners();

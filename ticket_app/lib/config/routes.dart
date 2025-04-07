@@ -8,7 +8,7 @@ import '../screens/home/home_screen.dart';
 import '../screens/home/search_screen.dart';
 import '../screens/home/ferry_details_screen.dart';
 import '../screens/booking/passenger_details_screen.dart';
-import '../screens/booking/vehicle_details_screen.dart';
+import '../screens/booking/vehicle_count_screen.dart';
 import '../screens/booking/payment_screen.dart';
 import '../screens/booking/booking_confirmation_screen.dart';
 import '../screens/ticket/ticket_list_screen.dart';

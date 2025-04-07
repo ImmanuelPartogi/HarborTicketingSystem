@@ -67,6 +67,7 @@ class Ticket extends Model
 
     /**
      * Get the passenger that owns the ticket.
+     * Relasi ini tetap ada tapi tidak wajib.
      *
      * @return BelongsTo
      */
@@ -208,12 +209,13 @@ class Ticket extends Model
 
     /**
      * Get the ticket type (passenger/vehicle)
+     * Dimodifikasi untuk tidak tergantung pada passenger_id
      *
      * @return string
      */
     public function getTicketTypeAttribute(): string
     {
-        return $this->passenger_id ? 'Passenger' : 'Vehicle';
+        return $this->vehicle_id ? 'Vehicle' : 'Passenger';
     }
 
     /**
