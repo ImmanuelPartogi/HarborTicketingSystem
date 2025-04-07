@@ -29,6 +29,7 @@ class Vehicle extends Model
         'type',
         'license_plate',
         'weight',
+        'owner_passenger_id',
     ];
 
     /**
@@ -145,5 +146,15 @@ class Vehicle extends Model
         }
 
         return 'Rp ' . number_format($price, 0, ',', '.');
+    }
+
+    /**
+     * Get the passenger that owns the vehicle.
+     *
+     * @return BelongsTo
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(Passenger::class, 'owner_passenger_id');
     }
 }

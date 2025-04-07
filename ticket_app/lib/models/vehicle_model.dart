@@ -1,7 +1,7 @@
 class Vehicle {
   final int id;
   final int bookingId;
-  final String type; // 'car', 'motorcycle', 'bus', 'truck'
+  final String type;
   final String licensePlate;
   final double? weight;
   final String? brand;
@@ -9,6 +9,7 @@ class Vehicle {
   final double price;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? ownerPassengerId; // Tambahkan field ini
 
   Vehicle({
     required this.id,
@@ -21,10 +22,11 @@ class Vehicle {
     required this.price,
     required this.createdAt,
     required this.updatedAt,
+    this.ownerPassengerId, // Tambahkan di constructor
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
-    // Helper function untuk parsing double dengan aman
+    // Helper function untuk parsing double
     double? parseDoubleValue(dynamic value) {
       if (value == null) return null;
       if (value is double) return value;
@@ -45,12 +47,13 @@ class Vehicle {
       bookingId: json['booking_id'],
       type: json['type'],
       licensePlate: json['license_plate'],
-      weight: parseDoubleValue(json['weight']), // Perbaikan di sini
+      weight: parseDoubleValue(json['weight']),
       brand: json['brand'],
       model: json['model'],
-      price: parseDoubleValue(json['price']) ?? 0.0, // Perbaikan di sini juga
+      price: parseDoubleValue(json['price']) ?? 0.0,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
+      ownerPassengerId: json['owner_passenger_id'], // Ambil dari JSON
     );
   }
 
@@ -66,6 +69,7 @@ class Vehicle {
       'price': price,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'owner_passenger_id': ownerPassengerId, // Sertakan dalam JSON
     };
   }
 

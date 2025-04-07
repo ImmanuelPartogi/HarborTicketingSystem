@@ -37,6 +37,8 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   bool _saveVehicleInfo = true;
   bool _isLoading = false;
   List<Map<String, dynamic>> _savedVehicles = [];
+  List<Map<String, dynamic>> _passengers = [];
+  int? _selectedOwnerPassengerId;
 
   // Prices for different vehicle types
   double _carPrice = 0;
@@ -49,6 +51,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     super.initState();
     _loadSavedVehicles();
     _loadVehiclePrices();
+    _loadPassengers(); // Tambahkan ini
   }
 
   @override
@@ -103,6 +106,27 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       }
     } catch (e) {
       print('Error loading vehicle prices: $e');
+    }
+  }
+
+  Future<void> _loadPassengers() async {
+    try {
+      final bookingProvider = Provider.of<BookingProvider>(
+        context,
+        listen: false,
+      );
+      setState(() {
+        _passengers = bookingProvider.passengers;
+      });
+
+      // Default ke penumpang pertama jika ada
+      if (_passengers.isNotEmpty) {
+        setState(() {
+          _selectedOwnerPassengerId = _passengers[0]['id'];
+        });
+      }
+    } catch (e) {
+      print('Error loading passengers: $e');
     }
   }
 
@@ -213,6 +237,17 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
       return;
     }
 
+    // Validasi pemilihan pemilik kendaraan
+    if (_selectedOwnerPassengerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a vehicle owner'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -220,7 +255,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     try {
       // Prepare vehicle data
       final vehicleData = {
-        'type': _selectedVehicleType.toUpperCase(), // Konversi ke uppercase
+        'type': _selectedVehicleType.toUpperCase(),
         'license_plate': _licensePlateController.text,
         'brand': _brandController.text,
         'model': _modelController.text,
@@ -230,6 +265,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 : null,
         'price': _getSelectedVehiclePrice(),
         'save_info': _saveVehicleInfo,
+        'owner_passenger_id': _selectedOwnerPassengerId, // Tambahkan ini
       };
 
       // Add vehicle to booking provider
@@ -322,6 +358,62 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                         label: const Text('Use Saved'),
                       ),
                   ],
+                ),
+
+                const SizedBox(height: AppTheme.paddingMedium),
+
+                Text(
+                  'Vehicle Owner',
+                  style: TextStyle(
+                    color: theme.textTheme.bodyLarge?.color,
+                    fontSize: AppTheme.fontSizeRegular,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.dividerColor),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusRegular,
+                    ),
+                  ),
+                  child: DropdownButtonFormField<int>(
+                    value: _selectedOwnerPassengerId,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.paddingMedium,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    hint: Text('Select vehicle owner'),
+                    items:
+                        _passengers.map((passenger) {
+                          // Tambahkan ID sebagai passenger ID yang sebenarnya
+                          int passengerId = passenger['id'] ?? 0;
+                          if (passengerId == 0 &&
+                              _passengers.indexOf(passenger) == 0) {
+                            // Jika ID tidak tersedia, gunakan index sebagai ID sementara
+                            passengerId = 1;
+                          }
+
+                          return DropdownMenuItem<int>(
+                            value: passengerId,
+                            child: Text(passenger['name'] ?? 'Unknown'),
+                          );
+                        }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedOwnerPassengerId = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Please select vehicle owner';
+                      }
+                      return null;
+                    },
+                  ),
                 ),
 
                 const SizedBox(height: AppTheme.paddingMedium),

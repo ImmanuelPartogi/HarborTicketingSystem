@@ -119,4 +119,14 @@ class Passenger extends Model
     {
         return $this->id_type . ': ' . $this->id_number;
     }
+
+    /**
+     * Get the vehicles owned by this passenger.
+     *
+     * @return HasMany
+     */
+    public function vehicles()
+    {
+        return $this->hasMany(Vehicle::class, 'owner_passenger_id');
+    }
 }

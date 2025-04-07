@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Booking;
 use App\Models\Ticket;
+use App\Models\Passenger; // Tambahkan ini
+use App\Models\Vehicle;   // Tambahkan ini
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -42,14 +44,23 @@ class TicketService
 
             // Generate passenger tickets
             foreach ($booking->passengers as $passenger) {
-                $ticket = $this->createTicket($booking, $passenger);
+                $ticketData = [
+                    'passenger_id' => $passenger->id,
+                    'vehicle_id' => null,
+                ];
+
+                $ticket = $this->createTicket($booking, $ticketData);
                 $tickets[] = $ticket;
             }
 
-            // Generate vehicle tickets if any
+            // Generate vehicle tickets
             foreach ($booking->vehicles as $vehicle) {
-                $ticket = $this->createVehicleTicket($booking, $vehicle);
-                $tickets[] = $ticket;
+                if ($vehicle->owner_passenger_id) {
+                    $this->createVehicleTicket($booking, [
+                        'vehicle_id' => $vehicle->id,
+                        'passenger_id' => $vehicle->owner_passenger_id
+                    ]);
+                }
             }
 
             Log::info('Tickets generated successfully', [
@@ -80,18 +91,22 @@ class TicketService
      * Create a ticket for a passenger.
      *
      * @param Booking $booking
-     * @param \App\Models\Passenger $passenger
+     * @param array $ticketData
      * @return Ticket
      */
-    protected function createTicket(Booking $booking, $passenger)
+    public function createTicket(Booking $booking, array $ticketData)
     {
         // Generate ticket code
         $ticketCode = $this->generateTicketCode();
+
+        // Get passenger
+        $passenger = Passenger::findOrFail($ticketData['passenger_id']);
 
         // Create ticket record
         $ticket = new Ticket();
         $ticket->booking_id = $booking->id;
         $ticket->passenger_id = $passenger->id;
+        $ticket->vehicle_id = $ticketData['vehicle_id'] ?? null;
         $ticket->ticket_code = $ticketCode;
         $ticket->status = 'ACTIVE';
         $ticket->boarding_status = Ticket::BOARDING_NOT_BOARDED;
@@ -141,17 +156,22 @@ class TicketService
      * Create a ticket for a vehicle.
      *
      * @param Booking $booking
-     * @param \App\Models\Vehicle $vehicle
+     * @param array $ticketData
      * @return Ticket
      */
-    protected function createVehicleTicket(Booking $booking, $vehicle)
+    public function createVehicleTicket(Booking $booking, array $ticketData)
     {
         // Generate ticket code
         $ticketCode = $this->generateTicketCode('VEH');
 
+        // Get vehicle and passenger
+        $vehicle = Vehicle::findOrFail($ticketData['vehicle_id']);
+        $passenger = Passenger::findOrFail($ticketData['passenger_id']);
+
         // Create ticket record
         $ticket = new Ticket();
         $ticket->booking_id = $booking->id;
+        $ticket->passenger_id = $passenger->id;  // Ini bagian krusial
         $ticket->vehicle_id = $vehicle->id;
         $ticket->ticket_code = $ticketCode;
         $ticket->status = 'ACTIVE';
@@ -195,6 +215,45 @@ class TicketService
         Storage::disk('public')->put($qrFileName, $qrImage);
         $ticket->qr_code = $qrFileName;
 
+        $ticket->save();
+
+        $watermarkData['passenger_name'] = $passenger->name;
+        $qrData['passenger_name'] = $passenger->name;
+        $qrData['passenger_id'] = $passenger->id;
+
+        return $ticket;
+    }
+
+    /**
+     * Update ticket information for rescheduled booking.
+     *
+     * @param Ticket $ticket
+     * @return Ticket
+     */
+    public function updateTicketForReschedule(Ticket $ticket)
+    {
+        $booking = $ticket->booking;
+
+        // Update watermark data
+        $watermarkData = json_decode($ticket->watermark_data, true);
+
+        if ($ticket->passenger_id) {
+            // Update passenger ticket info
+            $watermarkData['departure_date'] = $booking->booking_date;
+            $watermarkData['route'] = $booking->schedule->route->name;
+            $watermarkData['ferry'] = $booking->schedule->ferry->name;
+            $watermarkData['departure_time'] = $booking->schedule->departure_time;
+            $watermarkData['arrival_time'] = $booking->schedule->arrival_time;
+        } else if ($ticket->vehicle_id) {
+            // Update vehicle ticket info
+            $watermarkData['departure_date'] = $booking->booking_date;
+            $watermarkData['route'] = $booking->schedule->route->name;
+            $watermarkData['ferry'] = $booking->schedule->ferry->name;
+            $watermarkData['departure_time'] = $booking->schedule->departure_time;
+            $watermarkData['arrival_time'] = $booking->schedule->arrival_time;
+        }
+
+        $ticket->watermark_data = json_encode($watermarkData);
         $ticket->save();
 
         return $ticket;

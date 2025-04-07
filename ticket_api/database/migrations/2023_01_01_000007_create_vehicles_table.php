@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('vehicles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('booking_id')->constrained()->onDelete('cascade');
+            $table->foreignId('owner_passenger_id')->nullable()->constrained('passengers');
             $table->enum('type', ['MOTORCYCLE', 'CAR', 'BUS', 'TRUCK']);
             $table->string('license_plate', 20);
             $table->decimal('weight', 10, 2)->nullable()->comment('Berat dalam kg');

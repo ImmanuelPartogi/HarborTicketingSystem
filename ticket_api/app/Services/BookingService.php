@@ -115,6 +115,7 @@ class BookingService
                         'type' => $vehicleData['type'],
                         'license_plate' => $vehicleData['license_plate'],
                         'weight' => $vehicleData['weight'] ?? null,
+                        'owner_passenger_id' => $vehicleData['owner_passenger_id'] ?? null,
                     ]);
                 }
             }
@@ -164,16 +165,25 @@ class BookingService
             $passengers = $booking->passengers;
             $vehicles = $booking->vehicles;
 
-            foreach ($passengers as $index => $passenger) {
-                // Associate vehicle with passenger if they match
-                $vehicle = ($index < count($vehicles)) ? $vehicles[$index] : null;
-
+            foreach ($passengers as $passenger) {
                 $ticketData = [
                     'passenger_id' => $passenger->id,
-                    'vehicle_id' => $vehicle ? $vehicle->id : null,
+                    'vehicle_id' => null,
                 ];
 
                 $this->ticketService->createTicket($booking, $ticketData);
+            }
+
+            // Buat tiket untuk kendaraan dan hubungkan dengan pemiliknya
+            foreach ($vehicles as $vehicle) {
+                if ($vehicle->owner_passenger_id) {
+                    $ticketData = [
+                        'passenger_id' => $vehicle->owner_passenger_id,
+                        'vehicle_id' => $vehicle->id,
+                    ];
+
+                    $this->ticketService->createVehicleTicket($booking, $ticketData);
+                }
             }
 
             // Create booking log

@@ -23,6 +23,7 @@ class BookingProvider extends ChangeNotifier {
 
   List<Map<String, dynamic>> _pendingPassengers = [];
   List<Map<String, dynamic>> _pendingVehicles = [];
+  List<Map<String, dynamic>> get passengers => _pendingPassengers;
   int _scheduleId = 0;
 
   // Tambahkan _isLoading yang hilang

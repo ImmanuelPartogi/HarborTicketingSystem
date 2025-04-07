@@ -99,6 +99,15 @@ class BookingService {
           throw Exception('Date of Birth is required for passenger ${i + 1}');
         }
 
+        if (vehicles != null && vehicles.isNotEmpty) {
+          for (var vehicle in vehicles) {
+            if (!vehicle.containsKey('owner_passenger_id') ||
+                vehicle['owner_passenger_id'] == null) {
+              throw Exception('Vehicle owner must be specified');
+            }
+          }
+        }
+
         // Lakukan cleaning data
         passengers[i] = {
           'name': passenger['name'] ?? '',
