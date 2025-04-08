@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 import '../../config/theme.dart';
 import '../../config/routes.dart';
@@ -15,26 +16,39 @@ class TicketListScreen extends StatefulWidget {
   State<TicketListScreen> createState() => _TicketListScreenState();
 }
 
-class _TicketListScreenState extends State<TicketListScreen> with SingleTickerProviderStateMixin {
+class _TicketListScreenState extends State<TicketListScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadTickets();
+
+    // Tambahkan timer untuk memeriksa tiket kadaluarsa secara berkala
+    Timer.periodic(Duration(minutes: 5), (timer) {
+      if (mounted) {
+        final ticketProvider = Provider.of<TicketProvider>(
+          context,
+          listen: false,
+        );
+        ticketProvider.checkAndMoveExpiredTickets();
+      }
+    });
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _loadTickets() async {
     final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
     await ticketProvider.fetchActiveTickets();
     await ticketProvider.fetchTicketHistory();
+    ticketProvider.checkAndMoveExpiredTickets(); // Panggil saat loading tiket
   }
 
   @override
@@ -44,10 +58,7 @@ class _TicketListScreenState extends State<TicketListScreen> with SingleTickerPr
         title: const Text('My Tickets'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Active'),
-            Tab(text: 'History'),
-          ],
+          tabs: const [Tab(text: 'Active'), Tab(text: 'History')],
         ),
       ),
       body: TabBarView(
@@ -55,21 +66,48 @@ class _TicketListScreenState extends State<TicketListScreen> with SingleTickerPr
         children: [
           // Active tickets tab
           _buildActiveTicketsTab(),
-          
+
           // History tickets tab
           _buildHistoryTicketsTab(),
         ],
       ),
     );
   }
-  
+
   Widget _buildActiveTicketsTab() {
     return Consumer<TicketProvider>(
       builder: (context, ticketProvider, _) {
         if (ticketProvider.isLoadingActiveTickets) {
-          return const Center(child: LoadingIndicator(message: 'Loading active tickets...'));
+          return const Center(
+            child: LoadingIndicator(message: 'Loading active tickets...'),
+          );
         }
-        
+
+        // Debug logs
+        print('=== TICKET GROUPING DEBUG ===');
+        print('Active tickets count: ${ticketProvider.activeTickets.length}');
+
+        // Check each ticket for schedule data
+        int ticketsWithSchedule = 0;
+        int ticketsWithRouteAndFerry = 0;
+
+        for (var ticket in ticketProvider.activeTickets) {
+          if (ticket.schedule != null) {
+            ticketsWithSchedule++;
+            if (ticket.schedule!.route != null &&
+                ticket.schedule!.ferry != null) {
+              ticketsWithRouteAndFerry++;
+            }
+          }
+        }
+
+        print(
+          'Tickets with schedule: $ticketsWithSchedule / ${ticketProvider.activeTickets.length}',
+        );
+        print(
+          'Tickets with route & ferry: $ticketsWithRouteAndFerry / ${ticketProvider.activeTickets.length}',
+        );
+
         if (ticketProvider.activeTickets.isEmpty) {
           return Center(
             child: Column(
@@ -91,9 +129,7 @@ class _TicketListScreenState extends State<TicketListScreen> with SingleTickerPr
                 const SizedBox(height: AppTheme.paddingSmall),
                 const Text(
                   'You don\'t have any active tickets',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeRegular,
-                  ),
+                  style: TextStyle(fontSize: AppTheme.fontSizeRegular),
                 ),
                 const SizedBox(height: AppTheme.paddingLarge),
                 ElevatedButton.icon(
@@ -115,168 +151,59 @@ class _TicketListScreenState extends State<TicketListScreen> with SingleTickerPr
             ),
           );
         }
-        
+
         // Group tickets by schedule
         final groupedTickets = ticketProvider.getTicketsGroupedBySchedule();
-        
+        print('Grouped into ${groupedTickets.length} groups');
+
+        // Debug untuk melihat setiap grup
+        groupedTickets.forEach((key, tickets) {
+          final firstTicket = tickets.first;
+          final schedule = firstTicket.schedule;
+          print('Group key: $key');
+          print('  Tickets count: ${tickets.length}');
+          if (schedule != null) {
+            print('  Route: ${schedule.route?.routeName}');
+            print('  Ferry: ${schedule.ferry?.name}');
+            print(
+              '  Departure: ${DateFormat('yyyy-MM-dd HH:mm').format(schedule.departureTime)}',
+            );
+          } else {
+            print('  No schedule info');
+          }
+        });
+
         return RefreshIndicator(
-          onRefresh: () => ticketProvider.fetchActiveTickets(),
+          onRefresh: () => ticketProvider.fetchActiveTickets(forceReload: true),
           child: ListView.builder(
             padding: const EdgeInsets.all(AppTheme.paddingMedium),
             itemCount: groupedTickets.length,
             itemBuilder: (context, index) {
               // Get schedule ID and tickets for this group
-              final scheduleId = groupedTickets.keys.elementAt(index);
-              final tickets = groupedTickets[scheduleId]!;
-              
-              // Get details from the first ticket
-              final firstTicket = tickets.first;
-              final schedule = firstTicket.schedule;
-              
-              if (schedule == null) {
-                return const SizedBox.shrink();
-              }
-              
-              return Container(
-                margin: const EdgeInsets.only(bottom: AppTheme.paddingLarge),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Trip header
-                    Container(
-                      padding: const EdgeInsets.all(AppTheme.paddingMedium),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(AppTheme.borderRadiusMedium),
-                          topRight: Radius.circular(AppTheme.borderRadiusMedium),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.directions_boat,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              const SizedBox(width: AppTheme.paddingSmall),
-                              Text(
-                                schedule.route?.routeName ?? 'Unknown Route',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: AppTheme.fontSizeMedium,
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.paddingRegular,
-                                  vertical: AppTheme.paddingXSmall,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusRound),
-                                ),
-                                child: Text(
-                                  schedule.statusText,
-                                  style: TextStyle(
-                                    color: schedule.isAvailable ? Colors.green : Colors.red,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: AppTheme.fontSizeSmall,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppTheme.paddingSmall),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                color: Colors.white70,
-                                size: 16,
-                              ),
-                              const SizedBox(width: AppTheme.paddingSmall),
-                              Text(
-                                DateFormat('EEE, dd MMM yyyy').format(schedule.departureTime),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: AppTheme.paddingMedium),
-                              const Icon(
-                                Icons.access_time,
-                                color: Colors.white70,
-                                size: 16,
-                              ),
-                              const SizedBox(width: AppTheme.paddingSmall),
-                              Text(
-                                schedule.formattedDepartureTime,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Tickets list
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(AppTheme.borderRadiusMedium),
-                          bottomRight: Radius.circular(AppTheme.borderRadiusMedium),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(AppTheme.paddingMedium),
-                            child: Text(
-                              '${tickets.length} ${tickets.length > 1 ? 'Tickets' : 'Ticket'}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const Divider(height: 1),
-                          ...tickets.map((ticket) => _buildTicketItem(ticket)).toList(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              final key = groupedTickets.keys.elementAt(index);
+              final tickets = groupedTickets[key]!;
+
+              print(
+                'Building group $index (key: $key) with ${tickets.length} tickets',
               );
+
+              return TicketGroupItem(tickets: tickets);
             },
           ),
         );
       },
     );
   }
-  
+
   Widget _buildHistoryTicketsTab() {
     return Consumer<TicketProvider>(
       builder: (context, ticketProvider, _) {
         if (ticketProvider.isLoadingTicketHistory) {
-          return const Center(child: LoadingIndicator(message: 'Loading ticket history...'));
+          return const Center(
+            child: LoadingIndicator(message: 'Loading ticket history...'),
+          );
         }
-        
+
         if (ticketProvider.ticketHistory.isEmpty) {
           return Center(
             child: Column(
@@ -298,15 +225,13 @@ class _TicketListScreenState extends State<TicketListScreen> with SingleTickerPr
                 const SizedBox(height: AppTheme.paddingSmall),
                 const Text(
                   'Your past tickets will appear here',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeRegular,
-                  ),
+                  style: TextStyle(fontSize: AppTheme.fontSizeRegular),
                 ),
               ],
             ),
           );
         }
-        
+
         return RefreshIndicator(
           onRefresh: () => ticketProvider.fetchTicketHistory(),
           child: ListView.builder(
@@ -331,11 +256,211 @@ class _TicketListScreenState extends State<TicketListScreen> with SingleTickerPr
       },
     );
   }
-  
+}
+
+class TicketGroupItem extends StatefulWidget {
+  final List<dynamic> tickets;
+
+  const TicketGroupItem({Key? key, required this.tickets}) : super(key: key);
+
+  @override
+  State<TicketGroupItem> createState() => _TicketGroupItemState();
+}
+
+class _TicketGroupItemState extends State<TicketGroupItem> {
+  bool isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final firstTicket = widget.tickets.first;
+    final schedule = firstTicket.schedule;
+
+    if (schedule == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppTheme.paddingLarge),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Trip header (clickable to expand)
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                isExpanded = !isExpanded;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(AppTheme.paddingMedium),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor,
+                borderRadius:
+                    isExpanded
+                        ? const BorderRadius.only(
+                          topLeft: Radius.circular(AppTheme.borderRadiusMedium),
+                          topRight: Radius.circular(
+                            AppTheme.borderRadiusMedium,
+                          ),
+                        )
+                        : BorderRadius.circular(AppTheme.borderRadiusMedium),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.directions_boat,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppTheme.paddingSmall),
+                      Expanded(
+                        child: Text(
+                          '${schedule.route?.routeName ?? 'Unknown Route'} (${schedule.ferry?.name ?? 'Unknown Ferry'})',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppTheme.fontSizeMedium,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.paddingRegular,
+                          vertical: AppTheme.paddingXSmall,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.borderRadiusRound,
+                          ),
+                        ),
+                        child: Text(
+                          schedule.statusText,
+                          style: TextStyle(
+                            color:
+                                schedule.isAvailable
+                                    ? Colors.green
+                                    : Colors.red,
+                            fontWeight: FontWeight.w600,
+                            fontSize: AppTheme.fontSizeSmall,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppTheme.paddingSmall),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                      const SizedBox(width: AppTheme.paddingSmall),
+                      Text(
+                        DateFormat(
+                          'EEE, dd MMM yyyy',
+                        ).format(schedule.departureTime),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(width: AppTheme.paddingMedium),
+                      const Icon(
+                        Icons.access_time,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                      const SizedBox(width: AppTheme.paddingSmall),
+                      Text(
+                        schedule.formattedDepartureTime,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        isExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppTheme.paddingSmall),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.paddingRegular,
+                      vertical: AppTheme.paddingXSmall,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusRound,
+                      ),
+                    ),
+                    child: Text(
+                      '${widget.tickets.length} ${widget.tickets.length > 1 ? 'Tickets' : 'Ticket'}',
+                      style: TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: AppTheme.fontSizeSmall,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Expandable tickets list
+          if (isExpanded)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(AppTheme.borderRadiusMedium),
+                  bottomRight: Radius.circular(AppTheme.borderRadiusMedium),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(AppTheme.paddingMedium),
+                    child: Text(
+                      'Ticket Details (${widget.tickets.length})',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  ...widget.tickets
+                      .map((ticket) => _buildTicketItem(ticket))
+                      .toList(),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTicketItem(ticket) {
     return InkWell(
       onTap: () {
-        final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
+        final ticketProvider = Provider.of<TicketProvider>(
+          context,
+          listen: false,
+        );
         ticketProvider.setSelectedTicket(ticket.id);
         Navigator.pushNamed(
           context,
@@ -353,16 +478,18 @@ class _TicketListScreenState extends State<TicketListScreen> with SingleTickerPr
               height: 40,
               decoration: BoxDecoration(
                 color: ticket.statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                borderRadius: BorderRadius.circular(
+                  AppTheme.borderRadiusRegular,
+                ),
               ),
               child: Icon(
                 Icons.confirmation_number_outlined,
                 color: ticket.statusColor,
               ),
             ),
-            
+
             const SizedBox(width: AppTheme.paddingMedium),
-            
+
             // Ticket details
             Expanded(
               child: Column(
@@ -386,11 +513,14 @@ class _TicketListScreenState extends State<TicketListScreen> with SingleTickerPr
                 ],
               ),
             ),
-            
+
             // View button
             ElevatedButton(
               onPressed: () {
-                final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
+                final ticketProvider = Provider.of<TicketProvider>(
+                  context,
+                  listen: false,
+                );
                 ticketProvider.setSelectedTicket(ticket.id);
                 Navigator.pushNamed(
                   context,

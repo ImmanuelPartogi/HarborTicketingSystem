@@ -7,6 +7,7 @@ import '../../config/routes.dart';
 import '../../providers/ferry_provider.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../providers/booking_provider.dart';
 
 class FerryDetailsScreen extends StatefulWidget {
   final int scheduleId;
@@ -21,7 +22,6 @@ class FerryDetailsScreen extends StatefulWidget {
 class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
   int _passengerCount = 1;
   bool _hasVehicle = false;
-  
 
   @override
   void initState() {
@@ -47,33 +47,40 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
   }
 
   void _proceedToBooking() {
-    // Add explicit debug logs
     print("BUTTON PRESSED: _proceedToBooking called");
 
     final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
     final schedule = ferryProvider.selectedSchedule;
-
-    print("Schedule: ${schedule?.id}, Available: ${schedule?.isAvailable}");
 
     if (schedule == null) {
       print("ERROR: Schedule is null");
       return;
     }
 
-    // Force navigation regardless of seat availability for testing
     try {
-      print(
-        "NAVIGATING to passengerDetails with scheduleId=${schedule.id}, count=$_passengerCount",
-      );
+      // Set schedule ID
+      bookingProvider.setScheduleId(schedule.id);
 
-      Navigator.of(context).pushNamed(
-        AppRoutes.passengerDetails,
-        arguments: {
-          'scheduleId': schedule.id,
-          'passengerCount': _passengerCount,
-          'hasVehicle': _hasVehicle,
-        },
-      );
+      // Tambahkan jumlah penumpang (tanpa detail)
+      bookingProvider.clearPassengers();
+      for (int i = 0; i < _passengerCount; i++) {
+        bookingProvider.addPassenger({}); // Kosong, tanpa detail
+      }
+
+      if (_hasVehicle) {
+        // Jika ada kendaraan, buka layar detail kendaraan
+        Navigator.of(context).pushNamed(
+          AppRoutes.vehicleDetails,
+          arguments: {'scheduleId': schedule.id},
+        );
+      } else {
+        // Jika tidak ada kendaraan, langsung buat booking
+        _createBookingDirectly();
+      }
     } catch (e) {
       print("NAVIGATION ERROR: $e");
       // Show an error dialog for better visibility
@@ -91,6 +98,56 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
               ],
             ),
       );
+    }
+  }
+
+  Future<void> _createBookingDirectly() async {
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
+
+    // Tampilkan loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (ctx) => const AlertDialog(
+            content: LoadingIndicator(message: 'Membuat pemesanan...'),
+          ),
+    );
+
+    try {
+      // Berikan context ke fungsi createBooking
+      final success = await bookingProvider.createBooking(context);
+
+      // Tutup dialog loading
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (success) {
+        // Lanjut ke halaman detail booking atau konfirmasi
+        Navigator.of(context).pushReplacementNamed(
+          AppRoutes.bookingConfirmation,
+          arguments: {'bookingId': bookingProvider.currentBooking?.id},
+        );
+      } else {
+        // Tampilkan error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              bookingProvider.bookingError ?? 'Gagal membuat pemesanan',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Tutup dialog loading jika terjadi error
+      Navigator.of(context, rootNavigator: true).pop();
+
+      // Tampilkan error
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     }
   }
 
@@ -654,28 +711,38 @@ class _FerryDetailsScreenState extends State<FerryDetailsScreen> {
               ],
             ),
             child: ElevatedButton(
-              // Use a simple ElevatedButton for testing
               onPressed: () {
                 print("DIRECT BUTTON PRESS");
-                final schedule = ferryProvider.selectedSchedule;
-                if (schedule != null) {
+                final bookingProvider = Provider.of<BookingProvider>(
+                  context,
+                  listen: false,
+                );
+
+                // Set schedule ID
+                bookingProvider.setScheduleId(schedule.id);
+
+                // Tambahkan jumlah penumpang (tanpa detail)
+                bookingProvider.clearPassengers();
+                for (int i = 0; i < _passengerCount; i++) {
+                  bookingProvider.addPassenger({}); // Kosong, tanpa detail
+                }
+
+                if (_hasVehicle) {
+                  // Jika ada kendaraan, buka layar detail kendaraan
                   Navigator.of(context).pushNamed(
-                    AppRoutes.passengerDetails,
-                    arguments: {
-                      'scheduleId': schedule.id,
-                      'passengerCount': _passengerCount,
-                      'hasVehicle': _hasVehicle,
-                    },
+                    AppRoutes.vehicleDetails,
+                    arguments: {'scheduleId': schedule.id},
                   );
                 } else {
-                  print("Schedule is null in direct button press");
+                  // Jika tidak ada kendaraan, langsung buat booking
+                  _createBookingDirectly();
                 }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 minimumSize: Size(double.infinity, 50),
               ),
-              child: Text("Continue to Booking (Direct)"),
+              child: Text("Buat Pemesanan"),
             ),
           );
         },

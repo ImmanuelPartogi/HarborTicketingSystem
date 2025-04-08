@@ -15,69 +15,69 @@ return new class extends Migration
         // Add landing page settings
         $landingPageSettings = [
             // Hero Section
-            ['key' => 'hero_title', 'value' => 'Explore the Sea with Our Ferry Service', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'hero_subtitle', 'value' => 'Book your ferry tickets online for a seamless travel experience. Safe, convenient, and affordable sea transportation to your destination.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'hero_title', 'value' => 'Jelajahi Danau Toba dengan Layanan Kapal Feri Kami', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'hero_subtitle', 'value' => 'Pesan tiket feri Anda secara online untuk pengalaman perjalanan yang mulus. Transportasi  yang aman, nyaman, dan terjangkau ke tempat tujuan Anda.', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'hero_image', 'value' => 'https://images.unsplash.com/photo-1523292562811-8fa7962a78c8?q=80&w=2070', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'primary_button_text', 'value' => 'Check Available Routes', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'secondary_button_text', 'value' => 'Learn How to Book', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'primary_button_text', 'value' => 'Cek Rute yang Tersedia', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'secondary_button_text', 'value' => 'Pelajari Cara Pemesanan', 'created_at' => now(), 'updated_at' => now()],
 
             // Features Section
-            ['key' => 'features_title', 'value' => 'Why Choose Our Ferry Service', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'features_subtitle', 'value' => 'Experience the best sea travel with these benefits', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'features_title', 'value' => 'Mengapa Memilih Layanan Feri Kami', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'features_subtitle', 'value' => 'Rasakan pengalaman perjalanan  terbaik dengan keunggulan ini', 'created_at' => now(), 'updated_at' => now()],
 
             // Feature 1
             ['key' => 'feature1_icon', 'value' => 'fas fa-anchor', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'feature1_title', 'value' => 'Reliable Service', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'feature1_description', 'value' => 'Punctual departures and arrivals with a focus on passenger satisfaction', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'feature1_title', 'value' => 'Layanan Terpercaya', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'feature1_description', 'value' => 'Keberangkatan dan kedatangan tepat waktu dengan fokus pada kepuasan penumpang', 'created_at' => now(), 'updated_at' => now()],
 
             // Feature 2
             ['key' => 'feature2_icon', 'value' => 'fas fa-shield-alt', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'feature2_title', 'value' => 'Safety First', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'feature2_description', 'value' => 'We prioritize safety with well-maintained vessels and trained staff', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'feature2_title', 'value' => 'Utamakan Keselamatan', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'feature2_description', 'value' => 'Kami memprioritaskan keselamatan dengan kapal yang terawat baik dan staf yang terlatih', 'created_at' => now(), 'updated_at' => now()],
 
             // Feature 3
             ['key' => 'feature3_icon', 'value' => 'fas fa-ticket-alt', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'feature3_title', 'value' => 'Easy Booking', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'feature3_description', 'value' => 'Simple online booking system for tickets with instant confirmation', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'feature3_title', 'value' => 'Pemesanan Mudah', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'feature3_description', 'value' => 'Sistem pemesanan tiket online yang sederhana dengan konfirmasi instan', 'created_at' => now(), 'updated_at' => now()],
 
             // Feature 4
             ['key' => 'feature4_icon', 'value' => 'fas fa-wallet', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'feature4_title', 'value' => 'Affordable Rates', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'feature4_description', 'value' => 'Competitive pricing with special discounts for regular travelers', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'feature4_title', 'value' => 'Harga Terjangkau', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'feature4_description', 'value' => 'Harga kompetitif dengan diskon khusus untuk wisatawan reguler', 'created_at' => now(), 'updated_at' => now()],
 
             // Routes Section
-            ['key' => 'routes_title', 'value' => 'Popular Routes', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'routes_subtitle', 'value' => 'Explore our most frequently traveled sea routes', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'routes_title', 'value' => 'Rute Populer', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'routes_subtitle', 'value' => 'Jelajahi rute yang paling sering dilalui', 'created_at' => now(), 'updated_at' => now()],
 
             // How to Book Section
-            ['key' => 'howto_title', 'value' => 'How to Book Your Ferry Ticket', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'howto_subtitle', 'value' => 'Follow these simple steps to book your journey', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'howto_title', 'value' => 'Cara Memesan Tiket Feri Anda', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'howto_subtitle', 'value' => 'Ikuti langkah-langkah sederhana ini untuk memesan perjalanan Anda', 'created_at' => now(), 'updated_at' => now()],
 
             // Step 1
             ['key' => 'step1_icon', 'value' => 'fas fa-search', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'step1_title', 'value' => 'Search Routes', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'step1_description', 'value' => 'Enter your origin, destination, and travel date to find available ferries.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'step1_title', 'value' => 'Cari Rute', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'step1_description', 'value' => 'Masukkan asal, tujuan, dan tanggal perjalanan Anda untuk menemukan feri yang tersedia.', 'created_at' => now(), 'updated_at' => now()],
 
             // Step 2
             ['key' => 'step2_icon', 'value' => 'fas fa-calendar-alt', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'step2_title', 'value' => 'Select Schedule', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'step2_description', 'value' => 'Choose from available schedules and ferry types that suit your needs.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'step2_title', 'value' => 'Pilih Jadwal', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'step2_description', 'value' => 'Pilih dari jadwal yang tersedia dan jenis feri yang sesuai dengan kebutuhan Anda.', 'created_at' => now(), 'updated_at' => now()],
 
             // Step 3
             ['key' => 'step3_icon', 'value' => 'fas fa-credit-card', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'step3_title', 'value' => 'Make Payment', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'step3_description', 'value' => 'Secure payment via multiple options including credit card and mobile banking.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'step3_title', 'value' => 'Lakukan Pembayaran', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'step3_description', 'value' => 'Pembayaran yang aman melalui berbagai pilihan termasuk kartu kredit dan mobile banking.', 'created_at' => now(), 'updated_at' => now()],
 
             // Step 4
             ['key' => 'step4_icon', 'value' => 'fas fa-qrcode', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'step4_title', 'value' => 'Get E-Ticket', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'step4_description', 'value' => 'Receive your e-ticket instantly via email or download from your account.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'step4_title', 'value' => 'Dapatkan Tiket Elektronik', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'step4_description', 'value' => 'Dapatkan tiket elektronik Anda secara instan melalui akun Anda.', 'created_at' => now(), 'updated_at' => now()],
 
             // About Us Section
-            ['key' => 'about_title', 'value' => 'About Our Ferry Service', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'about_content', 'value' => 'Founded in 2010, our ferry ticket platform has been connecting islands and facilitating easy sea travel throughout Indonesia. We are dedicated to providing safe, reliable, and affordable transportation for passengers and vehicles.', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'about_mission', 'value' => 'Our mission is to simplify sea travel through technology while maintaining the highest standards of safety and customer service. With a wide network of routes connecting major ports across the archipelago, we\'re proud to help connect the islands of Indonesia.', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'about_image', 'value' => 'https://images.unsplash.com/photo-1580887742560-b8526e2bbae5?q=80&w=1974', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'about_title', 'value' => 'Tentang Layanan Kapal Feri Kami', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'about_content', 'value' => 'Didirikan pada tahun 2010, platform tiket kapal feri kami telah menghubungkan pulau-pulau dan memfasilitasi perjalanan  yang mudah di seluruh Indonesia. Kami berdedikasi untuk menyediakan transportasi yang aman, andal, dan terjangkau bagi penumpang dan kendaraan.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'about_mission', 'value' => 'Misi kami adalah menyederhanakan perjalanan  melalui teknologi dengan tetap mempertahankan standar keselamatan dan layanan pelanggan yang tertinggi. Dengan jaringan rute yang luas yang menghubungkan pelabuhan-pelabuhan utama di seluruh nusantara, kami bangga dapat membantu menghubungkan pulau-pulau di Indonesia.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'about_image', 'value' => 'https://images.unsplash.com/photo-1523292562811-8fa7962a78c8?q=80&w=2070', 'created_at' => now(), 'updated_at' => now()],
 
             // Stats
             ['key' => 'stats_daily_trips', 'value' => '150+', 'created_at' => now(), 'updated_at' => now()],
@@ -86,12 +86,12 @@ return new class extends Migration
             ['key' => 'stats_passengers', 'value' => '1M+', 'created_at' => now(), 'updated_at' => now()],
 
             // CTA Section
-            ['key' => 'cta_title', 'value' => 'Ready to Start Your Journey?', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'cta_subtitle', 'value' => 'Book your ferry tickets online for a seamless travel experience. Safe, convenient, and affordable sea transportation to your destination.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'cta_title', 'value' => 'Siap untuk Memulai Perjalanan Anda?', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'cta_subtitle', 'value' => 'Pesan tiket feri Anda secara online untuk pengalaman perjalanan yang mulus. Transportasi  yang aman, nyaman, dan terjangkau ke tempat tujuan Anda.', 'created_at' => now(), 'updated_at' => now()],
 
             // Footer
-            ['key' => 'footer_description', 'value' => 'Your trusted partner for sea travel in Indonesia. Book your ferry tickets online for a seamless experience.', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'footer_address', 'value' => 'Jl. Pelabuhan Raya No. 123, Jakarta Utara, Indonesia', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'footer_description', 'value' => 'Mitra terpercaya Anda untuk perjalanan  di Indonesia. Pesan tiket feri Anda secara online untuk pengalaman yang mulus.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'footer_address', 'value' => 'Jln Siliwangi balige; Balige, Sumatera Utara, Indonesia 22315', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'footer_phone', 'value' => '+62 21 1234 5678', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'footer_email', 'value' => 'info@ferryticket.com', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'footer_copyright', 'value' => '© 2024 Ferry Ticket System. All rights reserved.', 'created_at' => now(), 'updated_at' => now()],
@@ -103,8 +103,8 @@ return new class extends Migration
             ['key' => 'social_youtube', 'value' => 'https://youtube.com/ferryticket', 'created_at' => now(), 'updated_at' => now()],
 
             // SEO Settings
-            ['key' => 'meta_description', 'value' => 'Book your ferry tickets online for a seamless travel experience across Indonesia. Safe, convenient, and affordable sea transportation.', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'meta_keywords', 'value' => 'ferry tickets, sea travel, Indonesia ferry, online booking, boat tickets', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'meta_description', 'value' => 'Pesan tiket kapal feri Anda secara online untuk pengalaman perjalanan yang mulus di seluruh Indonesia. Transportasi  yang aman, nyaman, dan terjangkau.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'meta_keywords', 'value' => 'tiket feri, perjalanan , feri Indonesia, pemesanan online, tiket kapal', 'created_at' => now(), 'updated_at' => now()],
         ];
 
         // Insert the new settings

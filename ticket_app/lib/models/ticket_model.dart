@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'schedule_model.dart';
+import 'vehicle_model.dart'; // Tambahkan import ini
 
 class Ticket {
   final int id;
-  final int bookingId; // Pastikan field ini tersedia dan terisi dengan benar
+  final int bookingId;
   final int scheduleId;
   final int passengerId;
   final String ticketNumber;
-  final String status; // 'active', 'used', 'expired', 'cancelled'
+  final String status;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? usedAt;
   final ScheduleModel? schedule;
   final Passenger? passenger;
+  final Vehicle? vehicle; // Tambahkan properti ini
 
   Ticket({
     required this.id,
-    required this.bookingId, // Memastikan bookingId tersedia
+    required this.bookingId,
     required this.scheduleId,
     required this.passengerId,
     required this.ticketNumber,
@@ -26,6 +28,7 @@ class Ticket {
     this.usedAt,
     this.schedule,
     this.passenger,
+    this.vehicle, // Tambahkan parameter ini
   });
 
   factory Ticket.fromJson(Map<String, dynamic> json) {
@@ -73,9 +76,7 @@ class Ticket {
 
     return Ticket(
       id: parseInt(json['id']),
-      bookingId: parseInt(
-        json['booking_id'],
-      ), // Memastikan bookingId diambil dengan benar
+      bookingId: parseInt(json['booking_id']),
       scheduleId: parseInt(json['schedule_id']),
       passengerId: parseInt(json['passenger_id']),
       ticketNumber: parseString(json['ticket_number']),
@@ -87,16 +88,32 @@ class Ticket {
           json['schedule'] != null ? _parseSchedule(json['schedule']) : null,
       passenger:
           json['passenger'] != null ? _parsePassenger(json['passenger']) : null,
+      vehicle:
+          json['vehicle'] != null
+              ? _parseVehicle(json['vehicle'])
+              : null, // Tambahkan ini
     );
   }
 
-  // Helper method untuk parsing schedule dengan penanganan error (tidak berubah)
+  // Tambahkan metode ini di kelas Ticket
   static ScheduleModel? _parseSchedule(dynamic scheduleData) {
     if (scheduleData == null) return null;
     try {
       return ScheduleModel.fromJson(scheduleData);
     } catch (e) {
-      print('Error parsing schedule in ticket: $e');
+      print('Error parsing schedule: $e');
+      print('Schedule data: $scheduleData'); // Tambahkan log ini
+      return null;
+    }
+  }
+
+  // Tambahkan helper method untuk parsing vehicle
+  static Vehicle? _parseVehicle(dynamic vehicleData) {
+    if (vehicleData == null) return null;
+    try {
+      return Vehicle.fromJson(vehicleData);
+    } catch (e) {
+      print('Error parsing vehicle: $e');
       return null;
     }
   }
@@ -115,7 +132,7 @@ class Ticket {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'booking_id': bookingId, // Memastikan bookingId disertakan dalam JSON
+      'booking_id': bookingId,
       'schedule_id': scheduleId,
       'passenger_id': passengerId,
       'ticket_number': ticketNumber,
@@ -125,6 +142,7 @@ class Ticket {
       'used_at': usedAt?.toIso8601String(),
       'schedule': schedule?.toJson(),
       'passenger': passenger?.toJson(),
+      'vehicle': vehicle?.toJson(), // Tambahkan ini
     };
   }
 
@@ -207,6 +225,24 @@ class Passenger {
   factory Passenger.fromJson(Map<String, dynamic> json) {
     // Debug log untuk melihat data yang diterima
     print('Parsing Passenger data: ${json.keys.toList()}');
+
+    if (json['schedule'] != null) {
+    print('Schedule found: ${json['schedule']}');
+    
+    // Jika schedule tidak memiliki route/ferry tapi ada di booking.schedule
+    if ((json['schedule']['route'] == null || json['schedule']['ferry'] == null) && 
+        json['booking'] != null && json['booking']['schedule'] != null) {
+      
+      // Copy route dan ferry dari booking.schedule jika diperlukan
+      if (json['schedule']['route'] == null && json['booking']['schedule']['route'] != null) {
+        json['schedule']['route'] = json['booking']['schedule']['route'];
+      }
+      
+      if (json['schedule']['ferry'] == null && json['booking']['schedule']['ferry'] != null) {
+        json['schedule']['ferry'] = json['booking']['schedule']['ferry'];
+      }
+    }
+  }
 
     // Helper functions untuk parsing data dengan aman
     int parseInt(dynamic value, {int defaultValue = 0}) {

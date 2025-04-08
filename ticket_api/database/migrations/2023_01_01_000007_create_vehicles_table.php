@@ -1,4 +1,5 @@
 <?php
+// 2023_01_01_000202_create_vehicles_table.php
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -10,10 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Jika ingin mengubah tabel yang sudah ada
-        Schema::table('vehicles', function (Blueprint $table) {
-            // Ubah kolom owner_passenger_id menjadi nullable jika belum
-            $table->foreignId('owner_passenger_id')->nullable()->change();
+        Schema::create('vehicles', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('owner_passenger_id')->nullable()->constrained('passengers');
+            // Perbaikan disini - after harus ditempatkan setelah foreignId, bukan di tengah chain
+            $table->foreignId('booking_id')->nullable()->constrained('bookings');
+            $table->enum('type', ['MOTORCYCLE', 'CAR', 'BUS', 'TRUCK']);
+            $table->string('license_plate', 20);
+            $table->decimal('weight', 10, 2)->nullable()->comment('Berat dalam kg');
+            $table->timestamps();
         });
     }
 
@@ -22,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Rollback jika diperlukan
+        Schema::dropIfExists('vehicles');
     }
 };

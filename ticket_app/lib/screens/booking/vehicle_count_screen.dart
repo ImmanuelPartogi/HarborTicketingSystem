@@ -5,288 +5,251 @@ import '../../config/theme.dart';
 import '../../config/routes.dart';
 import '../../providers/booking_provider.dart';
 import '../../widgets/common/custom_button.dart';
-import '../../widgets/common/loading_indicator.dart';
 
-class PassengerCountScreen extends StatefulWidget {
+class VehicleCountScreen extends StatefulWidget {
   final int scheduleId;
-  final bool hasVehicle;
+  final int ticketCount;
 
-  const PassengerCountScreen({
+  const VehicleCountScreen({
     Key? key,
     required this.scheduleId,
-    this.hasVehicle = false,
+    required this.ticketCount,
   }) : super(key: key);
 
   @override
-  State<PassengerCountScreen> createState() => _PassengerCountScreenState();
+  State<VehicleCountScreen> createState() => _VehicleCountScreenState();
 }
 
-class _PassengerCountScreenState extends State<PassengerCountScreen> {
-  int _passengerCount = 1;
-  bool _isLoading = false;
-  String? _errorMessage;
+class _VehicleCountScreenState extends State<VehicleCountScreen> {
+  List<Map<String, dynamic>> _vehicles = [];
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-
-    // Set schedule ID
-    Future.microtask(() {
-      final bookingProvider = Provider.of<BookingProvider>(
-        context,
-        listen: false,
-      );
-      bookingProvider.setScheduleId(widget.scheduleId);
-    });
-  }
-
-  void _increasePassengerCount() {
-    setState(() {
-      if (_passengerCount < 50) { // Batasi maksimum 50 penumpang
-        _passengerCount++;
-      }
-    });
-  }
-
-  void _decreasePassengerCount() {
-    setState(() {
-      if (_passengerCount > 1) {
-        _passengerCount--;
-      }
-    });
-  }
-
-  Future<void> _proceedToNext() async {
     final bookingProvider = Provider.of<BookingProvider>(
       context,
       listen: false,
     );
-    
-    // Bersihkan data penumpang sebelumnya
-    bookingProvider.clearPassengers();
-    
-    // Tambahkan dummy passenger entries sesuai jumlah
-    for (int i = 0; i < _passengerCount; i++) {
-      bookingProvider.addPassenger({});
-    }
+    bookingProvider.clearVehicles();
 
-    // Navigate to next screen
-    if (widget.hasVehicle) {
-      Navigator.pushNamed(
+    // Tambah satu kendaraan default
+    _vehicles.add({'type': 'car', 'license_plate': ''});
+  }
+
+  void _addVehicle() {
+    setState(() {
+      if (_vehicles.length < 3) {
+        // Batasi maksimal 3 kendaraan
+        _vehicles.add({'type': 'car', 'license_plate': ''});
+      }
+    });
+  }
+
+  void _removeVehicle(int index) {
+    setState(() {
+      if (_vehicles.length > 1) {
+        _vehicles.removeAt(index);
+      }
+    });
+  }
+
+  void _updateVehicleType(int index, String type) {
+    setState(() {
+      _vehicles[index]['type'] = type;
+    });
+  }
+
+  void _updateLicensePlate(int index, String licensePlate) {
+    setState(() {
+      _vehicles[index]['license_plate'] = licensePlate;
+    });
+  }
+
+  void _continue() {
+    if (_formKey.currentState?.validate() ?? false) {
+      final bookingProvider = Provider.of<BookingProvider>(
         context,
-        AppRoutes.vehicleDetails,
-        arguments: {'scheduleId': widget.scheduleId},
+        listen: false,
       );
-    } else {
-      // Create booking directly if no vehicle
-      try {
-        setState(() {
-          _isLoading = true;
-        });
 
-        final success = await bookingProvider.createBooking();
+      // Tambahkan kendaraan ke provider
+      for (var vehicle in _vehicles) {
+        bookingProvider.addVehicle(vehicle);
+      }
 
-        if (success && mounted) {
-          final booking = bookingProvider.currentBooking;
+      // Tampilkan loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
 
-          if (booking == null || booking.id <= 0) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-                _errorMessage =
-                    'Booking created but ID is invalid. Please try again.';
-              });
+      // Berikan context ke createBooking()
+      bookingProvider
+          .createBooking(context)
+          .then((success) {
+            // Tutup dialog loading
+            Navigator.pop(context);
 
+            if (success && bookingProvider.currentBooking != null) {
+              Navigator.pushNamed(
+                context,
+                AppRoutes.payment,
+                arguments: {
+                  'bookingId': bookingProvider.currentBooking!.id,
+                  'totalAmount': bookingProvider.currentBooking!.totalAmount,
+                },
+              );
+            } else {
+              // Tampilkan pesan error
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text(
-                    'Booking created but ID is invalid. Please try again.',
+                    bookingProvider.bookingError ?? 'Gagal membuat pemesanan',
                   ),
                   backgroundColor: Colors.red,
                 ),
               );
             }
-            return;
-          }
+          })
+          .catchError((error) {
+            // Tutup dialog loading jika masih terbuka
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
 
-          // Navigasi ke halaman pembayaran
-          if (mounted) {
-            Navigator.pushNamed(
-              context,
-              AppRoutes.payment,
-              arguments: {
-                'bookingId': booking.id,
-                'bookingCode': booking.bookingCode,
-                'totalAmount': booking.totalAmount,
-              },
-            );
-          }
-        } else if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage =
-                bookingProvider.bookingError ??
-                'Failed to create booking. Please try again.';
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                bookingProvider.bookingError ??
-                    'Failed to create booking. Please try again.',
+            // Tampilkan error
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: ${error.toString()}'),
+                backgroundColor: Colors.red,
               ),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = 'Error: ${e.toString()}';
+            );
           });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Passengers')),
-      body: LoadingOverlay(
-        isLoading: _isLoading,
-        loadingMessage: 'Processing booking...',
-        child: Column(
-          children: [
-            // Error message if any
-            if (_errorMessage != null)
-              Container(
-                padding: const EdgeInsets.all(AppTheme.paddingRegular),
-                margin: const EdgeInsets.all(AppTheme.paddingMedium),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(
-                    AppTheme.borderRadiusRegular,
-                  ),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: Colors.red),
-                    SizedBox(width: AppTheme.paddingSmall),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red.shade700),
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.close, size: 16),
-                      onPressed: () {
-                        setState(() {
-                          _errorMessage = null;
-                        });
-                      },
-                    ),
-                  ],
+      appBar: AppBar(title: const Text('Detail Kendaraan')),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppTheme.paddingMedium),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tambahkan detail kendaraan',
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeLarge,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: AppTheme.paddingMedium),
 
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Select Number of Passengers',
-                      style: TextStyle(
-                        fontSize: AppTheme.fontSizeLarge,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppTheme.paddingLarge),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          onPressed: _decreasePassengerCount,
-                          icon: Icon(Icons.remove_circle),
-                          color: AppTheme.primaryColor,
-                          iconSize: 40,
-                        ),
-                        Container(
-                          width: 100,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.paddingLarge,
-                            vertical: AppTheme.paddingMedium,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: theme.dividerColor),
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.borderRadiusRegular,
-                            ),
-                          ),
-                          child: Text(
-                            _passengerCount.toString(),
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _increasePassengerCount,
-                          icon: Icon(Icons.add_circle),
-                          color: AppTheme.primaryColor,
-                          iconSize: 40,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppTheme.paddingMedium),
-                    Text(
-                      'Total persons',
-                      style: TextStyle(
-                        color: theme.textTheme.bodyMedium?.color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+              for (int i = 0; i < _vehicles.length; i++) _buildVehicleCard(i),
 
-            // Bottom navigation bar with continue button
-            Container(
-              padding: const EdgeInsets.all(AppTheme.paddingMedium),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
+              const SizedBox(height: AppTheme.paddingMedium),
+
+              if (_vehicles.length < 3)
+                TextButton.icon(
+                  onPressed: _addVehicle,
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text('Tambah Kendaraan Lain'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).primaryColor,
                   ),
-                ],
-              ),
-              child: CustomButton(
-                text:
-                    widget.hasVehicle
-                        ? 'Continue to Vehicle Details'
-                        : 'Continue to Payment',
-                onPressed: _proceedToNext,
+                ),
+
+              const SizedBox(height: AppTheme.paddingLarge),
+
+              CustomButton(
+                text: 'Lanjut ke Pembayaran',
+                onPressed: _continue,
                 type: ButtonType.primary,
                 isFullWidth: true,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVehicleCard(int index) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.paddingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Kendaraan ${index + 1}',
+                  style: TextStyle(
+                    fontSize: AppTheme.fontSizeMedium,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (_vehicles.length > 1)
+                  IconButton(
+                    onPressed: () => _removeVehicle(index),
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.paddingMedium),
+
+            // Tipe Kendaraan
+            DropdownButtonFormField<String>(
+              value: _vehicles[index]['type'],
+              decoration: const InputDecoration(
+                labelText: 'Tipe Kendaraan',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'motorcycle', child: Text('Motor')),
+                DropdownMenuItem(value: 'car', child: Text('Mobil')),
+                DropdownMenuItem(value: 'truck', child: Text('Truk')),
+                DropdownMenuItem(value: 'bus', child: Text('Bus')),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  _updateVehicleType(index, value);
+                }
+              },
+            ),
+
+            const SizedBox(height: AppTheme.paddingRegular),
+
+            // Nomor Polisi
+            TextFormField(
+              initialValue: _vehicles[index]['license_plate'],
+              decoration: const InputDecoration(
+                labelText: 'Nomor Polisi',
+                border: OutlineInputBorder(),
+                hintText: 'Contoh: B 1234 XYZ',
+              ),
+              textCapitalization: TextCapitalization.characters,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Nomor polisi wajib diisi';
+                }
+                return null;
+              },
+              onChanged: (value) => _updateLicensePlate(index, value),
             ),
           ],
         ),

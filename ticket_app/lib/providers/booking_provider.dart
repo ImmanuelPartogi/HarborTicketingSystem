@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 import '../models/booking_model.dart';
 import '../models/passenger_model.dart';
@@ -10,6 +11,7 @@ import '../services/booking_service.dart';
 import '../services/payment_service.dart';
 import '../services/storage_service.dart';
 import 'dart:convert';
+import '../providers/ferry_provider.dart';
 
 class BookingProvider extends ChangeNotifier {
   // Mengubah dari late menjadi nullable
@@ -204,13 +206,11 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  // Create a new booking - dengan pengecekan inisialisasi
-  // di BookingProvider.dart
-  Future<bool> createBooking() async {
+  Future<bool> createBooking(BuildContext context) async {
     if (!_checkInitialized()) return false;
 
     if (_scheduleId <= 0) {
-      _bookingError = 'Invalid booking data';
+      _bookingError = 'Data pemesanan tidak valid';
       notifyListeners();
       return false;
     }
@@ -220,38 +220,107 @@ class BookingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Buat booking dengan jumlah penumpang saja
+      // Dapatkan FerryProvider dari Provider yang sudah ada
+      final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
+      final schedule = await ferryProvider.getScheduleById(_scheduleId);
+
+      if (schedule == null) {
+        _bookingError = 'Gagal mendapatkan informasi jadwal';
+        _isCreatingBooking = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Hitung total amount
+      double totalAmount = schedule.finalPrice * _pendingPassengers.length;
+
+      // Tambahkan biaya kendaraan jika ada
+      if (_pendingVehicles.isNotEmpty) {
+        for (var vehicle in _pendingVehicles) {
+          final vehicleType =
+              _convertVehicleType(vehicle['type']).toUpperCase();
+
+          switch (vehicleType) {
+            case 'MOTORCYCLE':
+              totalAmount += schedule.route?.motorcyclePrice ?? 40000;
+              break;
+            case 'CAR':
+              totalAmount += schedule.route?.carPrice ?? 75000;
+              break;
+            case 'BUS':
+              totalAmount += schedule.route?.busPrice ?? 150000;
+              break;
+            case 'TRUCK':
+              totalAmount += schedule.route?.truckPrice ?? 200000;
+              break;
+          }
+        }
+      }
+
+      // Buat booking dengan parameter yang benar
       final bookingData = {
         'schedule_id': _scheduleId,
         'booking_date': DateTime.now().toIso8601String().split('T')[0],
-        'passenger_count': _pendingPassengers.length, // Hanya kirim jumlah
+        'passenger_count': _pendingPassengers.length,
+        'total_amount': totalAmount,
         'vehicles':
             _pendingVehicles.isNotEmpty
                 ? _pendingVehicles.map((v) {
-                  // Hapus owner_passenger_id jika ada
-                  final vehicleData = Map<String, dynamic>.from(v);
-                  vehicleData.remove('owner_passenger_id');
-                  return vehicleData;
+                  return {
+                    'type': _convertVehicleType(v['type']).toUpperCase(),
+                    'plate_number': v['license_plate'],
+                    'brand': v['brand'] ?? null,
+                    'model': v['model'] ?? null,
+                  };
                 }).toList()
                 : null,
       };
 
-      // Debug log
       print('Booking request data: ${json.encode(bookingData)}');
 
       _currentBooking = await _bookingService!.createBooking(
         bookingData: bookingData,
       );
 
+      if (_currentBooking == null) {
+        _bookingError =
+            'Gagal membuat pemesanan. Server tidak memberikan response yang valid.';
+        _isCreatingBooking = false;
+        notifyListeners();
+        return false;
+      }
+
       _isCreatingBooking = false;
       notifyListeners();
 
       return _currentBooking != null && _currentBooking!.bookingCode.isNotEmpty;
     } catch (e) {
-      _bookingError = 'Failed to create booking: ${e.toString()}';
+      _bookingError = 'Gagal membuat pemesanan: ${e.toString()}';
       _isCreatingBooking = false;
       notifyListeners();
+
+      // Log error lebih detail
+      print('Error saat membuat booking: $e');
       return false;
+    }
+  }
+
+  String _convertVehicleType(String type) {
+    // Sesuaikan dengan tipe kendaraan yang diharapkan API
+    switch (type.toLowerCase()) {
+      case 'motor':
+      case 'motorcycle':
+        return 'motorcycle';
+      case 'car':
+      case 'mobil':
+        return 'car';
+      case 'truck':
+      case 'truk':
+        return 'truck';
+      case 'bus':
+        return 'bus';
+      default:
+        return 'car'; // default ke car jika tidak dikenali
     }
   }
 

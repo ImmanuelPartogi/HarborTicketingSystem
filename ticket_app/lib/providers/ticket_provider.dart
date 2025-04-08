@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../services/ticket_service.dart';
 import '../config/debug_config.dart';
+import 'package:intl/intl.dart';
 
 class TicketProvider extends ChangeNotifier {
   late ApiService _apiService;
@@ -349,8 +350,75 @@ class TicketProvider extends ChangeNotifier {
   }
 
   // Group tickets by schedule
-  Map<int, List<Ticket>> getTicketsGroupedBySchedule() {
-    return _ticketService.groupTicketsBySchedule(_activeTickets);
+  // Group tickets by schedule
+  Map<String, List<dynamic>> getTicketsGroupedBySchedule() {
+    // Versi paling sederhana yang mengelompokkan tiket berdasarkan rute saja
+    final groupedTickets = <String, List<dynamic>>{};
+
+    // Log debug
+    print('DEBUG: Grouping ${_activeTickets.length} tickets');
+
+    // Kelompok tiket berdasarkan rute
+    for (var ticket in _activeTickets) {
+      if (ticket.schedule == null) {
+        print('DEBUG: Ticket ${ticket.id} has no schedule, skipping');
+        continue;
+      }
+
+      try {
+        // Gunakan HANYA nama rute sebagai kunci (bukan ID)
+        final routeName = ticket.schedule!.route?.routeName ?? 'Unknown Route';
+
+        // Log untuk debugging
+        print('DEBUG: Ticket ${ticket.id} - Route name: $routeName');
+
+        if (!groupedTickets.containsKey(routeName)) {
+          groupedTickets[routeName] = [];
+          print('DEBUG: Created new group for route: $routeName');
+        }
+
+        groupedTickets[routeName]!.add(ticket);
+        print('DEBUG: Added ticket ${ticket.id} to group "$routeName"');
+      } catch (e) {
+        print('DEBUG: Error grouping ticket ID ${ticket.id}: $e');
+        continue;
+      }
+    }
+
+    // Debug summary
+    print('DEBUG: Grouped into ${groupedTickets.length} groups:');
+    groupedTickets.forEach((key, tickets) {
+      print('DEBUG: Group "$key" has ${tickets.length} tickets');
+    });
+
+    return groupedTickets;
+  }
+
+  void checkAndMoveExpiredTickets() {
+    final now = DateTime.now();
+    final expiredTickets =
+        _activeTickets.where((ticket) {
+          return ticket.isExpired ||
+              ticket.isUsed ||
+              ticket.isCancelled ||
+              (ticket.schedule?.departureTime.isBefore(now) ?? false);
+        }).toList();
+
+    if (expiredTickets.isNotEmpty) {
+      setState(() {
+        for (var ticket in expiredTickets) {
+          _activeTickets.remove(ticket);
+          _ticketHistory.add(ticket);
+        }
+      });
+    }
+  }
+
+  // Panggil method ini secara periodik atau saat aplikasi dibuka
+  void initializeWithCleanup() {
+    fetchActiveTickets();
+    fetchTicketHistory();
+    checkAndMoveExpiredTickets();
   }
 
   // Check if ticket is valid

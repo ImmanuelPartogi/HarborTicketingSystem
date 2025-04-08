@@ -477,18 +477,12 @@ class ApiService {
   }
 
   // Booking endpoints
-  Future<dynamic> createBooking(Map<String, dynamic> bookingData) async {
+  Future<Map<String, dynamic>> createBooking(Map<String, dynamic> data) async {
     try {
-      final response = await post('/api/v1/bookings', body: bookingData);
-
-      // Log the full response for debugging
-      print('API response for createBooking:');
-      print(jsonEncode(response));
-
+      final response = await post('/api/v1/bookings', body: data);
       return response;
     } catch (e) {
-      print('API error in createBooking: $e');
-      throw Exception('Failed to create booking: $e');
+      throw Exception('API Error: ${e.toString()}');
     }
   }
 

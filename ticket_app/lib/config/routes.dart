@@ -7,7 +7,7 @@ import '../screens/auth/otp_verification_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/home/search_screen.dart';
 import '../screens/home/ferry_details_screen.dart';
-import '../screens/booking/passenger_details_screen.dart';
+import '../screens/booking/ticket_count_screen.dart';
 import '../screens/booking/vehicle_count_screen.dart';
 import '../screens/booking/payment_screen.dart';
 import '../screens/booking/booking_confirmation_screen.dart';
@@ -21,6 +21,8 @@ import '../screens/auth/forgot_password_screen.dart';
 import '../widgets/auth_guard.dart';
 import '../providers/auth_provider.dart';
 import '../screens/route/routes_screen.dart';
+import '../screens/ticket/qr_code_screen.dart';
+
 class AppRoutes {
   // Route names
   static const String login = '/login';
@@ -41,6 +43,7 @@ class AppRoutes {
   static const String editProfile = '/edit-profile';
   static const String transactionHistory = '/transaction-history';
   static const String routes = '/routes';
+  static const String ticketCount = '/ticket-count';
 
   // Define which routes are public (not requiring authentication)
   static final List<String> publicRoutes = [
@@ -128,29 +131,92 @@ class AppRoutes {
         return FerryDetailsScreen(scheduleId: args['scheduleId']);
 
       case passengerDetails:
-        final args = settings.arguments as Map<String, dynamic>;
-        return PassengerDetailsScreen(
-          scheduleId: args['scheduleId'],
-          passengerCount: args['passengerCount'],
-          hasVehicle: args['hasVehicle'] ?? false,
+        final args = settings.arguments as Map<String, dynamic>?;
+        return TicketCountScreen(
+          scheduleId: args?['scheduleId'],
+          hasVehicle: args?['hasVehicle'] ?? false,
         );
 
       case vehicleDetails:
-        final args = settings.arguments as Map<String, dynamic>;
-        return VehicleDetailsScreen(
-          scheduleId: args['scheduleId'],
-          passengerIds: args['passengerIds'],
-        );
+        final args = settings.arguments as Map<String, dynamic>?;
 
+        // Validasi data
+        if (args == null ||
+            args['scheduleId'] == null ||
+            args['ticketCount'] == null) {
+          return const Scaffold(
+            body: Center(
+              child: Text(
+                'Data tidak lengkap untuk halaman ini. Silakan kembali dan coba lagi.',
+              ),
+            ),
+          );
+        }
+
+        // Pastikan nilai yang diterima adalah int
+        final int scheduleId =
+            args['scheduleId'] is int
+                ? args['scheduleId']
+                : int.tryParse(args['scheduleId'].toString()) ?? 0;
+
+        final int ticketCount =
+            args['ticketCount'] is int
+                ? args['ticketCount']
+                : int.tryParse(args['ticketCount'].toString()) ?? 0;
+
+        if (scheduleId <= 0 || ticketCount <= 0) {
+          return const Scaffold(
+            body: Center(
+              child: Text(
+                'Data tidak valid untuk halaman ini. Silakan kembali dan coba lagi.',
+              ),
+            ),
+          );
+        }
+
+        return VehicleCountScreen(
+          scheduleId: scheduleId,
+          ticketCount: ticketCount,
+        );
+        
       case payment:
-        final args = settings.arguments as Map<String, dynamic>;
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null || args['bookingId'] == null) {
+          return const Scaffold(
+            body: Center(
+              child: Text('Data pemesanan tidak valid. Silakan coba lagi.'),
+            ),
+          );
+        }
+
+        // Pastikan bookingId adalah int
+        final int bookingId =
+            args['bookingId'] is int
+                ? args['bookingId']
+                : int.tryParse(args['bookingId'].toString()) ?? 0;
+
+        if (bookingId <= 0) {
+          return const Scaffold(
+            body: Center(
+              child: Text('ID pemesanan tidak valid. Silakan coba lagi.'),
+            ),
+          );
+        }
+
         return PaymentScreen(
-          bookingId: args['bookingId'],
-          totalAmount: args['totalAmount'],
+          bookingId: bookingId,
+          totalAmount: args['totalAmount'] ?? 0,
         );
 
       case bookingConfirmation:
-        final args = settings.arguments as Map<String, dynamic>;
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null || args['bookingId'] == null) {
+          return const Scaffold(
+            body: Center(
+              child: Text('Data pemesanan tidak valid. Silakan coba lagi.'),
+            ),
+          );
+        }
         return BookingConfirmationScreen(bookingId: args['bookingId']);
 
       case ticketList:

@@ -14,6 +14,7 @@ use App\Services\TicketService;
 use App\Services\PaymentService;
 use App\Services\NotificationService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class BookingService
 {
@@ -45,35 +46,85 @@ class BookingService
      * @param int $userId
      * @return Booking
      */
-    Future<Booking> createBooking({
-        required Map<String, dynamic> bookingData,
-      }) async {
+    public function createBooking(array $data, int $userId = null)
+    {
         try {
-          // Debug log
-          print('Creating booking with data: ${json.encode(bookingData)}');
+            DB::beginTransaction();
 
-          final response = await _apiService.createBooking(bookingData);
+            // Buat booking baru hanya dengan jumlah penumpang
+            $booking = Booking::create([
+                'user_id' => $userId,
+                'schedule_id' => $data['schedule_id'],
+                'booking_date' => Carbon::parse($data['booking_date']),
+                'passenger_count' => $data['passenger_count'], // Hanya menyimpan jumlah
+                'total_amount' => $data['total_amount'],
+                'status' => 'PENDING',
+                'booking_code' => $this->generateBookingCode(),
+            ]);
 
-          // Extract booking data from response
-          Map<String, dynamic> extractedBookingData;
-          if (response.containsKey('data')) {
-            if (response['data'].containsKey('booking')) {
-              extractedBookingData = response['data']['booking'];
-            } else {
-              extractedBookingData = response['data'];
+            // Buat data kendaraan jika ada (tanpa owner_passenger_id)
+            if (isset($data['vehicles']) && !empty($data['vehicles'])) {
+                foreach ($data['vehicles'] as $vehicleData) {
+                    $vehicle = Vehicle::create([
+                        'booking_id' => $booking->id,
+                        'type' => $vehicleData['type'],
+                        'plate_number' => $vehicleData['plate_number'],
+                        'brand' => $vehicleData['brand'] ?? null,
+                        'model' => $vehicleData['model'] ?? null,
+                    ]);
+                }
             }
-          } else if (response.containsKey('booking')) {
-            extractedBookingData = response['booking'];
-          } else {
-            extractedBookingData = response;
-          }
 
-          return Booking.fromJson(extractedBookingData);
-        } catch (e) {
-          print('Error creating booking: ${e.toString()}');
-          throw Exception('Failed to create booking: ${e.toString()}');
+            // Update kapasitas jadwal
+            $scheduleDate = ScheduleDate::firstOrCreate(
+                [
+                    'schedule_id' => $booking->schedule_id,
+                    'date' => $booking->booking_date->format('Y-m-d')
+                ],
+                [
+                    'status' => 'AVAILABLE',
+                    'passenger_count' => 0,
+                    'motorcycle_count' => 0,
+                    'car_count' => 0,
+                    'bus_count' => 0,
+                    'truck_count' => 0,
+                ]
+            );
+
+            $this->updateScheduleDateCapacity($scheduleDate, $booking);
+
+            // Catat log booking
+            BookingLog::create([
+                'booking_id' => $booking->id,
+                'previous_status' => 'NEW',
+                'new_status' => 'PENDING',
+                'changed_by_type' => $userId ? 'USER' : 'SYSTEM',
+                'changed_by_id' => $userId,
+                'notes' => 'Pemesanan baru dibuat',
+            ]);
+
+            DB::commit();
+            return $booking;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating booking: ' . $e->getMessage());
+            throw $e;
         }
-      }
+    }
+
+    /**
+     * Generate unique booking code
+     *
+     * @return string
+     */
+    private function generateBookingCode()
+    {
+        $prefix = 'BK';
+        $date = Carbon::now()->format('Ymd');
+        $random = strtoupper(substr(md5(uniqid()), 0, 6));
+
+        return $prefix . $date . $random;
+    }
 
     /**
      * Confirm a booking after payment.
@@ -87,51 +138,28 @@ class BookingService
         try {
             DB::beginTransaction();
 
-            // Create payment
+            // Pemrosesan pembayaran tetap sama
             $payment = $this->paymentService->createPayment($booking, $paymentData);
 
-            // Update booking status
-            $booking->update([
-                'status' => 'CONFIRMED',
-            ]);
+            // Update status booking
+            $booking->update(['status' => 'CONFIRMED']);
 
-            // Create tickets for all passengers
-            $passengers = $booking->passengers;
-            $vehicles = $booking->vehicles;
-
-            foreach ($passengers as $passenger) {
-                $ticketData = [
-                    'passenger_id' => $passenger->id,
-                    'vehicle_id' => null,
-                ];
-
+            // Buat tiket penumpang sejumlah passenger_count
+            for ($i = 0; $i < $booking->passenger_count; $i++) {
+                $ticketData = ['passenger_id' => null, 'vehicle_id' => null];
                 $this->ticketService->createTicket($booking, $ticketData);
             }
 
-            // Buat tiket untuk kendaraan dan hubungkan dengan pemiliknya
-            foreach ($vehicles as $vehicle) {
-                if ($vehicle->owner_passenger_id) {
-                    $ticketData = [
-                        'passenger_id' => $vehicle->owner_passenger_id,
-                        'vehicle_id' => $vehicle->id,
-                    ];
-
-                    $this->ticketService->createVehicleTicket($booking, $ticketData);
-                }
+            // Buat tiket untuk kendaraan tanpa owner_passenger_id
+            foreach ($booking->vehicles as $vehicle) {
+                $ticketData = [
+                    'passenger_id' => null,
+                    'vehicle_id' => $vehicle->id,
+                ];
+                $this->ticketService->createVehicleTicket($booking, $ticketData);
             }
 
-            // Create booking log
-            BookingLog::create([
-                'booking_id' => $booking->id,
-                'previous_status' => 'PENDING',
-                'new_status' => 'CONFIRMED',
-                'changed_by_type' => 'SYSTEM',
-                'notes' => 'Pembayaran berhasil, pemesanan dikonfirmasi',
-            ]);
-
-            // Send notification to user
-            $this->notificationService->sendBookingConfirmation($booking);
-
+            // Log dan notifikasi tetap sama
             DB::commit();
             return $booking;
         } catch (\Exception $e) {

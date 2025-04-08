@@ -40,7 +40,10 @@ class TicketController extends Controller
                 'booking.schedule.route',
                 'booking.schedule.ferry',
                 'passenger',
-                'vehicle'
+                'vehicle',
+                'schedule',           // Tambahkan ini untuk memuat relasi schedule langsung
+                'schedule.route',     // Tambahkan ini untuk memuat route dari schedule
+                'schedule.ferry'      // Tambahkan ini untuk memuat ferry dari schedule
             ]);
 
         if ($status) {

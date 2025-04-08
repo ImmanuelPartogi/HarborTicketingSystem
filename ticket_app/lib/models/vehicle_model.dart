@@ -1,110 +1,125 @@
+import 'package:flutter/material.dart';
+
 class Vehicle {
   final int id;
-  final int bookingId;
   final String type;
   final String licensePlate;
-  final double? weight;
-  final String? brand;
-  final String? model;
-  final double price;
+  final int bookingId;
+  final double price; // Tambahkan field price
   final DateTime createdAt;
   final DateTime updatedAt;
-  final int? ownerPassengerId; // Tambahkan field ini
 
   Vehicle({
     required this.id,
-    required this.bookingId,
     required this.type,
     required this.licensePlate,
-    this.weight,
-    this.brand,
-    this.model,
-    required this.price,
+    required this.bookingId,
+    this.price = 0.0, // Default price jika tidak tersedia
     required this.createdAt,
     required this.updatedAt,
-    this.ownerPassengerId, // Tambahkan di constructor
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
-    // Helper function untuk parsing double
-    double? parseDoubleValue(dynamic value) {
-      if (value == null) return null;
-      if (value is double) return value;
-      if (value is int) return value.toDouble();
-      if (value is String) {
-        try {
-          return double.parse(value);
-        } catch (e) {
-          print('Error parsing double from string: $value');
-          return null;
-        }
+    // Helper functions untuk parsing data dengan aman
+    int parseInt(dynamic value, {int defaultValue = 0}) {
+      if (value == null) return defaultValue;
+      if (value is int) return value;
+      try {
+        return int.parse(value.toString());
+      } catch (e) {
+        print('Error parsing int: $value');
+        return defaultValue;
       }
-      return null;
+    }
+
+    String parseString(dynamic value, {String defaultValue = ''}) {
+      if (value == null) return defaultValue;
+      return value.toString();
+    }
+
+    double parseDouble(dynamic value, {double defaultValue = 0.0}) {
+      if (value == null) return defaultValue;
+      if (value is double) return value;
+      try {
+        return double.parse(value.toString());
+      } catch (e) {
+        print('Error parsing double: $value');
+        return defaultValue;
+      }
+    }
+
+    DateTime parseDateTime(dynamic value, {DateTime? defaultValue}) {
+      if (value == null) {
+        return defaultValue ?? DateTime.now();
+      }
+      try {
+        return DateTime.parse(value.toString());
+      } catch (e) {
+        print('Error parsing datetime: $value');
+        return defaultValue ?? DateTime.now();
+      }
+    }
+
+    String vehicleType = parseString(json['type']).toLowerCase();
+    
+    // Jika price ada dalam JSON, gunakan itu
+    // Jika tidak, tentukan harga berdasarkan tipe kendaraan
+    double defaultPrice = 0.0;
+    switch (vehicleType) {
+      case 'motorcycle':
+      case 'motor':
+        defaultPrice = 50000.0;
+        break;
+      case 'car':
+      case 'mobil':
+        defaultPrice = 150000.0;
+        break;
+      case 'truck':
+      case 'truk':
+        defaultPrice = 300000.0;
+        break;
+      case 'bus':
+        defaultPrice = 400000.0;
+        break;
+      default:
+        defaultPrice = 100000.0;
     }
 
     return Vehicle(
-      id: json['id'],
-      bookingId: json['booking_id'],
-      type: json['type'],
-      licensePlate: json['license_plate'],
-      weight: parseDoubleValue(json['weight']),
-      brand: json['brand'],
-      model: json['model'],
-      price: parseDoubleValue(json['price']) ?? 0.0,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
-      ownerPassengerId: json['owner_passenger_id'], // Ambil dari JSON
+      id: parseInt(json['id']),
+      type: parseString(json['type']),
+      licensePlate: parseString(json['license_plate']),
+      bookingId: parseInt(json['booking_id']),
+      price: parseDouble(json['price'], defaultValue: defaultPrice),
+      createdAt: parseDateTime(json['created_at']),
+      updatedAt: parseDateTime(json['updated_at']),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'booking_id': bookingId,
       'type': type,
       'license_plate': licensePlate,
-      'weight': weight,
-      'brand': brand,
-      'model': model,
+      'booking_id': bookingId,
       'price': price,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'owner_passenger_id': ownerPassengerId, // Sertakan dalam JSON
     };
   }
 
   String get typeText {
     switch (type.toLowerCase()) {
-      case 'car':
-        return 'Car';
       case 'motorcycle':
-        return 'Motorcycle';
+        return 'Motor';
+      case 'car':
+        return 'Mobil';
       case 'bus':
         return 'Bus';
       case 'truck':
-        return 'Truck';
+        return 'Truk';
       default:
         return type;
     }
-  }
-
-  String get vehicleInfo {
-    List<String> info = [];
-
-    if (brand != null && model != null) {
-      info.add('$brand $model');
-    } else if (brand != null) {
-      info.add(brand!);
-    } else if (model != null) {
-      info.add(model!);
-    }
-
-    info.add(licensePlate);
-
-    if (weight != null) {
-      info.add('$weight kg');
-    }
-
-    return info.join(' • ');
   }
 }

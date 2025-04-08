@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart'; // Tambahkan import ini
 
 import '../../config/theme.dart';
 import '../../config/routes.dart';
@@ -7,6 +8,7 @@ import '../../providers/ticket_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/ticket/animated_ticket.dart';
+import '../../models/ticket_model.dart'; // Tambahkan import ini
 
 class TicketDetailScreen extends StatefulWidget {
   final int ticketId;
@@ -241,9 +243,9 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     ),
 
                     const SizedBox(height: AppTheme.paddingLarge),
-
-                    // Passenger details card
-                    if (ticket.passenger != null)
+                    
+                    // Jika ada kendaraan, tampilkan informasi kendaraan
+                    if (ticket.vehicle != null)
                       Container(
                         padding: const EdgeInsets.all(AppTheme.paddingMedium),
                         decoration: BoxDecoration(
@@ -263,7 +265,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Passenger Information',
+                              'Informasi Kendaraan',
                               style: TextStyle(
                                 fontSize: AppTheme.fontSizeMedium,
                                 fontWeight: FontWeight.bold,
@@ -272,24 +274,13 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             const SizedBox(height: AppTheme.paddingMedium),
 
                             _buildInfoRow(
-                              label: 'Name',
-                              value: ticket.passenger!.name,
+                              label: 'Tipe Kendaraan',
+                              value: ticket.vehicle!.typeText,
                             ),
                             _buildInfoRow(
-                              label: 'ID',
-                              value:
-                                  '${ticket.passenger!.identityTypeText}: ${ticket.passenger!.identityNumber}',
+                              label: 'Nomor Polisi',
+                              value: ticket.vehicle!.licensePlate,
                             ),
-                            if (ticket.passenger!.gender != null)
-                              _buildInfoRow(
-                                label: 'Gender',
-                                value: ticket.passenger!.genderText,
-                              ),
-                            if (ticket.passenger!.dateOfBirth != null)
-                              _buildInfoRow(
-                                label: 'Date of Birth',
-                                value: ticket.passenger!.dateOfBirth!,
-                              ),
                           ],
                         ),
                       ),
@@ -401,6 +392,8 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
 
   // di file ticket_detail_screen.dart atau sejenis
   Widget _buildTicketInfo(Ticket ticket) {
+    final theme = Theme.of(context); // Tambahkan definisi theme
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -413,15 +406,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-
-        // Jika kendaraan, tampilkan plat nomor
-        if (ticket.vehicle != null) ...[
-          const SizedBox(height: AppTheme.paddingSmall),
-          Text(
-            'License Plate: ${ticket.vehicle!.licensePlate}',
-            style: TextStyle(fontSize: AppTheme.fontSizeMedium),
-          ),
-        ],
 
         // Informasi jadwal dan rute
         const SizedBox(height: AppTheme.paddingMedium),

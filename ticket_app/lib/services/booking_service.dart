@@ -78,68 +78,46 @@ class BookingService {
   }
 
   Future<Booking> createBooking({
-    required int scheduleId,
-    required List<Map<String, dynamic>> passengers,
+    int? scheduleId,
+    List<Map<String, dynamic>>? passengers,
     List<Map<String, dynamic>>? vehicles,
+    Map<String, dynamic>? bookingData,
   }) async {
     try {
-      // Validasi data penumpang
-      for (var i = 0; i < passengers.length; i++) {
-        var passenger = passengers[i];
+      Map<String, dynamic> requestData;
 
-        // Validasi ID Number
-        if (passenger['id_number'] == null ||
-            passenger['id_number'].toString().trim().isEmpty) {
-          throw Exception('ID Number is required for passenger ${i + 1}');
-        }
-
-        // Validasi Date of Birth
-        if (passenger['dob'] == null ||
-            passenger['dob'].toString().trim().isEmpty) {
-          throw Exception('Date of Birth is required for passenger ${i + 1}');
-        }
-
-        if (vehicles != null && vehicles.isNotEmpty) {
-          for (var vehicle in vehicles) {
-            if (!vehicle.containsKey('owner_passenger_id') ||
-                vehicle['owner_passenger_id'] == null) {
-              throw Exception('Vehicle owner must be specified');
-            }
-          }
-        }
-
-        // Lakukan cleaning data
-        passengers[i] = {
-          'name': passenger['name'] ?? '',
-          'id_number': passenger['id_number'].toString().trim(),
-          'id_type': passenger['id_type'] ?? 'KTP',
-          'dob': passenger['dob'].toString().trim(),
-          'gender': passenger['gender'] ?? 'MALE',
-          'email': passenger['email'] ?? '',
-          'phone': passenger['phone'] ?? '',
-          'address': passenger['address'] ?? '',
-        };
+      // Gunakan bookingData jika disediakan
+      if (bookingData != null) {
+        requestData = bookingData;
       }
+      // Jika tidak, gunakan parameter lama
+      else {
+        if (scheduleId == null) {
+          throw Exception('Schedule ID is required');
+        }
 
-      // Format request data
-      final Map<String, dynamic> bookingData = {
-        'schedule_id': scheduleId,
-        'booking_date': DateTime.now().toIso8601String().split('T')[0],
-        'passengers': passengers,
-      };
+        // Format request data
+        requestData = {
+          'schedule_id': scheduleId,
+          'booking_date': DateTime.now().toIso8601String().split('T')[0],
+        };
+
+        // Tambahkan penumpang jika ada
+        if (passengers != null && passengers.isNotEmpty) {
+          requestData['passengers'] = passengers;
+        }
+
+        // Tambahkan kendaraan jika ada
+        if (vehicles != null && vehicles.isNotEmpty) {
+          requestData['vehicles'] = vehicles;
+        }
+      }
 
       // Debug log: print request data
-      print('Booking request data: ${json.encode(bookingData)}');
-
-      if (vehicles != null && vehicles.isNotEmpty) {
-        bookingData['vehicles'] = vehicles;
-      }
+      print('Booking request data: ${json.encode(requestData)}');
 
       // Make API request
-      final response = await _apiService.createBooking(bookingData);
-
-      // Log the full response for debugging
-      print('Create booking full response: ${json.encode(response)}');
+      final response = await _apiService.createBooking(requestData);
 
       // Extract booking data from the nested structure
       Map<String, dynamic> extractedBookingData;
@@ -157,10 +135,6 @@ class BookingService {
 
       // Create the booking object
       final booking = Booking.fromJson(extractedBookingData);
-
-      // TAMBAHAN: Tambahkan delay untuk memastikan data tersedia di server
-      print('Menunggu sinkronisasi data booking dengan server...');
-      await Future.delayed(Duration(seconds: 2));
 
       return booking;
     } catch (e) {

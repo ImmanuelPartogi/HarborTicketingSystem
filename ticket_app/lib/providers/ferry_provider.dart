@@ -435,6 +435,15 @@ class FerryProvider extends ChangeNotifier {
     }
   }
 
+  Future<ScheduleModel?> getScheduleById(int scheduleId) async {
+    if (_selectedSchedule != null && _selectedSchedule!.id == scheduleId) {
+      return _selectedSchedule;
+    }
+
+    await fetchScheduleDetail(scheduleId);
+    return _selectedSchedule;
+  }
+
   // Set selected schedule from the list
   void setSelectedSchedule(int scheduleId) {
     // Try to find in existing schedules first
