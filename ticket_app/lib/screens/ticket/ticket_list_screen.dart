@@ -55,10 +55,10 @@ class _TicketListScreenState extends State<TicketListScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Tickets'),
+        title: const Text('Tiket Saya'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [Tab(text: 'Active'), Tab(text: 'History')],
+          tabs: const [Tab(text: 'Aktif'), Tab(text: 'Riwayat')],
         ),
       ),
       body: TabBarView(
@@ -79,34 +79,13 @@ class _TicketListScreenState extends State<TicketListScreen>
       builder: (context, ticketProvider, _) {
         if (ticketProvider.isLoadingActiveTickets) {
           return const Center(
-            child: LoadingIndicator(message: 'Loading active tickets...'),
+            child: LoadingIndicator(message: 'Memuat tiket aktif...'),
           );
         }
 
         // Debug logs
-        print('=== TICKET GROUPING DEBUG ===');
-        print('Active tickets count: ${ticketProvider.activeTickets.length}');
-
-        // Check each ticket for schedule data
-        int ticketsWithSchedule = 0;
-        int ticketsWithRouteAndFerry = 0;
-
-        for (var ticket in ticketProvider.activeTickets) {
-          if (ticket.schedule != null) {
-            ticketsWithSchedule++;
-            if (ticket.schedule!.route != null &&
-                ticket.schedule!.ferry != null) {
-              ticketsWithRouteAndFerry++;
-            }
-          }
-        }
-
-        print(
-          'Tickets with schedule: $ticketsWithSchedule / ${ticketProvider.activeTickets.length}',
-        );
-        print(
-          'Tickets with route & ferry: $ticketsWithRouteAndFerry / ${ticketProvider.activeTickets.length}',
-        );
+        print('=== PENGELOMPOKAN TIKET DEBUG ===');
+        print('Jumlah tiket aktif: ${ticketProvider.activeTickets.length}');
 
         if (ticketProvider.activeTickets.isEmpty) {
           return Center(
@@ -120,7 +99,7 @@ class _TicketListScreenState extends State<TicketListScreen>
                 ),
                 const SizedBox(height: AppTheme.paddingMedium),
                 const Text(
-                  'No Active Tickets',
+                  'Tidak Ada Tiket Aktif',
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeLarge,
                     fontWeight: FontWeight.bold,
@@ -128,7 +107,7 @@ class _TicketListScreenState extends State<TicketListScreen>
                 ),
                 const SizedBox(height: AppTheme.paddingSmall),
                 const Text(
-                  'You don\'t have any active tickets',
+                  'Anda tidak memiliki tiket aktif',
                   style: TextStyle(fontSize: AppTheme.fontSizeRegular),
                 ),
                 const SizedBox(height: AppTheme.paddingLarge),
@@ -137,7 +116,7 @@ class _TicketListScreenState extends State<TicketListScreen>
                     Navigator.pushReplacementNamed(context, AppRoutes.home);
                   },
                   icon: const Icon(Icons.search),
-                  label: const Text('Book a Ferry'),
+                  label: const Text('Pesan Tiket Kapal'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
@@ -152,25 +131,18 @@ class _TicketListScreenState extends State<TicketListScreen>
           );
         }
 
-        // Group tickets by schedule
-        final groupedTickets = ticketProvider.getTicketsGroupedBySchedule();
-        print('Grouped into ${groupedTickets.length} groups');
+        // Gunakan fungsi pengelompokan berdasarkan tanggal, kapal, dan tujuan
+        final groupedTickets = ticketProvider.getTicketsGroupedByDateFerryDestination();
+        print('Tiket dikelompokkan menjadi ${groupedTickets.length} grup');
 
         // Debug untuk melihat setiap grup
         groupedTickets.forEach((key, tickets) {
-          final firstTicket = tickets.first;
-          final schedule = firstTicket.schedule;
-          print('Group key: $key');
-          print('  Tickets count: ${tickets.length}');
-          if (schedule != null) {
-            print('  Route: ${schedule.route?.routeName}');
-            print('  Ferry: ${schedule.ferry?.name}');
-            print(
-              '  Departure: ${DateFormat('yyyy-MM-dd HH:mm').format(schedule.departureTime)}',
-            );
-          } else {
-            print('  No schedule info');
-          }
+          final groupInfo = ticketProvider.getGroupInfo(key);
+          print('Grup kunci: $key');
+          print('  Jumlah tiket: ${tickets.length}');
+          print('  Tanggal: ${groupInfo['date']}');
+          print('  Kapal: ${groupInfo['ferry']}');
+          print('  Tujuan: ${groupInfo['destination']}');
         });
 
         return RefreshIndicator(
@@ -179,15 +151,18 @@ class _TicketListScreenState extends State<TicketListScreen>
             padding: const EdgeInsets.all(AppTheme.paddingMedium),
             itemCount: groupedTickets.length,
             itemBuilder: (context, index) {
-              // Get schedule ID and tickets for this group
+              // Dapatkan ID grup dan tiket untuk grup ini
               final key = groupedTickets.keys.elementAt(index);
               final tickets = groupedTickets[key]!;
 
               print(
-                'Building group $index (key: $key) with ${tickets.length} tickets',
+                'Membangun grup $index (key: $key) dengan ${tickets.length} tiket',
               );
 
-              return TicketGroupItem(tickets: tickets);
+              return TicketGroupItemEnhanced(
+                tickets: tickets,
+                groupKey: key,
+              );
             },
           ),
         );
@@ -200,7 +175,7 @@ class _TicketListScreenState extends State<TicketListScreen>
       builder: (context, ticketProvider, _) {
         if (ticketProvider.isLoadingTicketHistory) {
           return const Center(
-            child: LoadingIndicator(message: 'Loading ticket history...'),
+            child: LoadingIndicator(message: 'Memuat riwayat tiket...'),
           );
         }
 
@@ -216,7 +191,7 @@ class _TicketListScreenState extends State<TicketListScreen>
                 ),
                 const SizedBox(height: AppTheme.paddingMedium),
                 const Text(
-                  'No Ticket History',
+                  'Tidak Ada Riwayat Tiket',
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeLarge,
                     fontWeight: FontWeight.bold,
@@ -224,12 +199,12 @@ class _TicketListScreenState extends State<TicketListScreen>
                 ),
                 const SizedBox(height: AppTheme.paddingSmall),
                 const Text(
-                  'Your past tickets will appear here',
+                  'Tiket yang sudah lalu akan muncul di sini',
                   style: TextStyle(fontSize: AppTheme.fontSizeRegular),
                 ),
               ],
             ),
-          );
+          );  
         }
 
         return RefreshIndicator(
@@ -258,22 +233,29 @@ class _TicketListScreenState extends State<TicketListScreen>
   }
 }
 
-class TicketGroupItem extends StatefulWidget {
+class TicketGroupItemEnhanced extends StatefulWidget {
   final List<dynamic> tickets;
+  final String groupKey;
 
-  const TicketGroupItem({Key? key, required this.tickets}) : super(key: key);
+  const TicketGroupItemEnhanced({
+    Key? key, 
+    required this.tickets, 
+    required this.groupKey
+  }) : super(key: key);
 
   @override
-  State<TicketGroupItem> createState() => _TicketGroupItemState();
+  State<TicketGroupItemEnhanced> createState() => _TicketGroupItemEnhancedState();
 }
 
-class _TicketGroupItemState extends State<TicketGroupItem> {
+class _TicketGroupItemEnhancedState extends State<TicketGroupItemEnhanced> {
   bool isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
+    final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
     final firstTicket = widget.tickets.first;
     final schedule = firstTicket.schedule;
+    final groupInfo = ticketProvider.getGroupInfo(widget.groupKey);
 
     if (schedule == null) {
       return const SizedBox.shrink();
@@ -295,30 +277,28 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
               padding: const EdgeInsets.all(AppTheme.paddingMedium),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor,
-                borderRadius:
-                    isExpanded
-                        ? const BorderRadius.only(
-                          topLeft: Radius.circular(AppTheme.borderRadiusMedium),
-                          topRight: Radius.circular(
-                            AppTheme.borderRadiusMedium,
-                          ),
-                        )
-                        : BorderRadius.circular(AppTheme.borderRadiusMedium),
+                borderRadius: isExpanded
+                    ? const BorderRadius.only(
+                        topLeft: Radius.circular(AppTheme.borderRadiusMedium),
+                        topRight: Radius.circular(AppTheme.borderRadiusMedium),
+                      )
+                    : BorderRadius.circular(AppTheme.borderRadiusMedium),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Row 1: Tujuan
                   Row(
                     children: [
                       const Icon(
-                        Icons.directions_boat,
+                        Icons.place,
                         color: Colors.white,
                         size: 20,
                       ),
                       const SizedBox(width: AppTheme.paddingSmall),
                       Expanded(
                         child: Text(
-                          '${schedule.route?.routeName ?? 'Unknown Route'} (${schedule.ferry?.name ?? 'Unknown Ferry'})',
+                          'Tujuan: ${groupInfo['destination']}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -342,10 +322,7 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
                         child: Text(
                           schedule.statusText,
                           style: TextStyle(
-                            color:
-                                schedule.isAvailable
-                                    ? Colors.green
-                                    : Colors.red,
+                            color: schedule.isAvailable ? Colors.green : Colors.red,
                             fontWeight: FontWeight.w600,
                             fontSize: AppTheme.fontSizeSmall,
                           ),
@@ -354,6 +331,28 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
                     ],
                   ),
                   const SizedBox(height: AppTheme.paddingSmall),
+                  
+                  // Row 2: Jenis Kapal
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.directions_boat,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                      const SizedBox(width: AppTheme.paddingSmall),
+                      Text(
+                        'Kapal: ${groupInfo['ferry']}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppTheme.paddingSmall),
+                  
+                  // Row 3: Tanggal Berangkat
                   Row(
                     children: [
                       const Icon(
@@ -363,9 +362,7 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
                       ),
                       const SizedBox(width: AppTheme.paddingSmall),
                       Text(
-                        DateFormat(
-                          'EEE, dd MMM yyyy',
-                        ).format(schedule.departureTime),
+                        'Tanggal: ${groupInfo['date']}',
                         style: const TextStyle(color: Colors.white),
                       ),
                       const SizedBox(width: AppTheme.paddingMedium),
@@ -390,6 +387,8 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
                     ],
                   ),
                   const SizedBox(height: AppTheme.paddingSmall),
+                  
+                  // Badge jumlah tiket
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppTheme.paddingRegular,
@@ -402,7 +401,7 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
                       ),
                     ),
                     child: Text(
-                      '${widget.tickets.length} ${widget.tickets.length > 1 ? 'Tickets' : 'Ticket'}',
+                      '${widget.tickets.length} ${widget.tickets.length > 1 ? 'Tiket' : 'Tiket'}',
                       style: TextStyle(
                         color: AppTheme.primaryColor,
                         fontWeight: FontWeight.w600,
@@ -438,14 +437,12 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
                   Padding(
                     padding: const EdgeInsets.all(AppTheme.paddingMedium),
                     child: Text(
-                      'Ticket Details (${widget.tickets.length})',
+                      'Detail Tiket (${widget.tickets.length})',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                   const Divider(height: 1),
-                  ...widget.tickets
-                      .map((ticket) => _buildTicketItem(ticket))
-                      .toList(),
+                  ...widget.tickets.map((ticket) => _buildTicketItem(ticket)).toList(),
                 ],
               ),
             ),
@@ -457,10 +454,7 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
   Widget _buildTicketItem(ticket) {
     return InkWell(
       onTap: () {
-        final ticketProvider = Provider.of<TicketProvider>(
-          context,
-          listen: false,
-        );
+        final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
         ticketProvider.setSelectedTicket(ticket.id);
         Navigator.pushNamed(
           context,
@@ -478,9 +472,7 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
               height: 40,
               decoration: BoxDecoration(
                 color: ticket.statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(
-                  AppTheme.borderRadiusRegular,
-                ),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
               ),
               child: Icon(
                 Icons.confirmation_number_outlined,
@@ -504,7 +496,7 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
                       ),
                     ),
                   Text(
-                    'Ticket: ${ticket.ticketNumber}',
+                    'Tiket: ${ticket.ticketNumber}',
                     style: TextStyle(
                       color: Theme.of(context).textTheme.bodyMedium?.color,
                       fontSize: AppTheme.fontSizeSmall,
@@ -517,10 +509,7 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
             // View button
             ElevatedButton(
               onPressed: () {
-                final ticketProvider = Provider.of<TicketProvider>(
-                  context,
-                  listen: false,
-                );
+                final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
                 ticketProvider.setSelectedTicket(ticket.id);
                 Navigator.pushNamed(
                   context,
@@ -541,7 +530,7 @@ class _TicketGroupItemState extends State<TicketGroupItem> {
                 ),
                 minimumSize: const Size(0, 0),
               ),
-              child: const Text('View'),
+              child: const Text('Lihat'),
             ),
           ],
         ),

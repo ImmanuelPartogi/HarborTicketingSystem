@@ -394,6 +394,61 @@ class TicketProvider extends ChangeNotifier {
     return groupedTickets;
   }
 
+  Map<String, List<dynamic>> getTicketsGroupedByDateFerryDestination() {
+    final groupedTickets = <String, List<dynamic>>{};
+
+    for (var ticket in activeTickets) {
+      if (ticket.schedule == null ||
+          ticket.schedule!.route == null ||
+          ticket.schedule!.ferry == null) {
+        continue;
+      }
+
+      // Format tanggal (yyyy-MM-dd)
+      final dateFormat = DateFormat('yyyy-MM-dd');
+      final departureDate = dateFormat.format(ticket.schedule!.departureTime);
+
+      // Ambil jenis kapal
+      final ferryType = ticket.schedule!.ferry!.name;
+
+      // Ambil tujuan
+      final destination = ticket.schedule!.route!.routeName;
+
+      // Buat kunci pengelompokan: tanggal_kapal_tujuan
+      final key = '${departureDate}_${ferryType}_${destination}';
+
+      if (!groupedTickets.containsKey(key)) {
+        groupedTickets[key] = [];
+      }
+
+      groupedTickets[key]!.add(ticket);
+    }
+
+    return groupedTickets;
+  }
+
+  Map<String, String> getGroupInfo(String groupKey) {
+    final parts = groupKey.split('_');
+    if (parts.length < 3) {
+      return {'date': 'Unknown', 'ferry': 'Unknown', 'destination': 'Unknown'};
+    }
+
+    // Parse tanggal ke format yang lebih mudah dibaca
+    DateTime? date;
+    try {
+      date = DateFormat('yyyy-MM-dd').parse(parts[0]);
+    } catch (e) {
+      // Handle error
+    }
+
+    return {
+      'date':
+          date != null ? DateFormat('EEE, dd MMM yyyy').format(date) : parts[0],
+      'ferry': parts[1],
+      'destination': parts[2],
+    };
+  }
+
   void checkAndMoveExpiredTickets() {
     final now = DateTime.now();
     final expiredTickets =

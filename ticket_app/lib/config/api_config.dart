@@ -28,7 +28,8 @@ class ApiConfig {
   // Diperbaiki jika cancelBooking dan rescheduleBooking menggunakan ID numerik
   static const String cancelBooking = '/api/v1/bookings/id/{id}/cancel';
   static const String rescheduleBooking = '/api/v1/bookings/id/{id}/reschedule';
-  static const String generateTickets = '/api/v1/bookings/id/{id}/generate-tickets';
+  static const String generateTickets =
+      '/api/v1/bookings/id/{id}/generate-tickets';
 
   static const String payments = '/api/v1/payments';
   // Diperbaiki untuk menggunakan endpoint yang benar
@@ -37,6 +38,7 @@ class ApiConfig {
   static const String tickets = '/api/v1/tickets';
   static const String ticketDetail = '/api/v1/tickets/{id}';
   static const String validateTicket = '/api/v1/tickets/{id}/validate';
+  static const String groupedTickets = '/tickets/grouped';
 
   static const String notifications = '/api/v1/notifications';
 
