@@ -19,6 +19,7 @@ class TicketListScreen extends StatefulWidget {
 class _TicketListScreenState extends State<TicketListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  Timer? _expirationTimer;
 
   @override
   void initState() {
@@ -26,8 +27,8 @@ class _TicketListScreenState extends State<TicketListScreen>
     _tabController = TabController(length: 2, vsync: this);
     _loadTickets();
 
-    // Tambahkan timer untuk memeriksa tiket kadaluarsa secara berkala
-    Timer.periodic(Duration(minutes: 5), (timer) {
+    // Timer untuk memeriksa tiket kadaluarsa setiap 1 menit
+    _expirationTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) {
         final ticketProvider = Provider.of<TicketProvider>(
           context,
@@ -41,6 +42,7 @@ class _TicketListScreenState extends State<TicketListScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _expirationTimer?.cancel();
     super.dispose();
   }
 
@@ -48,33 +50,45 @@ class _TicketListScreenState extends State<TicketListScreen>
     final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
     await ticketProvider.fetchActiveTickets();
     await ticketProvider.fetchTicketHistory();
-    ticketProvider.checkAndMoveExpiredTickets(); // Panggil saat loading tiket
+    ticketProvider.checkAndMoveExpiredTickets();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tiket Saya'),
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [Tab(text: 'Aktif'), Tab(text: 'Riwayat')],
+          tabs: const [
+            Tab(text: 'Aktif'),
+            Tab(text: 'Riwayat')
+          ],
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: AppTheme.fontSizeRegular,
+          ),
+          indicatorWeight: 3,
+          indicatorColor: theme.primaryColor,
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Active tickets tab
-          _buildActiveTicketsTab(),
+          // Tab tiket aktif
+          _buildActiveTicketsTab(theme),
 
-          // History tickets tab
-          _buildHistoryTicketsTab(),
+          // Tab riwayat tiket
+          _buildHistoryTicketsTab(theme),
         ],
       ),
     );
   }
 
-  Widget _buildActiveTicketsTab() {
+  Widget _buildActiveTicketsTab(ThemeData theme) {
     return Consumer<TicketProvider>(
       builder: (context, ticketProvider, _) {
         if (ticketProvider.isLoadingActiveTickets) {
@@ -82,10 +96,6 @@ class _TicketListScreenState extends State<TicketListScreen>
             child: LoadingIndicator(message: 'Memuat tiket aktif...'),
           );
         }
-
-        // Debug logs
-        print('=== PENGELOMPOKAN TIKET DEBUG ===');
-        print('Jumlah tiket aktif: ${ticketProvider.activeTickets.length}');
 
         if (ticketProvider.activeTickets.isEmpty) {
           return Center(
@@ -95,7 +105,7 @@ class _TicketListScreenState extends State<TicketListScreen>
                 Icon(
                   Icons.confirmation_number_outlined,
                   size: 64,
-                  color: Theme.of(context).hintColor,
+                  color: theme.hintColor,
                 ),
                 const SizedBox(height: AppTheme.paddingMedium),
                 const Text(
@@ -131,38 +141,14 @@ class _TicketListScreenState extends State<TicketListScreen>
           );
         }
 
-        // Gunakan fungsi pengelompokan berdasarkan tanggal, kapal, dan tujuan
-        final groupedTickets = ticketProvider.getTicketsGroupedByDateFerryDestination();
-        print('Tiket dikelompokkan menjadi ${groupedTickets.length} grup');
-
-        // Debug untuk melihat setiap grup
-        groupedTickets.forEach((key, tickets) {
-          final groupInfo = ticketProvider.getGroupInfo(key);
-          print('Grup kunci: $key');
-          print('  Jumlah tiket: ${tickets.length}');
-          print('  Tanggal: ${groupInfo['date']}');
-          print('  Kapal: ${groupInfo['ferry']}');
-          print('  Tujuan: ${groupInfo['destination']}');
-        });
-
         return RefreshIndicator(
           onRefresh: () => ticketProvider.fetchActiveTickets(forceReload: true),
           child: ListView.builder(
             padding: const EdgeInsets.all(AppTheme.paddingMedium),
-            itemCount: groupedTickets.length,
+            itemCount: ticketProvider.activeTickets.length,
             itemBuilder: (context, index) {
-              // Dapatkan ID grup dan tiket untuk grup ini
-              final key = groupedTickets.keys.elementAt(index);
-              final tickets = groupedTickets[key]!;
-
-              print(
-                'Membangun grup $index (key: $key) dengan ${tickets.length} tiket',
-              );
-
-              return TicketGroupItemEnhanced(
-                tickets: tickets,
-                groupKey: key,
-              );
+              final ticket = ticketProvider.activeTickets[index];
+              return _buildTicketItem(context, ticket, ticketProvider);
             },
           ),
         );
@@ -170,7 +156,7 @@ class _TicketListScreenState extends State<TicketListScreen>
     );
   }
 
-  Widget _buildHistoryTicketsTab() {
+  Widget _buildHistoryTicketsTab(ThemeData theme) {
     return Consumer<TicketProvider>(
       builder: (context, ticketProvider, _) {
         if (ticketProvider.isLoadingTicketHistory) {
@@ -187,7 +173,7 @@ class _TicketListScreenState extends State<TicketListScreen>
                 Icon(
                   Icons.history,
                   size: 64,
-                  color: Theme.of(context).hintColor,
+                  color: theme.hintColor,
                 ),
                 const SizedBox(height: AppTheme.paddingMedium),
                 const Text(
@@ -214,196 +200,129 @@ class _TicketListScreenState extends State<TicketListScreen>
             itemCount: ticketProvider.ticketHistory.length,
             itemBuilder: (context, index) {
               final ticket = ticketProvider.ticketHistory[index];
-              return TicketCard(
-                ticket: ticket,
-                onTap: () {
-                  ticketProvider.setSelectedTicket(ticket.id);
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.ticketDetail,
-                    arguments: {'ticketId': ticket.id},
-                  );
-                },
-              );
+              return _buildTicketItem(context, ticket, ticketProvider, isHistory: true);
             },
           ),
         );
       },
     );
   }
-}
-
-class TicketGroupItemEnhanced extends StatefulWidget {
-  final List<dynamic> tickets;
-  final String groupKey;
-
-  const TicketGroupItemEnhanced({
-    Key? key, 
-    required this.tickets, 
-    required this.groupKey
-  }) : super(key: key);
-
-  @override
-  State<TicketGroupItemEnhanced> createState() => _TicketGroupItemEnhancedState();
-}
-
-class _TicketGroupItemEnhancedState extends State<TicketGroupItemEnhanced> {
-  bool isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
-    final firstTicket = widget.tickets.first;
-    final schedule = firstTicket.schedule;
-    final groupInfo = ticketProvider.getGroupInfo(widget.groupKey);
-
-    if (schedule == null) {
-      return const SizedBox.shrink();
+  
+  Widget _buildTicketItem(
+    BuildContext context,
+    dynamic ticket,
+    TicketProvider ticketProvider, {
+    bool isHistory = false,
+  }) {
+    final theme = Theme.of(context);
+    
+    // Mendapatkan icon berdasarkan jenis tiket
+    IconData ticketIcon = Icons.person;
+    if (ticket.vehicle != null) {
+      ticketIcon = Icons.directions_car;
     }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppTheme.paddingLarge),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Trip header (clickable to expand)
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                isExpanded = !isExpanded;
-              });
-            },
-            child: Container(
+    
+    // Tanggal keberangkatan
+    String departureDate = '';
+    if (ticket.schedule != null) {
+      final date = ticket.schedule.departureTime;
+      departureDate = DateFormat('EEE, dd MMM yyyy').format(date);
+    }
+    
+    // Waktu keberangkatan
+    String departureTime = '';
+    if (ticket.schedule != null) {
+      departureTime = ticket.schedule.formattedDepartureTime;
+    }
+    
+    // Rute
+    String routeName = 'Tidak diketahui';
+    if (ticket.schedule?.route != null) {
+      routeName = ticket.schedule!.route!.routeName;
+    }
+    
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+      ),
+      child: InkWell(
+        onTap: () {
+          ticketProvider.setSelectedTicket(ticket.id);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.ticketDetail,
+            arguments: {'ticketId': ticket.id},
+          );
+        },
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+        child: Column(
+          children: [
+            // Header dengan informasi rute
+            Container(
               padding: const EdgeInsets.all(AppTheme.paddingMedium),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: isExpanded
-                    ? const BorderRadius.only(
-                        topLeft: Radius.circular(AppTheme.borderRadiusMedium),
-                        topRight: Radius.circular(AppTheme.borderRadiusMedium),
-                      )
-                    : BorderRadius.circular(AppTheme.borderRadiusMedium),
+                color: theme.primaryColor.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppTheme.borderRadiusMedium),
+                  topRight: Radius.circular(AppTheme.borderRadiusMedium),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  // Row 1: Tujuan
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.place,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: AppTheme.paddingSmall),
-                      Expanded(
-                        child: Text(
-                          'Tujuan: ${groupInfo['destination']}',
+                  // Ikon kapal
+                  Container(
+                    padding: const EdgeInsets.all(AppTheme.paddingSmall),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                    ),
+                    child: Icon(
+                      Icons.directions_boat,
+                      color: theme.primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.paddingMedium),
+                  
+                  // Informasi rute
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          routeName,
                           style: const TextStyle(
-                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: AppTheme.fontSizeMedium,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.paddingRegular,
-                          vertical: AppTheme.paddingXSmall,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.borderRadiusRound,
-                          ),
-                        ),
-                        child: Text(
-                          schedule.statusText,
+                        Text(
+                          '$departureDate · $departureTime',
                           style: TextStyle(
-                            color: schedule.isAvailable ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.w600,
                             fontSize: AppTheme.fontSizeSmall,
+                            color: theme.textTheme.bodyMedium?.color,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: AppTheme.paddingSmall),
                   
-                  // Row 2: Jenis Kapal
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.directions_boat,
-                        color: Colors.white70,
-                        size: 16,
-                      ),
-                      const SizedBox(width: AppTheme.paddingSmall),
-                      Text(
-                        'Kapal: ${groupInfo['ferry']}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppTheme.paddingSmall),
-                  
-                  // Row 3: Tanggal Berangkat
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today,
-                        color: Colors.white70,
-                        size: 16,
-                      ),
-                      const SizedBox(width: AppTheme.paddingSmall),
-                      Text(
-                        'Tanggal: ${groupInfo['date']}',
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      const SizedBox(width: AppTheme.paddingMedium),
-                      const Icon(
-                        Icons.access_time,
-                        color: Colors.white70,
-                        size: 16,
-                      ),
-                      const SizedBox(width: AppTheme.paddingSmall),
-                      Text(
-                        schedule.formattedDepartureTime,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: Colors.white,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppTheme.paddingSmall),
-                  
-                  // Badge jumlah tiket
+                  // Badge status
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppTheme.paddingRegular,
                       vertical: AppTheme.paddingXSmall,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.borderRadiusRound,
-                      ),
+                      color: ticket.statusColor,
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusRound),
                     ),
                     child: Text(
-                      '${widget.tickets.length} ${widget.tickets.length > 1 ? 'Tiket' : 'Tiket'}',
-                      style: TextStyle(
-                        color: AppTheme.primaryColor,
+                      ticket.statusText,
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontWeight: FontWeight.w600,
                         fontSize: AppTheme.fontSizeSmall,
                       ),
@@ -412,125 +331,129 @@ class _TicketGroupItemEnhancedState extends State<TicketGroupItemEnhanced> {
                 ],
               ),
             ),
-          ),
-
-          // Expandable tickets list
-          if (isExpanded)
+            
+            // Divider dengan garis putus-putus
             Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(AppTheme.borderRadiusMedium),
-                  bottomRight: Radius.circular(AppTheme.borderRadiusMedium),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(horizontal: AppTheme.paddingSmall),
+              child: Row(
+                children: List.generate(40, (index) {
+                  return Expanded(
+                    child: Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                      color: index % 2 == 0 ? theme.dividerColor : Colors.transparent,
+                    ),
+                  );
+                }),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            
+            // Informasi penumpang/kendaraan
+            Padding(
+              padding: const EdgeInsets.all(AppTheme.paddingMedium),
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(AppTheme.paddingMedium),
-                    child: Text(
-                      'Detail Tiket (${widget.tickets.length})',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                  // Ikon untuk tipe tiket (penumpang atau kendaraan)
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: ticket.statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
+                    ),
+                    child: Icon(
+                      ticketIcon,
+                      color: ticket.statusColor,
                     ),
                   ),
-                  const Divider(height: 1),
-                  ...widget.tickets.map((ticket) => _buildTicketItem(ticket)).toList(),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTicketItem(ticket) {
-    return InkWell(
-      onTap: () {
-        final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
-        ticketProvider.setSelectedTicket(ticket.id);
-        Navigator.pushNamed(
-          context,
-          AppRoutes.ticketDetail,
-          arguments: {'ticketId': ticket.id},
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.paddingMedium),
-        child: Row(
-          children: [
-            // Ticket icon
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: ticket.statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(AppTheme.borderRadiusRegular),
-              ),
-              child: Icon(
-                Icons.confirmation_number_outlined,
-                color: ticket.statusColor,
-              ),
-            ),
-
-            const SizedBox(width: AppTheme.paddingMedium),
-
-            // Ticket details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (ticket.passenger != null)
-                    Text(
-                      ticket.passenger!.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: AppTheme.fontSizeRegular,
+                  const SizedBox(width: AppTheme.paddingMedium),
+                  
+                  // Informasi tiket
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Nama penumpang atau jenis kendaraan
+                        if (ticket.vehicle != null)
+                          Text(
+                            '${ticket.vehicle.typeText} - ${ticket.vehicle.licensePlate}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: AppTheme.fontSizeRegular,
+                            ),
+                          )
+                        else if (ticket.passenger != null)
+                          Text(
+                            ticket.passenger.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: AppTheme.fontSizeRegular,
+                            ),
+                          ),
+                        
+                        // Nomor tiket
+                        Text(
+                          'Tiket: ${ticket.ticketNumber}',
+                          style: TextStyle(
+                            color: theme.textTheme.bodyMedium?.color,
+                            fontSize: AppTheme.fontSizeSmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Tombol aksi berdasarkan status
+                  if (!isHistory && ticket.isActive)
+                    ElevatedButton(
+                      onPressed: () {
+                        ticketProvider.setSelectedTicket(ticket.id);
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.ticketDetail,
+                          arguments: {'ticketId': ticket.id},
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.paddingRegular,
+                          vertical: AppTheme.paddingXSmall,
+                        ),
+                        minimumSize: const Size(0, 0),
+                        textStyle: const TextStyle(
+                          fontSize: AppTheme.fontSizeSmall,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
+                      child: const Text('Lihat'),
+                    )
+                  else
+                    OutlinedButton(
+                      onPressed: () {
+                        ticketProvider.setSelectedTicket(ticket.id);
+                        Navigator.pushNamed(
+                          context,
+                          AppRoutes.ticketDetail,
+                          arguments: {'ticketId': ticket.id},
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.paddingRegular,
+                          vertical: AppTheme.paddingXSmall,
+                        ),
+                        minimumSize: const Size(0, 0),
+                        textStyle: const TextStyle(
+                          fontSize: AppTheme.fontSizeSmall,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      child: const Text('Detail'),
                     ),
-                  Text(
-                    'Tiket: ${ticket.ticketNumber}',
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                      fontSize: AppTheme.fontSizeSmall,
-                    ),
-                  ),
                 ],
               ),
-            ),
-
-            // View button
-            ElevatedButton(
-              onPressed: () {
-                final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
-                ticketProvider.setSelectedTicket(ticket.id);
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.ticketDetail,
-                  arguments: {'ticketId': ticket.id},
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                textStyle: const TextStyle(
-                  fontSize: AppTheme.fontSizeSmall,
-                  fontWeight: FontWeight.w500,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.paddingRegular,
-                  vertical: AppTheme.paddingXSmall,
-                ),
-                minimumSize: const Size(0, 0),
-              ),
-              child: const Text('Lihat'),
             ),
           ],
         ),

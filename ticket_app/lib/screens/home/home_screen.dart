@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart'; // Added missing import for DateFormat
+import 'package:intl/intl.dart';
 import 'dart:async';
 
 import '../../config/theme.dart';
@@ -13,7 +13,7 @@ import '../../widgets/home/route_card.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../profile/profile_screen.dart';
 import '../route/routes_screen.dart';
-import '../../models/schedule_model.dart'; // Added import for ScheduleModel
+import '../../models/schedule_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -31,7 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
   // Flag untuk setiap jenis data
   bool _routesInitialized = false;
   bool _activeTicketsInitialized = false;
-  bool _ticketHistoryInitialized = false;
 
   // Debouncing
   Timer? _debounceTimer;
@@ -181,6 +180,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -190,27 +191,59 @@ class _HomeScreenState extends State<HomeScreen> {
             onProfileTap: () => _setCurrentIndex(3),
             isInitialized: _isInitialized,
             onRefresh: _onRefresh,
-            onNavigateToTab:
-                _setCurrentIndex, // Added callback for tab navigation
+            onNavigateToTab: _setCurrentIndex,
+            ticketsTabKey: _ticketsTabKey, // Tambahkan key di sini
           ),
-          const RoutesScreen(), // Add Routes screen as 2nd tab
+          const RoutesScreen(),
           MyTicketsTab(key: _ticketsTabKey),
           const ProfileTab(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _setCurrentIndex,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Routes'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.confirmation_number),
-            label: 'My Tickets',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: _setCurrentIndex,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          selectedItemColor: theme.primaryColor,
+          unselectedItemColor: Colors.grey,
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.map_outlined),
+              activeIcon: Icon(Icons.map),
+              label: 'Routes',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.confirmation_number_outlined),
+              activeIcon: Icon(Icons.confirmation_number),
+              label: 'My Tickets',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -249,7 +282,8 @@ class HomeTab extends StatefulWidget {
   final VoidCallback onProfileTap;
   final Future<void> Function() onRefresh;
   final bool isInitialized;
-  final Function(int) onNavigateToTab; // Added callback for tab navigation
+  final Function(int) onNavigateToTab;
+  final GlobalKey<_MyTicketsTabState>? ticketsTabKey; // Tambahkan parameter ini
 
   const HomeTab({
     Key? key,
@@ -257,7 +291,8 @@ class HomeTab extends StatefulWidget {
     required this.onProfileTap,
     required this.onRefresh,
     required this.isInitialized,
-    required this.onNavigateToTab, // Added parameter
+    required this.onNavigateToTab,
+    this.ticketsTabKey, // Terima parameter dari parent
   }) : super(key: key);
 
   @override
@@ -267,9 +302,8 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> {
   DateTime? _lastRefreshTime;
   bool _isLoading = false;
-  bool _scheduleLoaded =
-      false; // Flag untuk memastikan jadwal hanya dimuat sekali
-  Timer? _refreshTimer; // Timer untuk memperbarui UI secara berkala
+  bool _scheduleLoaded = false;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
@@ -291,7 +325,7 @@ class _HomeTabState extends State<HomeTab> {
 
   // Metode khusus untuk memuat jadwal secara langsung
   Future<void> _loadSchedulesDirectly() async {
-    if (_isLoading || _scheduleLoaded) return; // Hindari pemuatan ganda
+    if (_isLoading || _scheduleLoaded) return;
 
     setState(() {
       _isLoading = true;
@@ -300,13 +334,13 @@ class _HomeTabState extends State<HomeTab> {
     try {
       final ferryProvider = Provider.of<FerryProvider>(context, listen: false);
 
-      // 1. Reset state untuk memastikan data baru
+      // Reset state untuk memastikan data baru
       ferryProvider.clearSchedules();
 
-      // 2. Memuat rute jika diperlukan
+      // Memuat rute jika diperlukan
       await ferryProvider.fetchRoutes(forceRefresh: true);
 
-      // 3. Panggil langsung untuk rute Ajibata-Ambarita yang diketahui memiliki jadwal
+      // Panggil langsung untuk rute Ajibata-Ambarita yang diketahui memiliki jadwal
       debugPrint('DIRECT: Fetching schedules for Ajibata-Ambarita directly');
 
       final today = DateTime.now();
@@ -319,22 +353,20 @@ class _HomeTabState extends State<HomeTab> {
         includeFullyBooked: false,
       );
 
-      // 4. Perbarui data jadwal langsung
+      // Perbarui data jadwal langsung
       ferryProvider.updateSchedulesDirectly(schedules);
 
-      // 5. Tunggu sebentar untuk memastikan perubahan diterapkan ke UI
+      // Tunggu sebentar untuk memastikan perubahan diterapkan ke UI
       setState(() {
         _scheduleLoaded = true;
         _isLoading = false;
       });
 
-      // 6. Pastikan UI diperbarui dengan menunggu sedikit dan memicu rebuild jika perlu
+      // Pastikan UI diperbarui dengan menunggu sedikit dan memicu rebuild jika perlu
       if (schedules.isNotEmpty && mounted) {
         _refreshTimer = Timer(Duration(milliseconds: 500), () {
           if (mounted) {
-            setState(
-              () {},
-            ); // Trigger UI rebuild untuk memastikan jadwal muncul
+            setState(() {});
           }
         });
       }
@@ -360,12 +392,12 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  // Metode untuk memuat ulang jadwal (digunakan oleh tombol Check Again)
+  // Metode untuk memuat ulang jadwal
   Future<void> _reloadSchedules() async {
     setState(() {
-      _scheduleLoaded = false; // Reset flag
+      _scheduleLoaded = false;
     });
-    _loadSchedulesDirectly(); // Muat ulang
+    _loadSchedulesDirectly();
   }
 
   Future<void> _handleRefresh() async {
@@ -427,12 +459,33 @@ class _HomeTabState extends State<HomeTab> {
                           ],
                         ),
                       ),
+                      // Add settings button
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.settings);
+                        },
+                        icon: const Icon(Icons.settings_outlined),
+                        style: IconButton.styleFrom(
+                          backgroundColor: theme.colorScheme.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       IconButton(
                         onPressed: () {
                           // Navigate to notifications
                         },
-                        icon: const Icon(Icons.notifications),
+                        icon: const Icon(Icons.notifications_outlined),
+                        style: IconButton.styleFrom(
+                          backgroundColor: theme.colorScheme.surface,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Consumer<AuthProvider>(
                         builder: (context, authProvider, _) {
                           final initial =
@@ -444,7 +497,7 @@ class _HomeTabState extends State<HomeTab> {
                             onTap: widget.onProfileTap,
                             child: CircleAvatar(
                               radius: 24,
-                              backgroundColor: AppTheme.primaryColor,
+                              backgroundColor: theme.primaryColor,
                               child: Text(
                                 initial,
                                 style: const TextStyle(
@@ -462,7 +515,12 @@ class _HomeTabState extends State<HomeTab> {
                 ),
 
                 // Search Form
-                const SearchForm(),
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppTheme.paddingMedium,
+                  ),
+                  child: SearchForm(),
+                ),
 
                 // Upcoming Departures Section
                 Padding(
@@ -480,26 +538,29 @@ class _HomeTabState extends State<HomeTab> {
                       ),
                       TextButton.icon(
                         onPressed: () => widget.onNavigateToTab(1),
-                        icon: const Icon(Icons.map),
+                        icon: const Icon(Icons.map, size: 18),
                         label: const Text('See All'),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.primaryColor,
+                          foregroundColor: theme.primaryColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.paddingSmall,
+                            vertical: 4,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                // Upcoming Schedules List dengan build strategy kustom
+                // Upcoming Schedules List
                 SizedBox(
-                  height: 230,
+                  height: 240,
                   child: Consumer<FerryProvider>(
                     builder: (context, ferryProvider, _) {
-                      // Selalu mulai proses pemuatan jadwal jika belum dilakukan
+                      // Start loading schedules
                       if (!_scheduleLoaded &&
                           !_isLoading &&
                           ferryProvider.schedules.isEmpty) {
-                        // Gunakan microtask untuk menghindari setState during build
                         Future.microtask(() {
                           if (mounted) {
                             _loadSchedulesDirectly();
@@ -514,45 +575,20 @@ class _HomeTabState extends State<HomeTab> {
                       final schedules = ferryProvider.schedules;
 
                       if (schedules.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.directions_boat_outlined,
-                                size: 48,
-                                color: theme.hintColor,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'No upcoming departures available',
-                                style: TextStyle(color: theme.hintColor),
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton(
-                                onPressed: _reloadSchedules,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: Text(
-                                  _isLoading ? "Loading..." : "Check Again",
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
+                        return _buildEmptySchedulesView(theme);
                       }
 
                       return ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount: schedules.length > 5 ? 5 : schedules.length,
+                        padding: const EdgeInsets.only(
+                          left: AppTheme.paddingMedium,
+                        ),
                         itemBuilder: (context, index) {
                           final schedule = schedules[index];
                           return Padding(
                             padding: const EdgeInsets.only(
-                              left: AppTheme.paddingMedium,
-                              right: 4,
+                              right: AppTheme.paddingMedium,
                               bottom: AppTheme.paddingMedium,
                             ),
                             child: ScheduleCard(
@@ -609,6 +645,106 @@ class _HomeTabState extends State<HomeTab> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: AppTheme.paddingMedium),
+                      Row(
+                        children: [
+                          _buildQuickLinkCard(
+                            context,
+                            icon: Icons.history,
+                            title: 'History',
+                            onTap: () {
+                              widget.onNavigateToTab(2);
+                              // Delay to allow tab to load, then switch to history tab
+                              if (widget.ticketsTabKey?.currentState != null) {
+                                Future.delayed(Duration(milliseconds: 300), () {
+                                  widget
+                                      .ticketsTabKey
+                                      ?.currentState
+                                      ?._tabController
+                                      .animateTo(1);
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(width: AppTheme.paddingMedium),
+                          _buildQuickLinkCard(
+                            context,
+                            icon: Icons.help_outline,
+                            title: 'Help & Info',
+                            onTap: () {
+                              // Show help dialog
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(20),
+                                  ),
+                                ),
+                                builder:
+                                    (context) => Container(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Help & Information',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          ListTile(
+                                            leading: Icon(Icons.support_agent),
+                                            title: Text('Customer Support'),
+                                            subtitle: Text(
+                                              'Contact our support team',
+                                            ),
+                                            onTap: () {
+                                              Navigator.pop(context);
+                                            },
+                                          ),
+                                          ListTile(
+                                            leading: Icon(Icons.info_outline),
+                                            title: Text('About Ferry App'),
+                                            subtitle: Text(
+                                              'Learn more about our services',
+                                            ),
+                                            onTap: () {
+                                              Navigator.pop(context);
+                                            },
+                                          ),
+                                          ListTile(
+                                            leading: Icon(Icons.help_outline),
+                                            title: Text('FAQ'),
+                                            subtitle: Text(
+                                              'Frequently asked questions',
+                                            ),
+                                            onTap: () {
+                                              Navigator.pop(context);
+                                            },
+                                          ),
+                                          const SizedBox(height: 16),
+                                          ElevatedButton(
+                                            onPressed:
+                                                () => Navigator.pop(context),
+                                            child: Text('Close'),
+                                            style: ElevatedButton.styleFrom(
+                                              minimumSize: Size(
+                                                double.infinity,
+                                                45,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -618,6 +754,40 @@ class _HomeTabState extends State<HomeTab> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptySchedulesView(ThemeData theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.directions_boat_outlined,
+            size: 48,
+            color: theme.hintColor,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No upcoming departures available',
+            style: TextStyle(color: theme.hintColor),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: _reloadSchedules,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.paddingMedium,
+                vertical: AppTheme.paddingSmall,
+              ),
+            ),
+            icon: Icon(_isLoading ? Icons.hourglass_empty : Icons.refresh),
+            label: Text(_isLoading ? "Loading..." : "Check Again"),
+          ),
+        ],
       ),
     );
   }
@@ -674,7 +844,616 @@ class _HomeTabState extends State<HomeTab> {
   }
 }
 
-// Fixed ScheduleCard implementation
+// MyTicketsTab yang diperbaharui
+class MyTicketsTab extends StatefulWidget {
+  const MyTicketsTab({Key? key}) : super(key: key);
+
+  @override
+  State<MyTicketsTab> createState() => _MyTicketsTabState();
+}
+
+class _MyTicketsTabState extends State<MyTicketsTab>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  bool _isLoading = false;
+  bool _isInitialized = false;
+  DateTime? _lastDataLoad;
+  Timer? _debounceTimer;
+  Timer? _expirationTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+
+    // Only load tickets if not already loaded elsewhere
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isInitialized) {
+        _loadTickets();
+      }
+    });
+
+    // Timer untuk memeriksa tiket kadaluarsa setiap 1 menit
+    _expirationTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        final ticketProvider = Provider.of<TicketProvider>(
+          context,
+          listen: false,
+        );
+        ticketProvider.checkAndMoveExpiredTickets();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _debounceTimer?.cancel();
+    _expirationTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // If this tab becomes visible and data isn't initialized or loaded for a while,
+    // schedule loading with proper debouncing
+    if (!_isInitialized && !_isLoading && mounted) {
+      // Cancel any previous timer
+      _debounceTimer?.cancel();
+
+      // Set a short delay to prevent multiple calls during navigation
+      _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+        if (mounted && !_isInitialized && !_isLoading) {
+          _loadTickets();
+        }
+      });
+    }
+  }
+
+  Future<void> _loadTickets() async {
+    // Cancel any previous debounce timer
+    _debounceTimer?.cancel();
+
+    if (!mounted || _isLoading) return;
+
+    // Throttling untuk mencegah reload terlalu sering (60 detik)
+    if (_lastDataLoad != null &&
+        DateTime.now().difference(_lastDataLoad!).inSeconds < 60) {
+      // Set timer untuk retry nanti jika diperlukan
+      _debounceTimer = Timer(
+        Duration(
+          seconds: 60 - DateTime.now().difference(_lastDataLoad!).inSeconds,
+        ),
+        () {
+          if (mounted && !_isInitialized) _loadTickets();
+        },
+      );
+
+      debugPrint('THROTTLED: Ticket load throttled');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final ticketProvider = Provider.of<TicketProvider>(
+        context,
+        listen: false,
+      );
+
+      // Load secara berurutan untuk mengurangi beban server
+      await ticketProvider.fetchActiveTickets();
+
+      if (mounted) {
+        await ticketProvider.fetchTicketHistory();
+      }
+
+      // Check and move expired tickets
+      ticketProvider.checkAndMoveExpiredTickets();
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isInitialized = true;
+          _lastDataLoad = DateTime.now();
+        });
+      }
+    } catch (e) {
+      debugPrint('ERROR in _loadTickets: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading tickets: $e')));
+      }
+    }
+  }
+
+  // Throttled refresh handler
+  DateTime? _lastRefreshTime;
+
+  Future<void> _handleRefresh() async {
+    // Throttling untuk refresh manual
+    if (_lastRefreshTime != null &&
+        DateTime.now().difference(_lastRefreshTime!).inSeconds < 30) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harap tunggu beberapa saat sebelum refresh kembali'),
+        ),
+      );
+      return;
+    }
+
+    _lastRefreshTime = DateTime.now();
+    _lastDataLoad = null; // Reset untuk force refresh
+    return _loadTickets();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tiket Saya'),
+        elevation: 0,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [Tab(text: 'Aktif'), Tab(text: 'Riwayat')],
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: AppTheme.fontSizeRegular,
+          ),
+          indicatorWeight: 3,
+          indicatorColor: theme.primaryColor,
+        ),
+      ),
+      body: Consumer<TicketProvider>(
+        builder: (context, ticketProvider, _) {
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              // Active tickets tab
+              RefreshIndicator(
+                onRefresh: _handleRefresh,
+                child:
+                    ticketProvider.isLoadingActiveTickets
+                        ? const Center(child: LoadingIndicator())
+                        : ticketProvider.activeTickets.isEmpty
+                        ? _buildEmptyTicketsView(
+                          'Tidak Ada Tiket Aktif',
+                          'Anda belum memiliki tiket aktif. Pesan tiket kapal untuk lihat disini.',
+                          Icons.confirmation_number_outlined,
+                          'Pesan Tiket Kapal',
+                          () {
+                            Navigator.pushReplacementNamed(
+                              context,
+                              AppRoutes.home,
+                            );
+                          },
+                        )
+                        : _buildTicketList(
+                          ticketProvider.activeTickets,
+                          ticketProvider,
+                          isActive: true,
+                        ),
+              ),
+
+              // History tickets tab
+              RefreshIndicator(
+                onRefresh: _handleRefresh,
+                child:
+                    ticketProvider.isLoadingTicketHistory
+                        ? const Center(child: LoadingIndicator())
+                        : ticketProvider.ticketHistory.isEmpty
+                        ? _buildEmptyTicketsView(
+                          'Tidak Ada Riwayat Tiket',
+                          'Tiket yang sudah digunakan, kadaluarsa, atau dibatalkan akan muncul disini.',
+                          Icons.history,
+                          null,
+                          null,
+                        )
+                        : _buildTicketList(
+                          ticketProvider.ticketHistory,
+                          ticketProvider,
+                          isActive: false,
+                        ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyTicketsView(
+    String title,
+    String subtitle,
+    IconData icon,
+    String? buttonText,
+    VoidCallback? onButtonPressed,
+  ) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.all(AppTheme.paddingLarge),
+        physics: const AlwaysScrollableScrollPhysics(), // Allow pull to refresh
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 80, color: theme.hintColor),
+              const SizedBox(height: AppTheme.paddingMedium),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeLarge,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: AppTheme.paddingSmall),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeRegular,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (buttonText != null && onButtonPressed != null) ...[
+                const SizedBox(height: AppTheme.paddingLarge),
+                ElevatedButton.icon(
+                  onPressed: onButtonPressed,
+                  icon: const Icon(Icons.search),
+                  label: Text(buttonText),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.paddingLarge,
+                      vertical: AppTheme.paddingRegular,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTicketList(
+    List<dynamic> tickets,
+    TicketProvider ticketProvider, {
+    bool isActive = true,
+  }) {
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(AppTheme.paddingMedium),
+      itemCount: tickets.length,
+      itemBuilder: (context, index) {
+        final ticket = tickets[index];
+        return _buildTicketCard(ticket, ticketProvider, isActive: isActive);
+      },
+    );
+  }
+
+  Widget _buildTicketCard(
+    dynamic ticket,
+    TicketProvider ticketProvider, {
+    bool isActive = true,
+  }) {
+    final theme = Theme.of(context);
+    final hasSchedule = ticket.schedule != null;
+
+    // Format date
+    String departureDate = '';
+    String departureTime = '';
+    if (hasSchedule) {
+      final formatter = DateFormat('EEE, dd MMM yyyy');
+      departureDate = formatter.format(ticket.schedule!.departureTime);
+      departureTime = ticket.schedule!.formattedDepartureTime;
+    }
+
+    // Route name
+    String routeName = '';
+    if (hasSchedule && ticket.schedule!.route != null) {
+      routeName = ticket.schedule!.route!.routeName;
+    }
+
+    // Jenis tiket (penumpang atau kendaraan)
+    final bool isVehicleTicket = ticket.vehicle != null;
+    final String ticketInfo =
+        isVehicleTicket
+            ? '${ticket.vehicle!.typeText} - ${ticket.vehicle!.licensePlate}'
+            : ticket.passenger != null
+            ? ticket.passenger!.name
+            : 'Passenger Ticket';
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: AppTheme.paddingMedium),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+      ),
+      child: InkWell(
+        onTap: () {
+          ticketProvider.setSelectedTicket(ticket.id);
+          Navigator.pushNamed(
+            context,
+            AppRoutes.ticketDetail,
+            arguments: {'ticketId': ticket.id},
+          );
+        },
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+        child: Column(
+          children: [
+            // Header dengan informasi rute
+            Container(
+              padding: const EdgeInsets.all(AppTheme.paddingMedium),
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(AppTheme.borderRadiusMedium),
+                  topRight: Radius.circular(AppTheme.borderRadiusMedium),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Ferry icon
+                  Container(
+                    padding: const EdgeInsets.all(AppTheme.paddingSmall),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusRegular,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.directions_boat,
+                      color: theme.primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.paddingMedium),
+
+                  // Route info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          routeName.isEmpty ? 'Unknown Route' : routeName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: AppTheme.fontSizeMedium,
+                          ),
+                        ),
+                        if (hasSchedule)
+                          Text(
+                            '$departureDate · $departureTime',
+                            style: TextStyle(
+                              fontSize: AppTheme.fontSizeSmall,
+                              color: theme.textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.paddingRegular,
+                      vertical: AppTheme.paddingXSmall,
+                    ),
+                    decoration: BoxDecoration(
+                      color: ticket.statusColor,
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusRound,
+                      ),
+                    ),
+                    child: Text(
+                      ticket.statusText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: AppTheme.fontSizeSmall,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Divider with dotted line
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.paddingSmall,
+              ),
+              child: Row(
+                children: List.generate(40, (index) {
+                  return Expanded(
+                    child: Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                      color:
+                          index % 2 == 0
+                              ? theme.dividerColor
+                              : Colors.transparent,
+                    ),
+                  );
+                }),
+              ),
+            ),
+
+            // Ticket body
+            Padding(
+              padding: const EdgeInsets.all(AppTheme.paddingMedium),
+              child: Row(
+                children: [
+                  // Icon based on ticket type (passenger or vehicle)
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: ticket.statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(
+                        AppTheme.borderRadiusRegular,
+                      ),
+                    ),
+                    child: Icon(
+                      isVehicleTicket ? Icons.directions_car : Icons.person,
+                      color: ticket.statusColor,
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.paddingMedium),
+
+                  // Ticket info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          ticketInfo,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: AppTheme.fontSizeRegular,
+                          ),
+                        ),
+                        Text(
+                          'Tiket: ${ticket.ticketNumber}',
+                          style: TextStyle(
+                            color: theme.textTheme.bodyMedium?.color,
+                            fontSize: AppTheme.fontSizeSmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Action button based on status
+                  isActive && ticket.isActive
+                      ? ElevatedButton(
+                        onPressed: () {
+                          ticketProvider.setSelectedTicket(ticket.id);
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.ticketDetail,
+                            arguments: {'ticketId': ticket.id},
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.paddingRegular,
+                            vertical: AppTheme.paddingXSmall,
+                          ),
+                          minimumSize: const Size(0, 0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusRegular,
+                            ),
+                          ),
+                        ),
+                        child: const Text('Lihat'),
+                      )
+                      : OutlinedButton(
+                        onPressed: () {
+                          ticketProvider.setSelectedTicket(ticket.id);
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.ticketDetail,
+                            arguments: {'ticketId': ticket.id},
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.paddingRegular,
+                            vertical: AppTheme.paddingXSmall,
+                          ),
+                          minimumSize: const Size(0, 0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.borderRadiusRegular,
+                            ),
+                          ),
+                        ),
+                        child: const Text('Detail'),
+                      ),
+                ],
+              ),
+            ),
+
+            // Ferry info for active tickets
+            if (isActive &&
+                ticket.isActive &&
+                hasSchedule &&
+                ticket.schedule!.ferry != null)
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: AppTheme.paddingMedium,
+                  right: AppTheme.paddingMedium,
+                  bottom: AppTheme.paddingMedium,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(AppTheme.paddingSmall),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusRegular,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: theme.textTheme.bodyMedium?.color,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Kapal: ${ticket.schedule!.ferry!.name}',
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeSmall,
+                            color: theme.textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Simple ProfileTab that uses ProfileScreen
+class ProfileTab extends StatelessWidget {
+  const ProfileTab({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const ProfileScreen();
+  }
+}
+
+// Fixed ScheduleCard implementation with improved design
 class ScheduleCard extends StatelessWidget {
   final ScheduleModel schedule;
   final VoidCallback onTap;
@@ -863,395 +1642,39 @@ class ScheduleCard extends StatelessWidget {
                 ],
               ),
             ),
+
+            // Book button
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppTheme.paddingSmall,
+                right: AppTheme.paddingSmall,
+                bottom: AppTheme.paddingSmall,
+              ),
+              child: ElevatedButton(
+                onPressed: onTap,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppTheme.borderRadiusRegular,
+                    ),
+                  ),
+                  minimumSize: Size(double.infinity, 36),
+                ),
+                child: Text(
+                  'Book Now',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: AppTheme.fontSizeSmall,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
-  }
-}
-
-// Improved MyTicketsTab to reduce redundant API calls
-class MyTicketsTab extends StatefulWidget {
-  const MyTicketsTab({Key? key}) : super(key: key);
-
-  @override
-  State<MyTicketsTab> createState() => _MyTicketsTabState();
-}
-
-class _MyTicketsTabState extends State<MyTicketsTab>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  bool _isLoading = false;
-  bool _isInitialized = false;
-  DateTime? _lastDataLoad;
-  Timer? _debounceTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-
-    // Only load tickets if not already loaded elsewhere
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_isInitialized) {
-        _loadTickets();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _debounceTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // If this tab becomes visible and data isn't initialized or loaded for a while,
-    // schedule loading with proper debouncing
-    if (!_isInitialized && !_isLoading && mounted) {
-      // Cancel any previous timer
-      _debounceTimer?.cancel();
-
-      // Set a short delay to prevent multiple calls during navigation
-      _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-        if (mounted && !_isInitialized && !_isLoading) {
-          _loadTickets();
-        }
-      });
-    }
-  }
-
-  Future<void> _loadTickets() async {
-    // Cancel any previous debounce timer
-    _debounceTimer?.cancel();
-
-    if (!mounted || _isLoading) return;
-
-    // Throttling untuk mencegah reload terlalu sering (60 detik)
-    if (_lastDataLoad != null &&
-        DateTime.now().difference(_lastDataLoad!).inSeconds < 60) {
-      // Set timer untuk retry nanti jika diperlukan
-      _debounceTimer = Timer(
-        Duration(
-          seconds: 60 - DateTime.now().difference(_lastDataLoad!).inSeconds,
-        ),
-        () {
-          if (mounted && !_isInitialized) _loadTickets();
-        },
-      );
-
-      debugPrint('THROTTLED: Ticket load throttled');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final ticketProvider = Provider.of<TicketProvider>(
-        context,
-        listen: false,
-      );
-
-      // Load secara berurutan untuk mengurangi beban server
-      await ticketProvider.fetchActiveTickets();
-
-      if (mounted) {
-        await ticketProvider.fetchTicketHistory();
-      }
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isInitialized = true;
-          _lastDataLoad = DateTime.now();
-        });
-      }
-    } catch (e) {
-      debugPrint('ERROR in _loadTickets: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading tickets: $e')));
-      }
-    }
-  }
-
-  // Throttled refresh handler
-  DateTime? _lastRefreshTime;
-
-  Future<void> _handleRefresh() async {
-    // Throttling untuk refresh manual
-    if (_lastRefreshTime != null &&
-        DateTime.now().difference(_lastRefreshTime!).inSeconds < 30) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Harap tunggu beberapa saat sebelum refresh kembali'),
-        ),
-      );
-      return;
-    }
-
-    _lastRefreshTime = DateTime.now();
-    _lastDataLoad = null; // Reset untuk force refresh
-    return _loadTickets();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Tickets'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [Tab(text: 'Active'), Tab(text: 'History')],
-        ),
-      ),
-      body: Consumer<TicketProvider>(
-        builder: (context, ticketProvider, _) {
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              // Active tickets tab
-              RefreshIndicator(
-                onRefresh: _handleRefresh,
-                child:
-                    ticketProvider.isLoadingActiveTickets
-                        ? const Center(child: LoadingIndicator())
-                        : ticketProvider.activeTickets.isEmpty
-                        ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.confirmation_number_outlined,
-                                size: 64,
-                                color: theme.hintColor,
-                              ),
-                              const SizedBox(height: AppTheme.paddingMedium),
-                              Text(
-                                'No active tickets',
-                                style: TextStyle(
-                                  fontSize: AppTheme.fontSizeMedium,
-                                  fontWeight: FontWeight.w500,
-                                  color: theme.textTheme.bodyLarge?.color,
-                                ),
-                              ),
-                              const SizedBox(height: AppTheme.paddingSmall),
-                              Text(
-                                'Book a ferry ticket to see your active tickets here',
-                                style: TextStyle(
-                                  fontSize: AppTheme.fontSizeRegular,
-                                  color: theme.textTheme.bodyMedium?.color,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        )
-                        : ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: ticketProvider.activeTickets.length,
-                          itemBuilder: (context, index) {
-                            final ticket = ticketProvider.activeTickets[index];
-                            return GestureDetector(
-                              onTap: () {
-                                ticketProvider.setSelectedTicket(ticket.id);
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.ticketDetail,
-                                  arguments: {'ticketId': ticket.id},
-                                );
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.paddingMedium,
-                                  vertical: AppTheme.paddingSmall,
-                                ),
-                                child: Card(
-                                  elevation: 2,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppTheme.borderRadiusMedium,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(
-                                      AppTheme.paddingMedium,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(
-                                                AppTheme.paddingSmall,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.primaryColor
-                                                    .withOpacity(0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                      AppTheme
-                                                          .borderRadiusRegular,
-                                                    ),
-                                              ),
-                                              child: const Icon(
-                                                Icons.directions_boat,
-                                                color: AppTheme.primaryColor,
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                              width: AppTheme.paddingMedium,
-                                            ),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    ticket
-                                                            .schedule
-                                                            ?.route
-                                                            ?.routeName ??
-                                                        'Unknown Route',
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize:
-                                                          AppTheme
-                                                              .fontSizeMedium,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-              ),
-
-              // History tab with similar implementation
-              RefreshIndicator(
-                onRefresh: _handleRefresh,
-                child:
-                    ticketProvider.isLoadingTicketHistory
-                        ? const Center(child: LoadingIndicator())
-                        : ticketProvider.ticketHistory.isEmpty
-                        ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.history,
-                                size: 64,
-                                color: theme.hintColor,
-                              ),
-                              const SizedBox(height: AppTheme.paddingMedium),
-                              Text(
-                                'No ticket history',
-                                style: TextStyle(
-                                  fontSize: AppTheme.fontSizeMedium,
-                                  fontWeight: FontWeight.w500,
-                                  color: theme.textTheme.bodyLarge?.color,
-                                ),
-                              ),
-                              const SizedBox(height: AppTheme.paddingSmall),
-                              Text(
-                                'Your completed trips will appear here',
-                                style: TextStyle(
-                                  fontSize: AppTheme.fontSizeRegular,
-                                  color: theme.textTheme.bodyMedium?.color,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        )
-                        : ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: ticketProvider.ticketHistory.length,
-                          itemBuilder: (context, index) {
-                            final ticket = ticketProvider.ticketHistory[index];
-                            return GestureDetector(
-                              onTap: () {
-                                ticketProvider.setSelectedTicket(ticket.id);
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.ticketDetail,
-                                  arguments: {'ticketId': ticket.id},
-                                );
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.paddingMedium,
-                                  vertical: AppTheme.paddingSmall,
-                                ),
-                                child: Card(
-                                  elevation: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(
-                                      AppTheme.paddingMedium,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(
-                                            AppTheme.paddingSmall,
-                                          ),
-                                          child: const Icon(Icons.history),
-                                        ),
-                                        const SizedBox(
-                                          width: AppTheme.paddingMedium,
-                                        ),
-                                        Expanded(
-                                          child: Text(
-                                            ticket.schedule?.route?.routeName ??
-                                                'Unknown Route',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-// Simple ProfileTab that uses ProfileScreen
-class ProfileTab extends StatelessWidget {
-  const ProfileTab({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const ProfileScreen();
   }
 }

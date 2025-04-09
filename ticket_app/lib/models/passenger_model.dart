@@ -12,7 +12,7 @@ class Passenger {
   final String? address;
   final bool isInfant;
   final String? nationality;
-  
+
   // Tambahkan field untuk tiket
   final int? ticketId;
   final String? seatNumber;
@@ -103,47 +103,84 @@ class Passenger {
 
   String toJson() => json.encode(toMap());
 
-  factory Passenger.fromJson(String source) => Passenger.fromMap(json.decode(source));
+  factory Passenger.fromJson(String source) =>
+      Passenger.fromMap(json.decode(source));
 
   @override
   String toString() {
     return 'Passenger(id: $id, name: $name, identityType: $identityType, identityNumber: $identityNumber, phone: $phone, email: $email, dateOfBirth: $dateOfBirth, gender: $gender, address: $address, isInfant: $isInfant, nationality: $nationality, ticketId: $ticketId, seatNumber: $seatNumber)';
   }
 
+  // Getter untuk format yang lebih baik dari jenis identitas
+  String get identityTypeText {
+    switch (identityType.toLowerCase()) {
+      case 'ktp':
+        return 'KTP';
+      case 'sim':
+        return 'SIM';
+      case 'passport':
+      case 'paspor':
+        return 'Paspor';
+      case 'student_id':
+      case 'kartu_pelajar':
+        return 'Kartu Pelajar';
+      default:
+        return identityType;
+    }
+  }
+
+  // Getter untuk gender dalam format yang lebih baik
+  String get genderText {
+    if (gender == null) return '';
+
+    switch (gender!.toLowerCase()) {
+      case 'm':
+      case 'male':
+      case 'laki-laki':
+        return 'Laki-laki';
+      case 'f':
+      case 'female':
+      case 'perempuan':
+        return 'Perempuan';
+      default:
+        return gender!;
+    }
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-  
+
     return other is Passenger &&
-      other.id == id &&
-      other.name == name &&
-      other.identityType == identityType &&
-      other.identityNumber == identityNumber &&
-      other.phone == phone &&
-      other.email == email &&
-      other.dateOfBirth == dateOfBirth &&
-      other.gender == gender &&
-      other.address == address &&
-      other.isInfant == isInfant &&
-      other.nationality == nationality &&
-      other.ticketId == ticketId &&
-      other.seatNumber == seatNumber;
+        other.id == id &&
+        other.name == name &&
+        other.identityType == identityType &&
+        other.identityNumber == identityNumber &&
+        other.phone == phone &&
+        other.email == email &&
+        other.dateOfBirth == dateOfBirth &&
+        other.gender == gender &&
+        other.address == address &&
+        other.isInfant == isInfant &&
+        other.nationality == nationality &&
+        other.ticketId == ticketId &&
+        other.seatNumber == seatNumber;
   }
 
   @override
   int get hashCode {
     return id.hashCode ^
-      name.hashCode ^
-      identityType.hashCode ^
-      identityNumber.hashCode ^
-      phone.hashCode ^
-      email.hashCode ^
-      dateOfBirth.hashCode ^
-      gender.hashCode ^
-      address.hashCode ^
-      isInfant.hashCode ^
-      nationality.hashCode ^
-      ticketId.hashCode ^
-      seatNumber.hashCode;
+        name.hashCode ^
+        identityType.hashCode ^
+        identityNumber.hashCode ^
+        phone.hashCode ^
+        email.hashCode ^
+        dateOfBirth.hashCode ^
+        gender.hashCode ^
+        address.hashCode ^
+        isInfant.hashCode ^
+        nationality.hashCode ^
+        ticketId.hashCode ^
+        seatNumber.hashCode;
   }
 }

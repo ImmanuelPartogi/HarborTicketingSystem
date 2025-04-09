@@ -666,8 +666,77 @@ class ApiService {
     return get(ApiConfig.tickets, queryParams: queryParams);
   }
 
-  Future<dynamic> getTicketDetail(int id) {
-    return get(_replacePathParams(ApiConfig.ticketDetail, {'id': id}));
+  // Metode untuk mendapatkan tiket aktif
+  Future<List<dynamic>> getActiveTickets() async {
+    try {
+      final response = await get(
+        '/api/v1/tickets',
+        queryParams: {'status': 'active'},
+      );
+
+      if (response != null &&
+          response['data'] != null &&
+          response['data']['tickets'] != null) {
+        return response['data']['tickets'];
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting active tickets: $e');
+      return [];
+    }
+  }
+
+  // Metode untuk mendapatkan riwayat tiket (tiket yang sudah digunakan, kadaluarsa, atau dibatalkan)
+  Future<List<dynamic>> getTicketHistory() async {
+    try {
+      // Menggunakan multi-parameter untuk mendapatkan semua tiket non-aktif
+      final response = await get(
+        '/api/v1/tickets',
+        queryParams: {'status': 'used,expired,cancelled'},
+      );
+
+      if (response != null &&
+          response['data'] != null &&
+          response['data']['tickets'] != null) {
+        return response['data']['tickets'];
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting ticket history: $e');
+      return [];
+    }
+  }
+
+  // Metode untuk mendapatkan detail tiket berdasarkan ID
+  Future<dynamic> getTicketDetail(int ticketId) async {
+    try {
+      final response = await get('/api/v1/tickets/$ticketId');
+
+      if (response != null && response['data'] != null) {
+        return response['data'];
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting ticket detail: $e');
+      throw e;
+    }
+  }
+
+  // Metode untuk mendapatkan tiket berdasarkan booking ID
+  Future<List<dynamic>> getTicketsByBookingId(int bookingId) async {
+    try {
+      final response = await get('/api/v1/bookings/$bookingId/tickets');
+
+      if (response != null &&
+          response['data'] != null &&
+          response['data']['tickets'] != null) {
+        return response['data']['tickets'];
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting tickets by booking ID: $e');
+      return [];
+    }
   }
 
   Future<dynamic> validateTicket(int id) {

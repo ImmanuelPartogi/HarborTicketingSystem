@@ -394,78 +394,88 @@ class TicketProvider extends ChangeNotifier {
     return groupedTickets;
   }
 
-  Map<String, List<dynamic>> getTicketsGroupedByDateFerryDestination() {
-    final groupedTickets = <String, List<dynamic>>{};
+  Map<String, List<Ticket>> getTicketsGroupedByDateFerryDestination() {
+    final Map<String, List<Ticket>> result = {};
 
-    for (var ticket in activeTickets) {
-      if (ticket.schedule == null ||
-          ticket.schedule!.route == null ||
-          ticket.schedule!.ferry == null) {
-        continue;
+    for (final ticket in activeTickets) {
+      // Lewati tiket yang tidak memiliki jadwal
+      if (ticket.schedule == null) continue;
+
+      // Buat kunci unik untuk pengelompokan berdasarkan:
+      // 1. scheduleId - memastikan tiket dikelompokkan per jadwal
+      // 2. tanggal keberangkatan - untuk pengelompokan tambahan jika diperlukan
+      final scheduleId = ticket.scheduleId ?? 0;
+      final departureDate = ticket.schedule!.departureTime;
+      final key = '$scheduleId-${departureDate.toString().split(' ')[0]}';
+
+      if (!result.containsKey(key)) {
+        result[key] = [];
       }
 
-      // Format tanggal (yyyy-MM-dd)
-      final dateFormat = DateFormat('yyyy-MM-dd');
-      final departureDate = dateFormat.format(ticket.schedule!.departureTime);
-
-      // Ambil jenis kapal
-      final ferryType = ticket.schedule!.ferry!.name;
-
-      // Ambil tujuan
-      final destination = ticket.schedule!.route!.routeName;
-
-      // Buat kunci pengelompokan: tanggal_kapal_tujuan
-      final key = '${departureDate}_${ferryType}_${destination}';
-
-      if (!groupedTickets.containsKey(key)) {
-        groupedTickets[key] = [];
-      }
-
-      groupedTickets[key]!.add(ticket);
+      result[key]!.add(ticket);
     }
 
-    return groupedTickets;
+    return result;
   }
 
   Map<String, String> getGroupInfo(String groupKey) {
-    final parts = groupKey.split('_');
-    if (parts.length < 3) {
-      return {'date': 'Unknown', 'ferry': 'Unknown', 'destination': 'Unknown'};
+    // Cek apakah ada tiket yang sesuai dengan kunci ini
+    final tickets = getTicketsGroupedByDateFerryDestination()[groupKey] ?? [];
+    if (tickets.isEmpty) {
+      return {
+        'date': 'Tidak ada data',
+        'ferry': 'Tidak ada data',
+        'destination': 'Tidak ada data',
+      };
     }
 
-    // Parse tanggal ke format yang lebih mudah dibaca
-    DateTime? date;
-    try {
-      date = DateFormat('yyyy-MM-dd').parse(parts[0]);
-    } catch (e) {
-      // Handle error
+    // Ambil tiket pertama untuk informasi kelompok
+    final firstTicket = tickets.first;
+    final schedule = firstTicket.schedule;
+
+    if (schedule == null) {
+      return {
+        'date': 'Tidak ada data',
+        'ferry': 'Tidak ada data',
+        'destination': 'Tidak ada data',
+      };
     }
+
+    // Format tanggal dengan intl.DateFormat
+    final dateFormatter = DateFormat('EEE, dd MMM yyyy', 'id_ID');
+    final formattedDate = dateFormatter.format(schedule.departureTime);
 
     return {
-      'date':
-          date != null ? DateFormat('EEE, dd MMM yyyy').format(date) : parts[0],
-      'ferry': parts[1],
-      'destination': parts[2],
+      'date': formattedDate,
+      'ferry': schedule.ferry?.name ?? 'Kapal tidak diketahui',
+      'destination': schedule.route?.routeName ?? 'Rute tidak diketahui',
     };
   }
 
   void checkAndMoveExpiredTickets() {
     final now = DateTime.now();
-    final expiredTickets =
-        _activeTickets.where((ticket) {
-          return ticket.isExpired ||
-              ticket.isUsed ||
-              ticket.isCancelled ||
-              (ticket.schedule?.departureTime.isBefore(now) ?? false);
-        }).toList();
+    final expiredTickets = <Ticket>[];
 
+    for (final ticket in activeTickets) {
+      if (ticket.schedule == null) continue;
+
+      // Cek jika tiket sudah kadaluarsa (30 menit setelah keberangkatan)
+      final expiryTime = ticket.schedule!.departureTime.add(
+        const Duration(
+          minutes: 30,
+        ), // Gunakan nilai dari AppConfig jika tersedia
+      );
+
+      if (now.isAfter(expiryTime)) {
+        expiredTickets.add(ticket);
+      }
+    }
+
+    // Pindahkan tiket kadaluarsa ke history
     if (expiredTickets.isNotEmpty) {
-      setState(() {
-        for (var ticket in expiredTickets) {
-          _activeTickets.remove(ticket);
-          _ticketHistory.add(ticket);
-        }
-      });
+      activeTickets.removeWhere((ticket) => expiredTickets.contains(ticket));
+      ticketHistory.addAll(expiredTickets);
+      notifyListeners();
     }
   }
 

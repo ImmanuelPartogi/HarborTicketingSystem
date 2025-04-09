@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'schedule_model.dart';
-import 'vehicle_model.dart'; // Tambahkan import ini
+import 'vehicle_model.dart';
+import 'passenger_model.dart';
 
 class Ticket {
   final int id;
@@ -14,7 +15,7 @@ class Ticket {
   final DateTime? usedAt;
   final ScheduleModel? schedule;
   final Passenger? passenger;
-  final Vehicle? vehicle; // Tambahkan properti ini
+  final Vehicle? vehicle;
 
   Ticket({
     required this.id,
@@ -28,13 +29,10 @@ class Ticket {
     this.usedAt,
     this.schedule,
     this.passenger,
-    this.vehicle, // Tambahkan parameter ini
+    this.vehicle,
   });
 
   factory Ticket.fromJson(Map<String, dynamic> json) {
-    // Debug log untuk melihat data yang diterima
-    print('Parsing Ticket data: ${json.keys.toList()}');
-
     // Helper functions untuk parsing data dengan aman
     int parseInt(dynamic value, {int defaultValue = 0}) {
       if (value == null) return defaultValue;
@@ -74,6 +72,33 @@ class Ticket {
       }
     }
 
+    ScheduleModel? scheduleData;
+    if (json['schedule'] != null) {
+      try {
+        scheduleData = ScheduleModel.fromJson(json['schedule']);
+      } catch (e) {
+        print('Error parsing schedule: $e');
+      }
+    }
+
+    Passenger? passengerData;
+    if (json['passenger'] != null) {
+      try {
+        passengerData = Passenger.fromJson(json['passenger']);
+      } catch (e) {
+        print('Error parsing passenger: $e');
+      }
+    }
+
+    Vehicle? vehicleData;
+    if (json['vehicle'] != null) {
+      try {
+        vehicleData = Vehicle.fromJson(json['vehicle']);
+      } catch (e) {
+        print('Error parsing vehicle: $e');
+      }
+    }
+
     return Ticket(
       id: parseInt(json['id']),
       bookingId: parseInt(json['booking_id']),
@@ -84,49 +109,10 @@ class Ticket {
       createdAt: parseDateTime(json['created_at']),
       updatedAt: parseDateTime(json['updated_at']),
       usedAt: parseNullableDateTime(json['used_at']),
-      schedule:
-          json['schedule'] != null ? _parseSchedule(json['schedule']) : null,
-      passenger:
-          json['passenger'] != null ? _parsePassenger(json['passenger']) : null,
-      vehicle:
-          json['vehicle'] != null
-              ? _parseVehicle(json['vehicle'])
-              : null, // Tambahkan ini
+      schedule: scheduleData,
+      passenger: passengerData,
+      vehicle: vehicleData,
     );
-  }
-
-  // Tambahkan metode ini di kelas Ticket
-  static ScheduleModel? _parseSchedule(dynamic scheduleData) {
-    if (scheduleData == null) return null;
-    try {
-      return ScheduleModel.fromJson(scheduleData);
-    } catch (e) {
-      print('Error parsing schedule: $e');
-      print('Schedule data: $scheduleData'); // Tambahkan log ini
-      return null;
-    }
-  }
-
-  // Tambahkan helper method untuk parsing vehicle
-  static Vehicle? _parseVehicle(dynamic vehicleData) {
-    if (vehicleData == null) return null;
-    try {
-      return Vehicle.fromJson(vehicleData);
-    } catch (e) {
-      print('Error parsing vehicle: $e');
-      return null;
-    }
-  }
-
-  // Helper method untuk parsing passenger dengan penanganan error (tidak berubah)
-  static Passenger? _parsePassenger(dynamic passengerData) {
-    if (passengerData == null) return null;
-    try {
-      return Passenger.fromJson(passengerData);
-    } catch (e) {
-      print('Error parsing passenger: $e');
-      return null;
-    }
   }
 
   Map<String, dynamic> toJson() {
@@ -142,211 +128,72 @@ class Ticket {
       'used_at': usedAt?.toIso8601String(),
       'schedule': schedule?.toJson(),
       'passenger': passenger?.toJson(),
-      'vehicle': vehicle?.toJson(), // Tambahkan ini
+      'vehicle': vehicle?.toJson(),
     };
   }
 
-  bool get isActive {
-    return status == 'active';
-  }
-
-  bool get isUsed {
-    return status == 'used';
-  }
-
-  bool get isExpired {
-    return status == 'expired';
-  }
-
-  bool get isCancelled {
-    return status == 'cancelled';
-  }
+  // Status getters
+  bool get isActive => status.toLowerCase() == 'active';
+  bool get isUsed => status.toLowerCase() == 'used';
+  bool get isExpired => status.toLowerCase() == 'expired';
+  bool get isCancelled => status.toLowerCase() == 'cancelled';
 
   String get statusText {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'active':
-        return 'Active';
+        return 'Aktif';
       case 'used':
-        return 'Used';
+        return 'Digunakan';
       case 'expired':
-        return 'Expired';
+        return 'Kadaluarsa';
       case 'cancelled':
-        return 'Cancelled';
+        return 'Dibatalkan';
       default:
-        return 'Unknown';
+        return 'Tidak Diketahui';
     }
   }
 
   Color get statusColor {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'active':
         return Colors.blue;
       case 'used':
         return Colors.green;
       case 'expired':
-        return Colors.grey;
+        return Colors.orange;
       case 'cancelled':
         return Colors.red;
       default:
         return Colors.grey;
     }
   }
-}
 
-class Passenger {
-  final int id;
-  final int? userId;
-  final String name;
-  final String identityNumber;
-  final String identityType; // 'ktp', 'sim', 'passport'
-  final String? dateOfBirth;
-  final String? gender;
-  final String? phone;
-  final String? email;
-  final String? address;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
-  Passenger({
-    required this.id,
-    this.userId,
-    required this.name,
-    required this.identityNumber,
-    required this.identityType,
-    this.dateOfBirth,
-    this.gender,
-    this.phone,
-    this.email,
-    this.address,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  factory Passenger.fromJson(Map<String, dynamic> json) {
-    // Debug log untuk melihat data yang diterima
-    print('Parsing Passenger data: ${json.keys.toList()}');
-
-    if (json['schedule'] != null) {
-    print('Schedule found: ${json['schedule']}');
+  // Cek apakah tiket sudah melewati waktu keberangkatan + 30 menit
+  bool isExpiredByTime() {
+    if (schedule == null) return false;
     
-    // Jika schedule tidak memiliki route/ferry tapi ada di booking.schedule
-    if ((json['schedule']['route'] == null || json['schedule']['ferry'] == null) && 
-        json['booking'] != null && json['booking']['schedule'] != null) {
-      
-      // Copy route dan ferry dari booking.schedule jika diperlukan
-      if (json['schedule']['route'] == null && json['booking']['schedule']['route'] != null) {
-        json['schedule']['route'] = json['booking']['schedule']['route'];
-      }
-      
-      if (json['schedule']['ferry'] == null && json['booking']['schedule']['ferry'] != null) {
-        json['schedule']['ferry'] = json['booking']['schedule']['ferry'];
-      }
-    }
+    final departureTime = schedule!.departureTime;
+    
+    // Estimasi waktu kedatangan jika tidak ada nilai arrivalTime
+    final estimatedTripDuration = const Duration(hours: 1); // Default 1 jam
+    final arrivalTime = schedule!.arrivalTime ?? 
+        departureTime.add(estimatedTripDuration);
+    
+    // Tiket dianggap expired jika sudah 30 menit setelah waktu kedatangan
+    final expirationTime = arrivalTime.add(const Duration(minutes: 30));
+    
+    return DateTime.now().isAfter(expirationTime);
   }
 
-    // Helper functions untuk parsing data dengan aman
-    int parseInt(dynamic value, {int defaultValue = 0}) {
-      if (value == null) return defaultValue;
-      if (value is int) return value;
-      try {
-        return int.parse(value.toString());
-      } catch (e) {
-        print('Error parsing int: $value');
-        return defaultValue;
-      }
-    }
-
-    int? parseNullableInt(dynamic value) {
-      if (value == null) return null;
-      if (value is int) return value;
-      try {
-        return int.parse(value.toString());
-      } catch (e) {
-        print('Error parsing nullable int: $value');
-        return null;
-      }
-    }
-
-    String parseString(dynamic value, {String defaultValue = ''}) {
-      if (value == null) return defaultValue;
-      return value.toString();
-    }
-
-    String? parseNullableString(dynamic value) {
-      if (value == null) return null;
-      return value.toString();
-    }
-
-    DateTime parseDateTime(dynamic value, {DateTime? defaultValue}) {
-      if (value == null) {
-        return defaultValue ?? DateTime.now();
-      }
-      try {
-        return DateTime.parse(value.toString());
-      } catch (e) {
-        print('Error parsing datetime: $value');
-        return defaultValue ?? DateTime.now();
-      }
-    }
-
-    return Passenger(
-      id: parseInt(json['id']),
-      userId: parseNullableInt(json['user_id']),
-      name: parseString(json['name']),
-      identityNumber: parseString(json['identity_number']),
-      identityType: parseString(json['identity_type'], defaultValue: 'unknown'),
-      dateOfBirth: parseNullableString(json['date_of_birth']),
-      gender: parseNullableString(json['gender']),
-      phone: parseNullableString(json['phone']),
-      email: parseNullableString(json['email']),
-      address: parseNullableString(json['address']),
-      createdAt: parseDateTime(json['created_at']),
-      updatedAt: parseDateTime(json['updated_at']),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'user_id': userId,
-      'name': name,
-      'identity_number': identityNumber,
-      'identity_type': identityType,
-      'date_of_birth': dateOfBirth,
-      'gender': gender,
-      'phone': phone,
-      'email': email,
-      'address': address,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-    };
-  }
-
-  String get identityTypeText {
-    switch (identityType.toLowerCase()) {
-      case 'ktp':
-        return 'KTP';
-      case 'sim':
-        return 'SIM';
-      case 'passport':
-        return 'Passport';
-      default:
-        return identityType;
-    }
-  }
-
-  String get genderText {
-    if (gender == null) return '';
-
-    switch (gender!.toLowerCase()) {
-      case 'm':
-      case 'male':
-        return 'Male';
-      case 'f':
-      case 'female':
-        return 'Female';
-      default:
-        return gender!;
-    }
+  // Cek apakah tiket sudah dekat dengan waktu keberangkatan
+  bool isDepartureSoon() {
+    if (schedule == null) return false;
+    
+    final departureTime = schedule!.departureTime;
+    final now = DateTime.now();
+    
+    // Jika keberangkatan kurang dari 1 jam
+    return departureTime.difference(now).inHours < 1 && 
+           now.isBefore(departureTime);
   }
 }

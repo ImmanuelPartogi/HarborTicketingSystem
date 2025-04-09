@@ -15,6 +15,8 @@ import 'providers/auth_provider.dart';
 import 'providers/booking_provider.dart';
 import 'providers/ferry_provider.dart';
 import 'providers/ticket_provider.dart';
+// Import ThemeProvider
+import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +40,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => BookingProvider()),
         // Meneruskan storageService ke TicketProvider
         ChangeNotifierProvider(create: (_) => TicketProvider(storageService)),
+        // Tambahkan ThemeProvider
+        ChangeNotifierProvider(create: (_) => ThemeProvider(storageService)),
         Provider<StorageService>.value(value: storageService),
         Provider<NotificationService>.value(value: notificationService),
       ],

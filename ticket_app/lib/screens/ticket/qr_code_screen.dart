@@ -28,16 +28,11 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
     super.initState();
     _loadTicketDetail();
     _startRefreshTimer();
-    
-    // Keep screen on
-    // SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
   }
   
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    // Restore system UI
-    // SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
     super.dispose();
   }
   
@@ -58,7 +53,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
         } else {
           // Refresh QR code
           final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
-          ticketProvider.generateTicketQR();
+          setState(() {}); // Force rebuild to regenerate QR
           
           // Restart timer
           _refreshCountdown = 30;
@@ -97,7 +92,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
           final ticket = ticketProvider.selectedTicket;
           
           if (ticket == null) {
-            return Center(
+            return const Center(
               child: Text(
                 'Ticket not found',
                 style: TextStyle(color: Colors.white),
@@ -115,13 +110,13 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.error_outline,
                       size: 80,
                       color: Colors.red,
                     ),
                     const SizedBox(height: AppTheme.paddingMedium),
-                    Text(
+                    const Text(
                       'Invalid Ticket',
                       style: TextStyle(
                         color: Colors.white,
@@ -136,7 +131,7 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                           : ticket.isUsed
                               ? 'This ticket has already been used.'
                               : 'This ticket has been cancelled.',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: AppTheme.fontSizeMedium,
                       ),
@@ -320,6 +315,59 @@ class _QrCodeScreenState extends State<QrCodeScreen> {
                             Expanded(
                               child: Text(
                                 '${ticket.passenger!.identityTypeText}: ${ticket.passenger!.identityNumber}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: AppTheme.fontSizeRegular,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      
+                      // Vehicle info
+                      if (ticket.vehicle != null) ...[
+                        Row(
+                          children: [
+                            const SizedBox(
+                              width: 100,
+                              child: Text(
+                                'Kendaraan',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: AppTheme.fontSizeRegular,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                ticket.vehicle!.typeText,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: AppTheme.fontSizeRegular,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppTheme.paddingSmall),
+                        Row(
+                          children: [
+                            const SizedBox(
+                              width: 100,
+                              child: Text(
+                                'Plat Nomor',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: AppTheme.fontSizeRegular,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                ticket.vehicle!.licensePlate,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: AppTheme.fontSizeRegular,
