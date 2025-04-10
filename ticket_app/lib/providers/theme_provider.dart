@@ -5,7 +5,8 @@ class ThemeProvider extends ChangeNotifier {
   final StorageService _storageService;
   ThemeMode _themeMode;
 
-  ThemeProvider(this._storageService) : _themeMode = ThemeMode.system {
+  // Ubah default dari ThemeMode.system menjadi ThemeMode.light
+  ThemeProvider(this._storageService) : _themeMode = ThemeMode.light {
     _loadTheme();
   }
 
@@ -18,13 +19,13 @@ class ThemeProvider extends ChangeNotifier {
     } else if (savedTheme == 'dark') {
       _themeMode = ThemeMode.dark;
     } else {
-      _themeMode = ThemeMode.system;
+      _themeMode = ThemeMode.light; // Default fallback ke light
     }
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-    
+
     String themeString;
     switch (mode) {
       case ThemeMode.light:
@@ -37,7 +38,7 @@ class ThemeProvider extends ChangeNotifier {
         themeString = 'system';
         break;
     }
-    
+
     await _storageService.setThemeMode(themeString);
     notifyListeners();
   }

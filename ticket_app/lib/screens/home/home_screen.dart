@@ -522,93 +522,6 @@ class _HomeTabState extends State<HomeTab> {
                   child: SearchForm(),
                 ),
 
-                // Upcoming Departures Section
-                Padding(
-                  padding: const EdgeInsets.all(AppTheme.paddingMedium),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Upcoming Departures',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeLarge,
-                          fontWeight: FontWeight.bold,
-                          color: theme.textTheme.displaySmall?.color,
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => widget.onNavigateToTab(1),
-                        icon: const Icon(Icons.map, size: 18),
-                        label: const Text('See All'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: theme.primaryColor,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppTheme.paddingSmall,
-                            vertical: 4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Upcoming Schedules List
-                SizedBox(
-                  height: 240,
-                  child: Consumer<FerryProvider>(
-                    builder: (context, ferryProvider, _) {
-                      // Start loading schedules
-                      if (!_scheduleLoaded &&
-                          !_isLoading &&
-                          ferryProvider.schedules.isEmpty) {
-                        Future.microtask(() {
-                          if (mounted) {
-                            _loadSchedulesDirectly();
-                          }
-                        });
-                      }
-
-                      if (_isLoading) {
-                        return const Center(child: LoadingIndicator());
-                      }
-
-                      final schedules = ferryProvider.schedules;
-
-                      if (schedules.isEmpty) {
-                        return _buildEmptySchedulesView(theme);
-                      }
-
-                      return ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: schedules.length > 5 ? 5 : schedules.length,
-                        padding: const EdgeInsets.only(
-                          left: AppTheme.paddingMedium,
-                        ),
-                        itemBuilder: (context, index) {
-                          final schedule = schedules[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(
-                              right: AppTheme.paddingMedium,
-                              bottom: AppTheme.paddingMedium,
-                            ),
-                            child: ScheduleCard(
-                              schedule: schedule,
-                              onTap: () {
-                                ferryProvider.setSelectedSchedule(schedule.id);
-                                Navigator.pushNamed(
-                                  context,
-                                  AppRoutes.ferryDetails,
-                                  arguments: {'scheduleId': schedule.id},
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-
                 const SizedBox(height: AppTheme.paddingMedium),
 
                 // Quick Links Section
@@ -746,6 +659,95 @@ class _HomeTabState extends State<HomeTab> {
                         ],
                       ),
                     ],
+                  ),
+                ),
+
+                const SizedBox(height: AppTheme.paddingMedium),
+
+                // Upcoming Departures Section
+                Padding(
+                  padding: const EdgeInsets.all(AppTheme.paddingMedium),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Upcoming Departures',
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeLarge,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textTheme.displaySmall?.color,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => widget.onNavigateToTab(1),
+                        icon: const Icon(Icons.map, size: 18),
+                        label: const Text('See All'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: theme.primaryColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.paddingSmall,
+                            vertical: 4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Upcoming Schedules List
+                SizedBox(
+                  height: 240,
+                  child: Consumer<FerryProvider>(
+                    builder: (context, ferryProvider, _) {
+                      // Start loading schedules
+                      if (!_scheduleLoaded &&
+                          !_isLoading &&
+                          ferryProvider.schedules.isEmpty) {
+                        Future.microtask(() {
+                          if (mounted) {
+                            _loadSchedulesDirectly();
+                          }
+                        });
+                      }
+
+                      if (_isLoading) {
+                        return const Center(child: LoadingIndicator());
+                      }
+
+                      final schedules = ferryProvider.schedules;
+
+                      if (schedules.isEmpty) {
+                        return _buildEmptySchedulesView(theme);
+                      }
+
+                      return ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: schedules.length > 5 ? 5 : schedules.length,
+                        padding: const EdgeInsets.only(
+                          left: AppTheme.paddingMedium,
+                        ),
+                        itemBuilder: (context, index) {
+                          final schedule = schedules[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              right: AppTheme.paddingMedium,
+                              bottom: AppTheme.paddingMedium,
+                            ),
+                            child: ScheduleCard(
+                              schedule: schedule,
+                              onTap: () {
+                                ferryProvider.setSelectedSchedule(schedule.id);
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.ferryDetails,
+                                  arguments: {'scheduleId': schedule.id},
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
 
